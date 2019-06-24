@@ -3,14 +3,17 @@
 //! # Examples
 //!
 //! ```rust
-//! use Str1::{Str1, States};
+//! use Str1::{Str1, State};
 //!
 //! // Takes the address
 //! let mut board = Str1::new(2);
 //! // Turn relay 1 on
-//! board.set_relay(1, States::On);
+//! board.set_relay(1, State::On);
 //! // and back off
-//! board.set_relay(1, States::Off);
+//! board.set_relay(1, State::Off);
+//!
+//! // Get the status of a relay
+//! assert_eq!(board.get_relay(1), State::Off);
 //! ```
 //!
 //! # About the board
@@ -21,9 +24,13 @@
 //! **Note:** Relay boards need to be programmed with an address before use.
 //! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details.
 //!
-//! We use the STR1 line of relay boards from smart_hardware, based in Bulgaria. You can buy
+//! We use the STR1 line of relay boards from `smart_hardware`, based in Bulgaria. You can buy
 //! these relay boards on eBay. Two examples of boards we use are STR116 and STR008,
-//! having 16 or 8 relays respectively. Software should work with either one.
+//! having 16 or 8 relays respectively. Software should work with either one. If you're using an STR008, you can still ask
+//! for the status of a relay out of bounds, 12 for example. If the relay doesn't exist, it will silently fail or return `Off`.
+//!
+//! These relay boards are the most basic controller in our brewing rig. Check out [Adaptiman's brewing blog](https://adaptiman.com/category/brewing/)
+//! for more information on our particular setup.
 //!
 //!
 //! # Links:
@@ -95,10 +102,6 @@ impl Str1 {
     }
 
     /// Sets a relay On or Off
-    ///
-    /// `relay_num` should be the address of a relay on the board.
-    ///
-    /// If the provided relay number is out of range, this will silently fail.
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
         let bytestring = match state {
             On => self.get_write_bytestring(relay_num, 1),
@@ -112,9 +115,14 @@ impl Str1 {
         };
     }
 
+    /// Gets the status of a relay
     pub fn get_relay(&mut self, relay_num: u8) -> State {
+        if relay_num > 15 {
+            return Off;
+        }
+
         // This bytstring is always the same
-        let bytestring = r#"55aa07140200102d77"#;
+        let bytestring = format!("55aa0714{}00102d77", self.address);
         let mut port = Str1::port();
 
         match port.write(&hex::decode(bytestring).expect("Couldn't decode hex")) {
@@ -137,6 +145,7 @@ impl Str1 {
         }
     }
 
+    // The write bytestring is a little long
     fn get_write_bytestring(&self, relay_number: u8, state: u8) -> Vec<u8> {
         let address = zfill(self.address.parse::<u8>().expect("Couldnt parse address number to u8"));
         let relay_num = zfill(relay_number);
