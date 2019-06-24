@@ -7,3 +7,14 @@ edition = "2018"
 [dependencies]
 hex = "0.3.2"
 serialport = "3.3.0"
+
+[package]
+description = "Brewkit drivers"
+documentation = "https://github.com/NavasotaBrewing/brewdrivers"
+homepage = "https://github.com/NavasotaBrewing/brewdrivers"
+repository = "https://github.com/NavasotaBrewing/brewdrivers"
+readme = "readme.md"
+keywords = ["serial", "hardware", "brewing", "control", "driver"]
+categories = ["hardware-support", "network-programming"]
+license = "MIT"
+license-file = "LICENSE"
