@@ -1,28 +1,15 @@
-//! Driver for an STR1XX relay board
+//! Driver for an `STR1XX` relay board
 //!
-//! # Examples
-//!
-//! ```rust
-//! use Str1::{Str1, State};
-//!
-//! // Takes the address
-//! let mut board = Str1::new(2);
-//! // Turn relay 1 on
-//! board.set_relay(1, State::On);
-//! // and back off
-//! board.set_relay(1, State::Off);
-//!
-//! // Get the status of a relay
-//! assert_eq!(board.get_relay(1), State::Off);
-//! ```
+//! **See the doc page for the `Str1` struct for examples**
 //!
 //! # About the board
 //!
-//! Relay boards contains relays, which can be on or off. Physical devices like valves and pumps
+//! Relay boards contain relays, which can be on or off. Physical devices like valves and pumps
 //! can be connected to relays in order to be toggled on and off.
 //!
 //! **Note:** Relay boards need to be programmed with an address before use.
-//! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details.
+//! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details. This software provides
+//! a way to change the controller number, see `Str1.set_controller_num`.
 //!
 //! We use the STR1 line of relay boards from `smart_hardware`, based in Bulgaria. You can buy
 //! these relay boards on eBay. Two examples of boards we use are STR116 and STR008,
@@ -62,7 +49,30 @@ pub enum State {
 
 /// Representation of an STR1 board
 ///
-/// This is the main interface for an STR1XX board. See the str1 docs for examples.
+/// This is the main interface for an STR1XX board.
+///
+/// # Examples
+///
+/// ## Toggling some relays:
+/// ```rust
+/// use brewdrivers::str1::{Str1, State};
+///
+/// let mut board = Str1::new(2);
+///
+/// board.set_relay(1, State::On);  // Turn relay 1 on
+/// board.set_relay(1, State::Off); // and back off
+///
+/// // Get the status of a relay
+/// assert_eq!(board.get_relay(1), State::Off);
+/// ```
+///
+/// # Setting the controller number:
+/// ```rust
+/// use brewdrivers::str1::Str1;
+///
+/// let mut board = Str1::new(2); // Use the current controller number (don't forget it!)
+/// board.set_controller_num(4);  // Controller number is changed.
+/// ```
 #[derive(Debug)]
 pub struct Str1 {
     pub address: String
@@ -95,6 +105,23 @@ impl Str1 {
         serialport::open_with_settings(&port_name, &settings).expect("Couldnt open port")
     }
 
+    // Write to the device and return the bytearray it sends back
+    fn write(&self, bytestring: String) -> Vec<u8> {
+        let mut port = Str1::port();
+        match port.write(&hex::decode(&bytestring).expect("Couldn't decode hex")) {
+            Ok(_) => {},
+            Err(_) => println!("Could not write bytestring")
+        };
+
+        let mut output_buf: Vec<u8> = vec![];
+        match port.read_to_end(&mut output_buf) {
+            _ => { /* let this fail (timeout) */ }
+        };
+
+        output_buf
+    }
+
+    // Get a hex checksum on a str
     fn get_checksum(bytestring: &str) -> String {
         let to_check = bytestring.to_string();
         let raw_sum: u8 = hex::decode(&to_check).unwrap().iter().sum();
@@ -102,38 +129,47 @@ impl Str1 {
     }
 
     /// Sets a relay On or Off
+    ///
+    /// ```rust
+    /// // Remember to bring in the State enum
+    /// use brewdrivers::str1::{Str1, State};
+    ///
+    /// let mut str116 = Str1::new(2);
+    /// str116.set_relay(4, State::On); // it's on now
+    /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
-        let bytestring = match state {
-            On => self.get_write_bytestring(relay_num, 1),
-            Off => self.get_write_bytestring(relay_num, 0)
+        let new_state = match state {
+            On => "01",
+            Off => "00"
         };
-        println!("{:?}", &bytestring);
 
-        match Str1::port().write(&bytestring) {
-            Ok(_) => {},
-            Err(_) => println!("Could not set relay!"),
-        };
+        let mut bytestring = format!("55aa0817{}{}01{}checksum77", self.address, zfill(relay_num), new_state);
+
+
+        let checksum = Str1::get_checksum(&bytestring[4..16]);
+        bytestring = bytestring.replace("checksum", &checksum);
+
+        self.write(bytestring);
     }
 
     /// Gets the status of a relay
+    ///
+    /// ```rust
+    /// let mut str116 = Str1::new(2);
+    ///
+    /// str116.get_relay(3); // State::On or State::Off
+    /// str116.get_relay(243); // State::Off (relay doesn't exist)
+    /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
         if relay_num > 15 {
             return Off;
         }
 
-        // This bytstring is always the same
+        // This bytstring is always the same, except for the address number
         let bytestring = format!("55aa0714{}00102d77", self.address);
-        let mut port = Str1::port();
 
-        match port.write(&hex::decode(bytestring).expect("Couldn't decode hex")) {
-            Ok(_) => {},
-            Err(_) => println!("Could not write relay status bytestring")
-        };
-
-        let mut output_buf: Vec<u8> = vec![];
-        match port.read_to_end(&mut output_buf) {
-            _ => { /* let this fail (timeout) */ }
-        };
+        // Write to device and get output
+        let output_buf = self.write(bytestring);
 
         let relay_statuses = &hex::encode(output_buf)[6..38];
 
@@ -145,23 +181,26 @@ impl Str1 {
         }
     }
 
-    // The write bytestring is a little long
-    fn get_write_bytestring(&self, relay_number: u8, state: u8) -> Vec<u8> {
-        let address = zfill(self.address.parse::<u8>().expect("Couldnt parse address number to u8"));
-        let relay_num = zfill(relay_number);
-        let new_state = zfill(state);
+    /// Changes the controller number.
+    ///
+    /// Be careful with this. You need to know the current controller number to access the board, and
+    /// to change the controller number, so don't forget it.
+    /// ```rust
+    /// // Address is 2 at the moment
+    /// let mut str116 = Str1::new(2);
+    /// str116.set_controller_num(3);
+    /// // Address is now 3
+    /// ```
+    pub fn set_controller_num(&mut self, new_cn: u8) {
+        let new_zfilled = zfill(new_cn);
 
-        // This is from adaptibrew
-        //
-        // MA0, MA1, 0x08, 0x17, CN, start number output (relaynumber), \
-        // number of outputs (usually 0x01), 00/01 (off/on), CS (calculated), MAE
-        // need to do a checksum on 0x08, 0x17, CN, relaynumber, 0x01, 0x01
-        let mut bytestring = format!(r#"55aa0817{}{}01{}checksum77"#, address, relay_num, new_state);
+        let mut bytestring = format!("55aa0601{}{}checksum77", self.address, &new_zfilled);
 
-        let checksum = Str1::get_checksum(&bytestring[4..16]);
+        let checksum = Str1::get_checksum(&bytestring[4..12]);
         bytestring = bytestring.replace("checksum", &checksum);
 
-        hex::decode(&bytestring).expect("Couldn't decode bytestring!")
+        self.write(bytestring);
+        self.address = new_zfilled;
     }
 }
 
