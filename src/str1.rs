@@ -37,6 +37,8 @@ use hex;
 use serialport::prelude::*;
 use State::{On, Off};
 
+use std::io::Write;
+
 // Like zfill in python :)
 fn zfill(val: u8) -> String {
     format!("{:02}", val)
@@ -45,6 +47,7 @@ fn zfill(val: u8) -> String {
 /// States of relays
 ///
 /// These relays are binary, only on or off
+#[derive(Debug, PartialEq)]
 pub enum State {
     On,
     Off
@@ -53,6 +56,7 @@ pub enum State {
 /// Representation of an STR1 board
 ///
 /// This is the main interface for an STR1XX board. See the str1 docs for examples.
+#[derive(Debug)]
 pub struct Str1 {
     pub address: String
 }
@@ -73,7 +77,7 @@ impl Str1 {
     fn port() -> Box<SerialPort> {
         let port_name = String::from("/dev/ttyAMA0");
         let mut settings: SerialPortSettings = Default::default();
-        settings.timeout = Duration::from_millis(10);
+        settings.timeout = Duration::from_millis(100);
         settings.baud_rate = 19200;
         settings.data_bits = DataBits::Eight;
         settings.flow_control = FlowControl::None;
@@ -84,8 +88,8 @@ impl Str1 {
         serialport::open_with_settings(&port_name, &settings).expect("Couldnt open port")
     }
 
-    fn get_checksum(bytestring: &str, start: usize, finish: usize) -> String {
-        let to_check = bytestring[start..finish].to_string();
+    fn get_checksum(bytestring: &str) -> String {
+        let to_check = bytestring.to_string();
         let raw_sum: u8 = hex::decode(&to_check).unwrap().iter().sum();
         String::from(hex::encode([raw_sum]))
     }
@@ -100,11 +104,37 @@ impl Str1 {
             On => self.get_write_bytestring(relay_num, 1),
             Off => self.get_write_bytestring(relay_num, 0)
         };
+        println!("{:?}", &bytestring);
 
         match Str1::port().write(&bytestring) {
             Ok(_) => {},
             Err(_) => println!("Could not set relay!"),
         };
+    }
+
+    pub fn get_relay(&mut self, relay_num: u8) -> State {
+        // This bytstring is always the same
+        let bytestring = r#"55aa07140200102d77"#;
+        let mut port = Str1::port();
+
+        match port.write(&hex::decode(bytestring).expect("Couldn't decode hex")) {
+            Ok(_) => {},
+            Err(_) => println!("Could not write relay status bytestring")
+        };
+
+        let mut output_buf: Vec<u8> = vec![];
+        match port.read_to_end(&mut output_buf) {
+            _ => { /* let this fail (timeout) */ }
+        };
+
+        let relay_statuses = &hex::encode(output_buf)[6..38];
+
+        let i: usize = (relay_num as usize) * 2;
+        if &relay_statuses[i..(i + 2)] == "01" {
+            On
+        } else {
+            Off
+        }
     }
 
     fn get_write_bytestring(&self, relay_number: u8, state: u8) -> Vec<u8> {
@@ -119,7 +149,7 @@ impl Str1 {
         // need to do a checksum on 0x08, 0x17, CN, relaynumber, 0x01, 0x01
         let mut bytestring = format!(r#"55aa0817{}{}01{}checksum77"#, address, relay_num, new_state);
 
-        let checksum = Str1::get_checksum(&bytestring, 4, 16);
+        let checksum = Str1::get_checksum(&bytestring[4..16]);
         bytestring = bytestring.replace("checksum", &checksum);
 
         hex::decode(&bytestring).expect("Couldn't decode bytestring!")
@@ -141,5 +171,15 @@ mod tests {
         let s = Str1::new(2);
         assert_eq!("02", s.address);
         assert_ne!("2", s.address);
+    }
+
+    #[test]
+    fn get_relay_status() {
+        let mut s = Str1::new(2);
+        s.set_relay(1, On);
+        assert_eq!(s.get_relay(1), On);
+
+        s.set_relay(1, Off);
+        assert_eq!(s.get_relay(1), Off);
     }
 }
