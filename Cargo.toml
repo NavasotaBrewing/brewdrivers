@@ -5,3 +5,5 @@ authors = ["llamicron <llamicron@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+hex = "0.3.2"
+serialport = "3.3.0"
