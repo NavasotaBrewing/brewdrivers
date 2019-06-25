@@ -44,19 +44,14 @@ fn handle_relay_matches(matches: &ArgMatches) {
         let cn = matches.value_of("controller_num").unwrap().parse::<u8>().unwrap();
         let mut str116 = Str1xx::new(cn);
 
-        let rn_match = matches.value_of("relay_num").unwrap();
-        let rn = match rn_match.parse::<u8>() {
-            Ok(x) => x,
-            Err(_) => {
-                if rn_match == "all" {
-                    println!("Controller {}", cn);
-                    for i in 0..16 { println!("Relay {}: {:>6?}", i, str116.get_relay(i)); }
-                }
-                process::exit(0);
-            }
-        };
+        let rn_matches = matches.value_of("relay_num").unwrap();
 
+        if rn_matches == "all" {
+            str116.list_all_relays();
+            process::exit(0);
+        }
 
+        let rn = rn_matches.parse::<u8>().unwrap();
 
         if let Some(state) = matches.value_of("state") {
             match state.parse::<u8>().unwrap() {

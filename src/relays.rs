@@ -200,6 +200,41 @@ impl Str1xx {
         self.write(bytestring);
         self.address = new_zfilled;
     }
+
+    /// Prints the status off all the relays
+    ///
+    /// ## Examples
+    /// ```rust
+    /// let mut str116 = Str1xx::new(2);
+    ///
+    /// str116.list_all_relays();
+    /// ```
+    /// Will print:
+    /// ```
+    /// Controller 02
+    /// Relay 0: Off
+    /// Relay 1: On
+    /// Relay 2: Off
+    /// Relay 3: Off
+    /// Relay 4: On
+    /// Relay 5: On
+    /// Relay 6: On
+    /// Relay 7: On
+    /// Relay 8: Off
+    /// Relay 9: Off
+    /// Relay 10: Off
+    /// Relay 11: Off
+    /// Relay 12: Off
+    /// Relay 13: Off
+    /// Relay 14: Off
+    /// Relay 15: Off
+    /// ```
+    pub fn list_all_relays(&mut self) {
+        println!("Controller {}", self.address);
+        for i in 0..16 {
+            println!("Relay {}: {:?}", i, self.get_relay(i));
+        }
+    }
 }
 
 
