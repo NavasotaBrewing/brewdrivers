@@ -9,6 +9,12 @@
 //!
 extern crate serialport;
 extern crate hex;
+extern crate clap;
 
 pub mod relays;
 mod helpers;
+mod cli;
+
+fn main() {
+    cli::run();
+}

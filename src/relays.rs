@@ -97,7 +97,7 @@ impl Str1xx {
         settings.flow_control = FlowControl::None;
         settings.parity = Parity::None;
         settings.stop_bits = StopBits::One;
-        settings.timeout = Duration::from_millis(15);
+        settings.timeout = Duration::from_millis(10);
 
         serialport::open_with_settings(&port_name, &settings).expect("Couldnt open port")
     }
