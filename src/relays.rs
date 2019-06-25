@@ -20,6 +20,10 @@
 //! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details. This software provides
 //! a way to change the controller number, [see here](struct.Str1xx.html#method.set_controller_num).
 //!
+//! # Command Line Usage
+//! This crate provides a command line interface (CLI) for interacting with hardware.
+//! See CLI usage [here](cli/index.html).
+//!
 //! # Links:
 //!
 //! * [STR1XX board description on eBay](https://bit.ly/31PUi8W)

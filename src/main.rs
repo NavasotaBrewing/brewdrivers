@@ -12,8 +12,8 @@ extern crate hex;
 extern crate clap;
 
 pub mod relays;
+pub mod cli;
 mod helpers;
-mod cli;
 
 fn main() {
     cli::run();

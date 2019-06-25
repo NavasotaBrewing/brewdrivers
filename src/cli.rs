@@ -1,3 +1,45 @@
+//! This is the command line interface (CLI) for `brewdrivers`.
+//! It provides a way to a) run the brewdrivers server and
+//! b) interact with the hardware directly from the
+//! command line (normally for debugging and testing).
+//!
+//! To run it, just run the `brewdrivers` binary provided in the Github releases,
+//! or you can run it from Rust through the [`cli::run`](fn.run.html) function
+//! # Commands
+//! ## Server
+//! ```
+//! Coming soon...
+//! ```
+//! ## Relays
+//! From the CLI you can:
+//! 1. Set a relay
+//! 2. Get a relay status
+//! 3. Get all relay statuses
+//! 4. Set controller number
+//!
+//! ```
+//! // Set a relay
+//! // Provide controller number, relay number, and new state
+//! // This turns relay 4 on controller #2 on
+//! $ brewdrivers relay 2 4 1
+//! // And back off again
+//! $ brewdrivers relay 2 4 0
+//!
+//! // Get a relay status
+//! // Same as above, but don't provide a state
+//! $ brewdrivers relay 2 4
+//!
+//! // Get all relay statuses
+//! $ brewdrivers relay 2 all
+//! Relay 0: Off
+//! Relay 1: On
+//! ...
+//!
+//! // Set controller number
+//! Coming soon...
+//! ```
+//!
+
 use std::process;
 
 use crate::relays::Str1xx;
@@ -5,7 +47,7 @@ use crate::relays::State;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-pub fn matches() -> ArgMatches<'static> {
+fn matches() -> ArgMatches<'static> {
     return App::new("Brewdrivers")
         .version(env!("CARGO_PKG_VERSION"))
         .author("llamicron <llamicron@gmail.com>")
@@ -31,6 +73,7 @@ pub fn matches() -> ArgMatches<'static> {
     .get_matches();
 }
 
+/// Runs the CLi
 pub fn run() {
     let matches = matches();
 
