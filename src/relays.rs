@@ -81,6 +81,18 @@ impl Str1xx {
     /// Address should be the address previously programmed into the relay board.
     ///
     /// See the [commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details on programming the number
+    ///
+    /// # Examples
+    /// ```rust
+    /// // Remember to use it
+    /// use brewdrivers::relays::Str1xx;
+    ///
+    /// // It needs to be declared as mutable
+    /// let mut str116 = Str1xx::new(2);
+    ///
+    /// str116.get_relay(2);
+    /// // ...
+    /// ```
     pub fn new(address: u8) -> Str1xx {
         Str1xx {
             address: zfill(address)
@@ -127,8 +139,9 @@ impl Str1xx {
 
     /// Sets a relay On or Off
     ///
+    /// # Examples
     /// ```rust
-    /// // Remember to bring in the State enum
+    /// // Remember to bring in the State enum too
     /// use brewdrivers::relays::{Str1xx, State};
     ///
     /// let mut str116 = Str1xx::new(2);
@@ -149,13 +162,16 @@ impl Str1xx {
         self.write(bytestring);
     }
 
-    /// Gets the status of a relay
+    /// Gets the status of a relay.
     ///
+    /// To print the status of all relays, see [`list_all_relays`](struct.Str1xx.html#method.list_all_relays)
+    ///
+    /// # Examples
     /// ```rust
     /// let mut str116 = Str1xx::new(2);
     ///
-    /// str116.get_relay(3); // State::On or State::Off
-    /// str116.get_relay(243); // State::Off (relay doesn't exist)
+    /// str116.get_relay(3);   // State::On or State::Off
+    /// str116.get_relay(243); // State::Off (even though relay doesn't exist)
     /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
         if relay_num > 15 {
@@ -182,6 +198,8 @@ impl Str1xx {
     ///
     /// Be careful with this. You need to know the current controller number to access the board, and
     /// to change the controller number, so don't forget it.
+    ///
+    /// # Examples
     /// ```rust
     /// // Address is 2 at the moment
     /// let mut str116 = Str1xx::new(2);
@@ -203,7 +221,7 @@ impl Str1xx {
 
     /// Prints the status off all the relays
     ///
-    /// ## Examples
+    /// # Examples
     /// ```rust
     /// let mut str116 = Str1xx::new(2);
     ///
