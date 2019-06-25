@@ -1,24 +1,24 @@
-//! Driver for an `STR1XX` relay board
+//! Drivers for relay boards
 //!
-//! **See the doc page for the `Str1` struct for examples**
+//! **Note:** examples are in the struct documentation. See [here](struct.Str1xx.html#examples) for STR1XX boards.
 //!
-//! # About the board
+//! # About the boards
 //!
 //! Relay boards contain relays, which can be on or off. Physical devices like valves and pumps
 //! can be connected to relays in order to be toggled on and off.
 //!
-//! **Note:** Relay boards need to be programmed with an address before use.
-//! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details. This software provides
-//! a way to change the controller number, see `Str1.set_controller_num`.
-//!
-//! We use the STR1 line of relay boards from `smart_hardware`, based in Bulgaria. You can buy
+//! We use the STR1XX line of relay boards from `smart_hardware`, based in Bulgaria. You can buy
 //! these relay boards on eBay. Two examples of boards we use are STR116 and STR008,
-//! having 16 or 8 relays respectively. Software should work with either one. If you're using an STR008, you can still ask
+//! having 16 or 8 relays respectively. Software should work with either one, as the only difference is
+//! the number of relays available. If you're using an STR008, you can still ask
 //! for the status of a relay out of bounds, 12 for example. If the relay doesn't exist, it will silently fail or return `Off`.
 //!
 //! These relay boards are the most basic controller in our brewing rig. Check out [Adaptiman's brewing blog](https://adaptiman.com/category/brewing/)
 //! for more information on our particular setup.
 //!
+//! **Note:** Relay boards need to be programmed with an address before use.
+//! See the [commands manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details. This software provides
+//! a way to change the controller number, [see here](struct.Str1xx.html#method.set_controller_num).
 //!
 //! # Links:
 //!
@@ -26,28 +26,25 @@
 //! * [Commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
 //!
 use std::time::Duration;
+use std::io::Write;
 
 use hex;
 use serialport::prelude::*;
+use crate::helpers::zfill;
+
 use State::{On, Off};
 
-use std::io::Write;
-
-// Like zfill in python :)
-fn zfill(val: u8) -> String {
-    format!("{:02}", val)
-}
 
 /// States of relays
 ///
-/// These relays are binary, only on or off
+/// Relays on these boards are binary, only on or off
 #[derive(Debug, PartialEq)]
 pub enum State {
     On,
     Off
 }
 
-/// Representation of an STR1 board
+/// Representation of an STR1XX board
 ///
 /// This is the main interface for an STR1XX board.
 ///
@@ -55,9 +52,9 @@ pub enum State {
 ///
 /// ## Toggling some relays:
 /// ```rust
-/// use brewdrivers::str1::{Str1, State};
+/// use brewdrivers::relays::{Str1xx, State};
 ///
-/// let mut board = Str1::new(2);
+/// let mut board = Str1xx::new(2);
 ///
 /// board.set_relay(1, State::On);  // Turn relay 1 on
 /// board.set_relay(1, State::Off); // and back off
@@ -66,26 +63,26 @@ pub enum State {
 /// assert_eq!(board.get_relay(1), State::Off);
 /// ```
 ///
-/// # Setting the controller number:
+/// ## Setting the controller number:
 /// ```rust
-/// use brewdrivers::str1::Str1;
+/// use brewdrivers::relays::Str1xx;
 ///
-/// let mut board = Str1::new(2); // Use the current controller number (don't forget it!)
+/// let mut board = Str1xx::new(2); // Use the current controller number (don't forget it!)
 /// board.set_controller_num(4);  // Controller number is changed.
 /// ```
 #[derive(Debug)]
-pub struct Str1 {
+pub struct Str1xx {
     pub address: String
 }
 
-impl Str1 {
-    /// Returns a new Str1 controller struct.
+impl Str1xx {
+    /// Returns a new Str1xx controller struct.
     ///
     /// Address should be the address previously programmed into the relay board.
     ///
     /// See the [commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details on programming the number
-    pub fn new(address: u8) -> Str1 {
-        Str1 {
+    pub fn new(address: u8) -> Str1xx {
+        Str1xx {
             address: zfill(address)
         }
     }
@@ -107,7 +104,7 @@ impl Str1 {
 
     // Write to the device and return the bytearray it sends back
     fn write(&self, bytestring: String) -> Vec<u8> {
-        let mut port = Str1::port();
+        let mut port = Str1xx::port();
         match port.write(&hex::decode(&bytestring).expect("Couldn't decode hex")) {
             Ok(_) => {},
             Err(_) => println!("Could not write bytestring")
@@ -132,9 +129,9 @@ impl Str1 {
     ///
     /// ```rust
     /// // Remember to bring in the State enum
-    /// use brewdrivers::str1::{Str1, State};
+    /// use brewdrivers::relays::{Str1xx, State};
     ///
-    /// let mut str116 = Str1::new(2);
+    /// let mut str116 = Str1xx::new(2);
     /// str116.set_relay(4, State::On); // it's on now
     /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
@@ -146,7 +143,7 @@ impl Str1 {
         let mut bytestring = format!("55aa0817{}{}01{}checksum77", self.address, zfill(relay_num), new_state);
 
 
-        let checksum = Str1::get_checksum(&bytestring[4..16]);
+        let checksum = Str1xx::get_checksum(&bytestring[4..16]);
         bytestring = bytestring.replace("checksum", &checksum);
 
         self.write(bytestring);
@@ -155,7 +152,7 @@ impl Str1 {
     /// Gets the status of a relay
     ///
     /// ```rust
-    /// let mut str116 = Str1::new(2);
+    /// let mut str116 = Str1xx::new(2);
     ///
     /// str116.get_relay(3); // State::On or State::Off
     /// str116.get_relay(243); // State::Off (relay doesn't exist)
@@ -187,7 +184,8 @@ impl Str1 {
     /// to change the controller number, so don't forget it.
     /// ```rust
     /// // Address is 2 at the moment
-    /// let mut str116 = Str1::new(2);
+    /// let mut str116 = Str1xx::new(2);
+    ///
     /// str116.set_controller_num(3);
     /// // Address is now 3
     /// ```
@@ -196,7 +194,7 @@ impl Str1 {
 
         let mut bytestring = format!("55aa0601{}{}checksum77", self.address, &new_zfilled);
 
-        let checksum = Str1::get_checksum(&bytestring[4..12]);
+        let checksum = Str1xx::get_checksum(&bytestring[4..12]);
         bytestring = bytestring.replace("checksum", &checksum);
 
         self.write(bytestring);
@@ -210,20 +208,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_zfill() {
-        assert_eq!("02", zfill(2));
-        assert_eq!("05", zfill(5));
-        assert_eq!("14", zfill(14));
-        assert_eq!("145", zfill(145));
-
-        let s = Str1::new(2);
-        assert_eq!("02", s.address);
-        assert_ne!("2", s.address);
-    }
-
-    #[test]
-    fn get_relay_status() {
-        let mut s = Str1::new(2);
+    fn toggle_relays() {
+        let mut s = Str1xx::new(2);
         s.set_relay(1, On);
         assert_eq!(s.get_relay(1), On);
 

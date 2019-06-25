@@ -11,7 +11,6 @@ readme = "readme.md"
 keywords = ["serial", "hardware", "brewing", "control", "driver"]
 categories = ["hardware-support", "network-programming"]
 license = "MIT"
-license-file = "LICENSE"
 
 [dependencies]
 hex = "0.3.2"
