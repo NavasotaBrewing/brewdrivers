@@ -31,10 +31,11 @@
 //!
 use std::time::Duration;
 use std::io::Write;
+use std::str;
 
 use hex;
 use serialport::prelude::*;
-use crate::helpers::zfill;
+use crate::helpers::to_hex;
 
 use State::{On, Off};
 
@@ -76,7 +77,7 @@ pub enum State {
 /// ```
 #[derive(Debug)]
 pub struct Str1xx {
-    pub address: String
+    pub address: u8
 }
 
 impl Str1xx {
@@ -99,7 +100,7 @@ impl Str1xx {
     /// ```
     pub fn new(address: u8) -> Str1xx {
         Str1xx {
-            address: zfill(address)
+            address
         }
     }
 
@@ -107,8 +108,8 @@ impl Str1xx {
     fn port() -> Box<SerialPort> {
         let port_name = String::from("/dev/ttyAMA0");
         let mut settings: SerialPortSettings = Default::default();
-        settings.timeout = Duration::from_millis(100);
-        settings.baud_rate = 19200;
+        settings.timeout = Duration::from_millis(20);
+        settings.baud_rate = 9600;
         settings.data_bits = DataBits::Eight;
         settings.flow_control = FlowControl::None;
         settings.parity = Parity::None;
@@ -121,6 +122,7 @@ impl Str1xx {
     // Write to the device and return the bytearray it sends back
     fn write(&self, bytestring: String) -> Vec<u8> {
         let mut port = Str1xx::port();
+        println!("{:?}", bytestring);
         match port.write(&hex::decode(&bytestring).expect("Couldn't decode hex")) {
             Ok(_) => {},
             Err(_) => println!("Could not write bytestring")
@@ -135,10 +137,24 @@ impl Str1xx {
     }
 
     // Get a hex checksum on a str
-    fn get_checksum(bytestring: &str) -> String {
-        let to_check = bytestring.to_string();
-        let raw_sum: u8 = hex::decode(&to_check).unwrap().iter().sum();
-        String::from(hex::encode([raw_sum]))
+    pub fn get_checksum(bytestring: &str) -> String {
+        // Split by 2 chars
+        let subs = bytestring.to_string().as_bytes()
+            .chunks(2)
+            .map(str::from_utf8)
+            .collect::<Result<Vec<&str>, _>>()
+            .unwrap();
+
+        // Decode each pair of chars and add the sum
+        let mut sum: u32 = 0;
+        for piece in subs {
+            sum += hex::decode(&piece).unwrap()[0] as u32;
+        }
+
+        // Sum back to hex
+        let sum_string = format!("{:x}", sum);
+        // Return only the last 2 chars
+        sum_string[sum_string.len() - 2..].to_string()
     }
 
     /// Sets a relay On or Off
@@ -153,11 +169,11 @@ impl Str1xx {
     /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
         let new_state = match state {
-            On => "01",
-            Off => "00"
+            On => to_hex(1),
+            Off => to_hex(0)
         };
 
-        let mut bytestring = format!("55aa0817{}{}01{}checksum77", self.address, zfill(relay_num), new_state);
+        let mut bytestring = format!("55aa0817{}{}01{}checksum77", to_hex(self.address), to_hex(relay_num), new_state);
 
 
         let checksum = Str1xx::get_checksum(&bytestring[4..16]);
@@ -178,12 +194,8 @@ impl Str1xx {
     /// str116.get_relay(243); // State::Off (even though relay doesn't exist)
     /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
-        if relay_num > 15 {
-            return Off;
-        }
-
         // This bytstring is always the same, except for the address number
-        let bytestring = format!("55aa0714{}00102d77", self.address);
+        let bytestring = format!("55aa0714{}00102d77", to_hex(self.address));
 
         // Write to device and get output
         let output_buf = self.write(bytestring);
@@ -212,15 +224,14 @@ impl Str1xx {
     /// // Address is now 3
     /// ```
     pub fn set_controller_num(&mut self, new_cn: u8) {
-        let new_zfilled = zfill(new_cn);
 
-        let mut bytestring = format!("55aa0601{}{}checksum77", self.address, &new_zfilled);
+        let mut bytestring = format!("55aa0601{}{}checksum77", to_hex(self.address), &to_hex(new_cn));
 
         let checksum = Str1xx::get_checksum(&bytestring[4..12]);
         bytestring = bytestring.replace("checksum", &checksum);
 
         self.write(bytestring);
-        self.address = new_zfilled;
+        self.address = new_cn;
     }
 
     /// Prints the status off all the relays
@@ -252,7 +263,7 @@ impl Str1xx {
     /// Relay 15: Off
     /// ```
     pub fn list_all_relays(&mut self) {
-        println!("Controller {}", self.address);
+        println!("Controller {} (Dec. {})", to_hex(self.address), self.address);
         for i in 0..16 {
             println!("Relay {}: {:?}", i, self.get_relay(i));
         }
@@ -266,11 +277,16 @@ mod tests {
 
     #[test]
     fn toggle_relays() {
-        let mut s = Str1xx::new(2);
+        let mut s = Str1xx::new(254);
         s.set_relay(1, On);
         assert_eq!(s.get_relay(1), On);
 
         s.set_relay(1, Off);
         assert_eq!(s.get_relay(1), Off);
+    }
+
+    #[test]
+    fn checksum() {
+        assert_eq!("20", Str1xx::get_checksum("0817fe010101"));
     }
 }
