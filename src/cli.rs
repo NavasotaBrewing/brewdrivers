@@ -1,3 +1,5 @@
+//! Command line interaction for all driver modules
+//!
 //! This is the command line interface (CLI) for `brewdrivers`.
 //! It provides a way to a) run the brewdrivers server and
 //! b) interact with the hardware directly from the
