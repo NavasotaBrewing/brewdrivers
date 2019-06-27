@@ -25,4 +25,5 @@ fn main() {
     let mut board = relays::Str1xx::new(254);
     board.set_relay(3, relays::State::Off);
     board.set_relay(3, relays::State::On);
+    board.get_relay(3);
 }

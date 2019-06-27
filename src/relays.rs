@@ -32,7 +32,6 @@
 use std::time::Duration;
 use std::io::Write;
 use std::str;
-// use std::thread::sleep;
 
 use hex;
 use serialport::prelude::*;
@@ -41,64 +40,19 @@ use crate::helpers::to_hex;
 use State::{On, Off};
 
 
-/// States of relays
-///
-/// Relays on these boards are binary, only on or off
 #[derive(Debug, PartialEq)]
 pub enum State {
     On,
     Off
 }
 
-/// Representation of an STR1XX board
-///
-/// This is the main interface for an STR1XX board.
-///
-/// # Examples
-///
-/// ## Toggling some relays:
-/// ```rust
-/// use brewdrivers::relays::{Str1xx, State};
-///
-/// let mut board = Str1xx::new(2);
-///
-/// board.set_relay(1, State::On);  // Turn relay 1 on
-/// board.set_relay(1, State::Off); // and back off
-///
-/// // Get the status of a relay
-/// assert_eq!(board.get_relay(1), State::Off);
-/// ```
-///
-/// ## Setting the controller number:
-/// ```rust
-/// use brewdrivers::relays::Str1xx;
-///
-/// let mut board = Str1xx::new(2); // Use the current controller number (don't forget it!)
-/// board.set_controller_num(4);  // Controller number is changed.
-/// ```
+
 #[derive(Debug)]
 pub struct Str1xx {
     pub address: u8
 }
 
 impl Str1xx {
-    /// Returns a new Str1xx controller struct.
-    ///
-    /// Address should be the address previously programmed into the relay board.
-    ///
-    /// See the [commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details on programming the number
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Remember to use it
-    /// use brewdrivers::relays::Str1xx;
-    ///
-    /// // It needs to be declared as mutable
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.get_relay(2);
-    /// // ...
-    /// ```
     pub fn new(address: u8) -> Str1xx {
         Str1xx {
             address
@@ -121,51 +75,23 @@ impl Str1xx {
     }
 
     // Write to the device and return the bytearray it sends back
-    pub fn write(&self, bytestring: String) -> Vec<u8> {
+    pub fn write(&self, bytestring: Bytestring) -> Vec<u8> {
         let mut port = Str1xx::port();
-        match port.write(&hex::decode(&bytestring).expect("Couldn't decode hex")) {
-            Ok(_) => {
-                let mut output_buf: Vec<u8> = vec![];
-                match port.read_to_end(&mut output_buf) {
-                    _ => { /* let this fail (timeout) */ }
-                };
 
-                return output_buf;
-            },
-            Err(_) => println!("Could not write bytestring")
+        match port.write(&bytestring.to_bytes()) {
+            Ok(_) => {},
+            Err(_) => println!("Error writing to serial device!"),
+        };
+
+        let mut output_buf: Vec<u8> = vec![];
+        match port.read(&mut output_buf) {
+            Ok(_) => return output_buf,
+            Err(_) => println!("Error reading from serial device!"),
         };
 
         return vec![];
     }
 
-    // Get a hex checksum on a str
-    pub fn get_checksum(bytestring: &str) -> String {
-        // Split by 2 chars
-        let bs = bytestring.to_owned();
-        let subs = bs.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>().unwrap();
-
-        // Decode each pair of chars and add the sum
-        let mut sum: u32 = 0;
-        for piece in subs {
-            sum += hex::decode(&piece).unwrap()[0] as u32;
-        }
-
-        // Sum back to hex
-        let sum_string = format!("{:x}", sum);
-        // Return only the last 2 chars
-        sum_string[sum_string.len() - 2..].to_string()
-    }
-
-    /// Sets a relay On or Off
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Remember to bring in the State enum too
-    /// use brewdrivers::relays::{Str1xx, State};
-    ///
-    /// let mut str116 = Str1xx::new(2);
-    /// str116.set_relay(4, State::On); // it's on now
-    /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
         let new_state = match state {
             On => 1,
@@ -177,90 +103,23 @@ impl Str1xx {
         // MA0, MA1, CS, and MAE are added automatically
         let bytestring = Bytestring::from(vec![8, 23, self.address, relay_num, 1, new_state]);
 
-        self.write(bytestring.full());
+        self.write(bytestring);
     }
 
-    /// Gets the status of a relay.
-    ///
-    /// To print the status of all relays, see [`list_all_relays`](struct.Str1xx.html#method.list_all_relays)
-    ///
-    /// # Examples
-    /// ```rust
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.get_relay(3);   // State::On or State::Off
-    /// str116.get_relay(243); // State::Off (even though relay doesn't exist)
-    /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
-
-        // This bytstring is always the same, except for the address number
-        let bytestring = format!("55aa0714{}0000102d77", to_hex(self.address));
-
-        // Write to device and get output
+        let bytestring = Bytestring::from(vec![7, 20, self.address, relay_num, 1]);
         let output_buf = self.write(bytestring);
-
-        println!("{:?}", output_buf);
-        let relay_statuses = &hex::encode(output_buf)[6..38];
-
-        let i: usize = (relay_num as usize) * 2;
-        if &relay_statuses[i..(i + 2)] == "01" {
-            On
-        } else {
-            Off
-        }
+        println!("{:?}", hex::encode(output_buf));
+        unimplemented!();
     }
 
-    /// Changes the controller number.
-    ///
-    /// Be careful with this. You need to know the current controller number to access the board, and
-    /// to change the controller number, so don't forget it. The other option is to reset the board to factory defaults.
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Address is 2 at the moment
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.set_controller_num(3);
-    /// // Address is now 3
-    /// ```
     pub fn set_controller_num(&mut self, new_cn: u8) {
-        let mut bytestring = format!("55aa0601{}{}checksum77", to_hex(self.address), &to_hex(new_cn));
-
-        let checksum = Str1xx::get_checksum(&bytestring[4..12]);
-        bytestring = bytestring.replace("checksum", &checksum);
-
+        // MA0, MA1, 0x06, 0x01, CN, newCN, CS, MAE
+        let mut bytestring = Bytestring::from(vec![6, 1, self.address, new_cn]);
         self.write(bytestring);
         self.address = new_cn;
     }
 
-    /// Prints the status off all the relays
-    ///
-    /// # Examples
-    /// ```rust
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.list_all_relays();
-    /// ```
-    /// Will print:
-    /// ```
-    /// Controller 02
-    /// Relay 0: Off
-    /// Relay 1: On
-    /// Relay 2: Off
-    /// Relay 3: Off
-    /// Relay 4: On
-    /// Relay 5: On
-    /// Relay 6: On
-    /// Relay 7: On
-    /// Relay 8: Off
-    /// Relay 9: Off
-    /// Relay 10: Off
-    /// Relay 11: Off
-    /// Relay 12: Off
-    /// Relay 13: Off
-    /// Relay 14: Off
-    /// Relay 15: Off
-    /// ```
     pub fn list_all_relays(&mut self) {
         println!("Controller {} (Dec. {})", to_hex(self.address), self.address);
         for i in 0..16 {
@@ -278,11 +137,12 @@ const MA1: &str = "aa";
 const MAE: &str = "77";
 
 #[derive(Debug)]
-struct Bytestring {
+pub struct Bytestring {
     pub data: Vec<u8>,
 }
 
 impl Bytestring {
+    /// Returns a new Bytestring from a Vec<u8> of data bytes
     pub fn from(bytes: Vec<u8>) -> Bytestring {
         Bytestring {
             data: bytes
@@ -303,8 +163,6 @@ impl Bytestring {
         if hex.len() > 2 {
             return None;
         }
-
-        println!("{:?}", hex);
 
         match hex::decode(hex) {
             Ok(val) => Some(val[0]),
@@ -327,6 +185,10 @@ impl Bytestring {
         let data_strings = self.data.iter().map(|&val| Bytestring::to_hex(val) ).collect::<Vec<String>>();
         format!("{}{}{}{}{}", MA0, MA1, data_strings.join(""), self.checksum_as_hex(), MAE)
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        hex::decode(&self.full()).unwrap_or(vec![])
+    }
 }
 
 impl std::fmt::Display for Bytestring {
@@ -340,22 +202,16 @@ impl std::fmt::Display for Bytestring {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn toggle_relays() {
-    //     let mut s = Str1xx::new(254);
-    //     s.set_relay(1, On);
-    //     assert_eq!(s.get_relay(1), On);
+    #[test]
+    fn get_relay_status() {
+        let mut board = Str1xx::new(254);
+        board.set_relay(0, State::Off);
 
-    //     sleep(Duration::from_millis(500));
+        assert_eq!(State::Off, board.get_relay(0));
 
-    //     s.set_relay(1, Off);
-    //     assert_eq!(s.get_relay(1), Off);
-    // }
-
-    // #[test]
-    // fn checksum() {
-    //     assert_eq!("20", Str1xx::get_checksum("0817fe010101"));
-    // }
+        board.set_relay(0, State::On);
+        assert_eq!(State::On, board.get_relay(0));
+    }
 
     #[test]
     fn bytestring_hex_to_u8() {
