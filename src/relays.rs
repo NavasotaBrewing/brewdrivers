@@ -32,6 +32,7 @@
 use std::time::Duration;
 use std::io::Write;
 use std::str;
+// use std::thread::sleep;
 
 use hex;
 use serialport::prelude::*;
@@ -120,30 +121,28 @@ impl Str1xx {
     }
 
     // Write to the device and return the bytearray it sends back
-    fn write(&self, bytestring: String) -> Vec<u8> {
+    pub fn write(&self, bytestring: String) -> Vec<u8> {
         let mut port = Str1xx::port();
-        println!("{:?}", bytestring);
         match port.write(&hex::decode(&bytestring).expect("Couldn't decode hex")) {
-            Ok(_) => {},
+            Ok(_) => {
+                let mut output_buf: Vec<u8> = vec![];
+                match port.read_to_end(&mut output_buf) {
+                    _ => { /* let this fail (timeout) */ }
+                };
+
+                return output_buf;
+            },
             Err(_) => println!("Could not write bytestring")
         };
 
-        let mut output_buf: Vec<u8> = vec![];
-        match port.read_to_end(&mut output_buf) {
-            _ => { /* let this fail (timeout) */ }
-        };
-
-        output_buf
+        return vec![];
     }
 
     // Get a hex checksum on a str
     pub fn get_checksum(bytestring: &str) -> String {
         // Split by 2 chars
-        let subs = bytestring.to_string().as_bytes()
-            .chunks(2)
-            .map(str::from_utf8)
-            .collect::<Result<Vec<&str>, _>>()
-            .unwrap();
+        let bs = bytestring.to_owned();
+        let subs = bs.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>().unwrap();
 
         // Decode each pair of chars and add the sum
         let mut sum: u32 = 0;
@@ -179,7 +178,7 @@ impl Str1xx {
         let checksum = Str1xx::get_checksum(&bytestring[4..16]);
         bytestring = bytestring.replace("checksum", &checksum);
 
-        self.write(bytestring);
+        println!("{:?}", self.write(bytestring));
     }
 
     /// Gets the status of a relay.
@@ -195,11 +194,12 @@ impl Str1xx {
     /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
         // This bytstring is always the same, except for the address number
-        let bytestring = format!("55aa0714{}00102d77", to_hex(self.address));
+        let bytestring = format!("55aa0714{}0000102d77", to_hex(self.address));
 
         // Write to device and get output
         let output_buf = self.write(bytestring);
 
+        println!("{:?}", output_buf);
         let relay_statuses = &hex::encode(output_buf)[6..38];
 
         let i: usize = (relay_num as usize) * 2;
@@ -271,22 +271,126 @@ impl Str1xx {
 }
 
 
+
+// Master start bytes
+const MA0: &str = "55";
+const MA1: &str = "aa";
+// Master end byte
+const MAE: &str = "77";
+
+#[derive(Debug)]
+struct Bytestring {
+    pub data: Vec<u8>,
+}
+
+impl Bytestring {
+    pub fn from(bytes: Vec<u8>) -> Bytestring {
+        Bytestring {
+            data: bytes
+        }
+    }
+
+    /// Converts a u8 to a 2-character hex String
+    pub fn to_hex(val: u8) -> String {
+        let hex = format!("{:x}", val);
+        if hex.len() == 1 {
+            return format!("0{}", hex);
+        }
+        hex
+    }
+
+    /// Converts a 2 character hex String to a u8
+    pub fn to_u8(hex: &str) -> Option<u8> {
+        if hex.len() > 2 {
+            return None;
+        }
+
+        println!("{:?}", hex);
+
+        match hex::decode(hex) {
+            Ok(val) => Some(val[0]),
+            Err(_) => None,
+        }
+    }
+
+    pub fn checksum_as_hex(&self) -> String {
+        let sum = self.data.iter().map(|&val| val as i32 ).sum::<i32>();
+        let hex_string = format!("{:x}", sum);
+        if hex_string.len() == 1 {
+            format!("0{}", hex_string)
+        } else {
+            hex_string[hex_string.len() - 2..].to_string()
+        }
+    }
+
+    /// Returns a string of all bytes as hex
+    pub fn full(&self) -> String {
+        let data_strings = self.data.iter().map(|&val| Bytestring::to_hex(val) ).collect::<Vec<String>>();
+        println!("{:?}", data_strings);
+        format!("{}{}{}{}{}", MA0, MA1, data_strings.join(""), self.checksum_as_hex(), MAE)
+    }
+}
+
+impl std::fmt::Display for Bytestring {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut strings: Vec<String> = vec![];
+
+        for val in &self.data {
+            strings.push(Bytestring::to_hex(*val));
+        }
+        write!(f, "{}", strings.join(""))
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn toggle_relays() {
-        let mut s = Str1xx::new(254);
-        s.set_relay(1, On);
-        assert_eq!(s.get_relay(1), On);
+    // #[test]
+    // fn toggle_relays() {
+    //     let mut s = Str1xx::new(254);
+    //     s.set_relay(1, On);
+    //     assert_eq!(s.get_relay(1), On);
 
-        s.set_relay(1, Off);
-        assert_eq!(s.get_relay(1), Off);
+    //     sleep(Duration::from_millis(500));
+
+    //     s.set_relay(1, Off);
+    //     assert_eq!(s.get_relay(1), Off);
+    // }
+
+    // #[test]
+    // fn checksum() {
+    //     assert_eq!("20", Str1xx::get_checksum("0817fe010101"));
+    // }
+
+    #[test]
+    fn bytestring_can_be_printed_as_hex() {
+        let bs = Bytestring::from(vec![254, 0, 1]);
+        assert_eq!("fe0001".to_string(), format!("{}", bs));
     }
 
     #[test]
-    fn checksum() {
-        assert_eq!("20", Str1xx::get_checksum("0817fe010101"));
+    fn bytestring_hex_to_u8() {
+        assert_eq!(Some(254), Bytestring::to_u8("fe"));
+        assert_eq!(Some(0),   Bytestring::to_u8("00"));
+        assert_eq!(Some(16),  Bytestring::to_u8("10"));
+        assert_eq!(None,      Bytestring::to_u8("0"));
+        assert_eq!(None,      Bytestring::to_u8("fefe"));
     }
+
+    #[test]
+    fn full_bytestring() {
+        assert_eq!("55aafeff01030177", Bytestring::from(vec![254, 255, 1, 3]).full());
+        assert_eq!("55aafefe77", Bytestring::from(vec![254]).full());
+        assert_eq!("55aa010177", Bytestring::from(vec![1]).full());
+        assert_eq!("55aa0077", Bytestring::from(vec![]).full());
+    }
+
+    #[test]
+    fn checksum_as_hex() {
+        let bs = Bytestring::from(vec![5, 5, 10]);
+        assert_eq!("14", bs.checksum_as_hex());
+    }
+
 }

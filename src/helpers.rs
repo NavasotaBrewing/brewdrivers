@@ -3,9 +3,9 @@
 //     format!("{:02}", val)
 // }
 
-// pub fn zfill_string(val: String) -> String {
-//     format!("{:02}", val)
-// }
+pub fn zfill_string(val: String) -> String {
+    format!("{:02}", val)
+}
 
 /// Returns a 2 digit hex
 ///
