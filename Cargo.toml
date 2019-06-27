@@ -1,6 +1,6 @@
 [package]
 name = "brewdrivers"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["llamicron <llamicron@gmail.com>"]
 edition = "2018"
 description = "Brewkit drivers"
@@ -11,6 +11,11 @@ readme = "readme.md"
 keywords = ["serial", "hardware", "brewing", "control", "driver"]
 categories = ["hardware-support", "network-programming"]
 license = "MIT"
+
+# [[bin]]
+# path = "./src"
+# name = "main"
+# doc = false
 
 [dependencies]
 hex = "0.3.2"

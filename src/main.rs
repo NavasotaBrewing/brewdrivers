@@ -7,12 +7,8 @@
 //!
 //! Click on each of the modules below for drivers for that class of hardware.
 //!
-extern crate serialport;
-extern crate hex;
-extern crate clap;
 
-pub mod relays;
-pub mod cli;
+use brewdrivers::cli;
 
 fn main() {
     cli::run();
