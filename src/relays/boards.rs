@@ -143,28 +143,6 @@ impl Str1xx {
             println!("Relay {}: {:?}", i, self.get_relay(i));
         }
     }
-
-    pub fn set_baudrate(&mut self, new_baudrate: u32) {
-        let new_baud_key = match new_baudrate {
-            300 => 0,
-            600 => 1,
-            1200 => 2,
-            2400 => 3,
-            4800 => 4,
-            9600 => 5,
-            19200 => 6,
-            38400 => 7,
-            57600 => 8,
-            115200 => 9,
-            _ => 5
-        };
-        let bytestring = Bytestring::from(vec![8, 51, self.address, 170, 85, new_baud_key]);
-        self.write(bytestring);
-        match self.port.set_baud_rate(new_baudrate) {
-            Ok(_) => {},
-            Err(e) => println!("Could not set baud rate: {}", e),
-        };
-    }
 }
 
 
