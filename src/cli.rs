@@ -58,29 +58,29 @@ fn matches() -> ArgMatches<'static> {
             .about("Controls an STR116 or STR008")
             .arg(Arg::with_name("controller_num")
                 .help("Board controller number")
-                .validator(is_int)
+                .validator(validators::is_int)
                 .required(true)
                 .index(1))
             .arg(Arg::with_name("relay_num")
                 .help("Relay to change")
-                .validator(is_int_or_all)
+                .validator(validators::is_int_or_all)
                 .required(true)
                 .index(2))
             .arg(Arg::with_name("state")
                 .help("Relay state: 1 or 0")
-                .validator(is_int)
+                .validator(validators::is_int)
                 .required(false)
                 .index(3)))
         .subcommand(SubCommand::with_name("set_cn")
             .about("Programs the controller number of a board")
             .arg(Arg::with_name("current_cn")
                 .help("Current controller number")
-                .validator(is_int)
+                .validator(validators::is_int)
                 .required(true)
                 .index(1))
             .arg(Arg::with_name("new_cn")
                 .help("New controller number to set (0-255)")
-                .validator(is_int)
+                .validator(validators::is_int)
                 .required(true)
                 .index(2)))
 
@@ -101,6 +101,7 @@ pub fn run() {
 }
 
 fn handle_set_cn_matches(matches: &ArgMatches) {
+
     let ccn = matches.value_of("current_cn").unwrap().parse::<u8>().unwrap();
     let ncn = matches.value_of("new_cn").unwrap().parse::<u8>().unwrap();
 
@@ -139,19 +140,22 @@ fn handle_relay_matches(matches: &ArgMatches) {
     }
 }
 
-fn is_int(arg: String) -> Result<(), String> {
-    match arg.parse::<u8>() {
-        Ok(_) => return Ok(()),
-        Err(_) => return Err("needs to be an integer".to_string())
-    }
-}
 
-fn is_int_or_all(arg: String) -> Result<(), String> {
-    match arg.parse::<u8>() {
-        Ok(_) => return Ok(()),
-        Err(_) => {
-            if arg == "all".to_string() { return Ok(()); }
+mod validators {
+    pub fn is_int(arg: String) -> Result<(), String> {
+        match arg.parse::<u8>() {
+            Ok(_) => return Ok(()),
+            Err(_) => return Err("needs to be an integer".to_string())
         }
     }
-    Err("needs to be an int or 'all'".to_string())
+
+    pub fn is_int_or_all(arg: String) -> Result<(), String> {
+        match arg.parse::<u8>() {
+            Ok(_) => return Ok(()),
+            Err(_) => {
+                if arg == "all".to_string() { return Ok(()); }
+            }
+        }
+        Err("needs to be an int or 'all'".to_string())
+    }
 }
