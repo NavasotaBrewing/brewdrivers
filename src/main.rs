@@ -22,10 +22,7 @@ mod helpers;
 
 fn main() {
     // cli::run();
-    // println!("{:?}", hex::decode("0"));
-    println!("{:x}", 2);
-    // let mut board = relays::Str1xx::new(254);
-    // board.set_relay(1, relays::State::On);
-    // board.set_relay(1, relays::State::Off);
-    // println!("{:?}", board.get_relay(1));
+    let mut board = relays::Str1xx::new(254);
+    board.set_relay(3, relays::State::Off);
+    board.set_relay(3, relays::State::On);
 }

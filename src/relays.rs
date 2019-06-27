@@ -168,17 +168,16 @@ impl Str1xx {
     /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
         let new_state = match state {
-            On => to_hex(1),
-            Off => to_hex(0)
+            On => 1,
+            Off => 0
         };
 
-        let mut bytestring = format!("55aa0817{}{}01{}checksum77", to_hex(self.address), to_hex(relay_num), new_state);
+        // From the software guide
+        // MA0, MA1, 0x08, 0x17, CN, start number output, number of outputs, 0/1, CS, MAE
+        // MA0, MA1, CS, and MAE are added automatically
+        let bytestring = Bytestring::from(vec![8, 23, self.address, relay_num, 1, new_state]);
 
-
-        let checksum = Str1xx::get_checksum(&bytestring[4..16]);
-        bytestring = bytestring.replace("checksum", &checksum);
-
-        println!("{:?}", self.write(bytestring));
+        self.write(bytestring.full());
     }
 
     /// Gets the status of a relay.
@@ -213,7 +212,7 @@ impl Str1xx {
     /// Changes the controller number.
     ///
     /// Be careful with this. You need to know the current controller number to access the board, and
-    /// to change the controller number, so don't forget it.
+    /// to change the controller number, so don't forget it. The other option is to reset the board to factory defaults.
     ///
     /// # Examples
     /// ```rust
@@ -326,19 +325,13 @@ impl Bytestring {
     /// Returns a string of all bytes as hex
     pub fn full(&self) -> String {
         let data_strings = self.data.iter().map(|&val| Bytestring::to_hex(val) ).collect::<Vec<String>>();
-        println!("{:?}", data_strings);
         format!("{}{}{}{}{}", MA0, MA1, data_strings.join(""), self.checksum_as_hex(), MAE)
     }
 }
 
 impl std::fmt::Display for Bytestring {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut strings: Vec<String> = vec![];
-
-        for val in &self.data {
-            strings.push(Bytestring::to_hex(*val));
-        }
-        write!(f, "{}", strings.join(""))
+        write!(f, "{}", self.full())
     }
 }
 
@@ -363,12 +356,6 @@ mod tests {
     // fn checksum() {
     //     assert_eq!("20", Str1xx::get_checksum("0817fe010101"));
     // }
-
-    #[test]
-    fn bytestring_can_be_printed_as_hex() {
-        let bs = Bytestring::from(vec![254, 0, 1]);
-        assert_eq!("fe0001".to_string(), format!("{}", bs));
-    }
 
     #[test]
     fn bytestring_hex_to_u8() {
