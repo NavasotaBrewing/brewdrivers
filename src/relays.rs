@@ -50,56 +50,56 @@ pub enum State {
     Off
 }
 
-/// Representation of an STR1XX board
-///
-/// This is the main interface for an STR1XX board.
-///
-/// # Examples
-///
-/// ## Toggling some relays:
-/// ```rust
-/// use brewdrivers::relays::{Str1xx, State};
-///
-/// let mut board = Str1xx::new(2);
-///
-/// board.set_relay(1, State::On);  // Turn relay 1 on
-/// board.set_relay(1, State::Off); // and back off
-///
-/// // Get the status of a relay
-/// assert_eq!(board.get_relay(1), State::Off);
-/// ```
-///
-/// ## Setting the controller number:
-/// ```rust
-/// use brewdrivers::relays::Str1xx;
-///
-/// let mut board = Str1xx::new(2); // Use the current controller number (don't forget it!)
-/// board.set_controller_num(4);  // Controller number is changed.
-/// ```
 #[derive(Debug)]
 pub struct Str1xx {
+    /// Representation of an STR1XX board
+    ///
+    /// This is the main interface for an STR1XX board.
+    ///
+    /// # Examples
+    ///
+    /// ## Toggling some relays:
+    /// ```rust
+    /// use brewdrivers::relays::{Str1xx, State};
+    ///
+    /// let mut board = Str1xx::new(2);
+    ///
+    /// board.set_relay(1, State::On);  // Turn relay 1 on
+    /// board.set_relay(1, State::Off); // and back off
+    ///
+    /// // Get the status of a relay
+    /// assert_eq!(board.get_relay(1), State::Off);
+    /// ```
+    ///
+    /// ## Setting the controller number:
+    /// ```rust
+    /// use brewdrivers::relays::Str1xx;
+    ///
+    /// let mut board = Str1xx::new(2); // Use the current controller number (don't forget it!)
+    /// board.set_controller_num(4);  // Controller number is changed.
+    /// ```
     pub address: u8
 }
 
 impl Str1xx {
-    /// Returns a new Str1xx controller struct.
-    ///
-    /// Address should be the address previously programmed into the relay board.
-    ///
-    /// See the [commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details on programming the number
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Remember to use it
-    /// use brewdrivers::relays::Str1xx;
-    ///
-    /// // It needs to be declared as mutable
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.get_relay(2);
-    /// // ...
-    /// ```
     pub fn new(address: u8) -> Str1xx {
+        /// Returns a new Str1xx controller struct.
+        ///
+        /// Address should be the address previously programmed into the relay board.
+        ///
+        /// See the [commands guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) for details on programming the number
+        ///
+        /// # Examples
+        /// ```rust
+        /// // Remember to use it
+        /// use brewdrivers::relays::Str1xx;
+        ///
+        /// // It needs to be declared as mutable
+        /// let mut str116 = Str1xx::new(2);
+        ///
+        /// str116.get_relay(2);
+        /// // ...
+        /// ```
         Str1xx {
             address
         }
@@ -156,17 +156,17 @@ impl Str1xx {
         sum_string[sum_string.len() - 2..].to_string()
     }
 
-    /// Sets a relay On or Off
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Remember to bring in the State enum too
-    /// use brewdrivers::relays::{Str1xx, State};
-    ///
-    /// let mut str116 = Str1xx::new(2);
-    /// str116.set_relay(4, State::On); // it's on now
-    /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) {
+        /// Sets a relay On or Off
+        ///
+        /// # Examples
+        /// ```rust
+        /// // Remember to bring in the State enum too
+        /// use brewdrivers::relays::{Str1xx, State};
+        ///
+        /// let mut str116 = Str1xx::new(2);
+        /// str116.set_relay(4, State::On); // it's on now
+        /// ```
         let new_state = match state {
             On => 1,
             Off => 0
@@ -180,18 +180,19 @@ impl Str1xx {
         self.write(bytestring.full());
     }
 
-    /// Gets the status of a relay.
-    ///
-    /// To print the status of all relays, see [`list_all_relays`](struct.Str1xx.html#method.list_all_relays)
-    ///
-    /// # Examples
-    /// ```rust
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.get_relay(3);   // State::On or State::Off
-    /// str116.get_relay(243); // State::Off (even though relay doesn't exist)
-    /// ```
     pub fn get_relay(&mut self, relay_num: u8) -> State {
+        /// Gets the status of a relay.
+        ///
+        /// To print the status of all relays, see [`list_all_relays`](struct.Str1xx.html#method.list_all_relays)
+        ///
+        /// # Examples
+        /// ```rust
+        /// let mut str116 = Str1xx::new(2);
+        ///
+        /// str116.get_relay(3);   // State::On or State::Off
+        /// str116.get_relay(243); // State::Off (even though relay doesn't exist)
+        /// ```
+
         // This bytstring is always the same, except for the address number
         let bytestring = format!("55aa0714{}0000102d77", to_hex(self.address));
 
@@ -209,6 +210,7 @@ impl Str1xx {
         }
     }
 
+<<<<<<< HEAD
     /// Changes the controller number.
     ///
     /// Be careful with this. You need to know the current controller number to access the board, and
@@ -222,8 +224,22 @@ impl Str1xx {
     /// str116.set_controller_num(3);
     /// // Address is now 3
     /// ```
+=======
+>>>>>>> 8a8c5554d7002a3b5b7cb54c19892e5c201fdc62
     pub fn set_controller_num(&mut self, new_cn: u8) {
-
+        /// Changes the controller number.
+        ///
+        /// Be careful with this. You need to know the current controller number to access the board, and
+        /// to change the controller number, so don't forget it.
+        ///
+        /// # Examples
+        /// ```rust
+        /// // Address is 2 at the moment
+        /// let mut str116 = Str1xx::new(2);
+        ///
+        /// str116.set_controller_num(3);
+        /// // Address is now 3
+        /// ```
         let mut bytestring = format!("55aa0601{}{}checksum77", to_hex(self.address), &to_hex(new_cn));
 
         let checksum = Str1xx::get_checksum(&bytestring[4..12]);
@@ -233,35 +249,35 @@ impl Str1xx {
         self.address = new_cn;
     }
 
-    /// Prints the status off all the relays
-    ///
-    /// # Examples
-    /// ```rust
-    /// let mut str116 = Str1xx::new(2);
-    ///
-    /// str116.list_all_relays();
-    /// ```
-    /// Will print:
-    /// ```
-    /// Controller 02
-    /// Relay 0: Off
-    /// Relay 1: On
-    /// Relay 2: Off
-    /// Relay 3: Off
-    /// Relay 4: On
-    /// Relay 5: On
-    /// Relay 6: On
-    /// Relay 7: On
-    /// Relay 8: Off
-    /// Relay 9: Off
-    /// Relay 10: Off
-    /// Relay 11: Off
-    /// Relay 12: Off
-    /// Relay 13: Off
-    /// Relay 14: Off
-    /// Relay 15: Off
-    /// ```
     pub fn list_all_relays(&mut self) {
+        /// Prints the status off all the relays
+        ///
+        /// # Examples
+        /// ```rust
+        /// let mut str116 = Str1xx::new(2);
+        ///
+        /// str116.list_all_relays();
+        /// ```
+        /// Will print:
+        /// ```
+        /// Controller 02
+        /// Relay 0: Off
+        /// Relay 1: On
+        /// Relay 2: Off
+        /// Relay 3: Off
+        /// Relay 4: On
+        /// Relay 5: On
+        /// Relay 6: On
+        /// Relay 7: On
+        /// Relay 8: Off
+        /// Relay 9: Off
+        /// Relay 10: Off
+        /// Relay 11: Off
+        /// Relay 12: Off
+        /// Relay 13: Off
+        /// Relay 14: Off
+        /// Relay 15: Off
+        /// ```
         println!("Controller {} (Dec. {})", to_hex(self.address), self.address);
         for i in 0..16 {
             println!("Relay {}: {:?}", i, self.get_relay(i));
