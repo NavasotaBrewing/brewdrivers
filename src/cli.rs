@@ -71,6 +71,18 @@ fn matches() -> ArgMatches<'static> {
                 .validator(is_int)
                 .required(false)
                 .index(3)))
+        .subcommand(SubCommand::with_name("set_cn")
+            .about("Programs the controller number of a board")
+            .arg(Arg::with_name("current_cn")
+                .help("Current controller number")
+                .validator(is_int)
+                .required(true)
+                .index(1))
+            .arg(Arg::with_name("new_cn")
+                .help("New controller number to set (0-255)")
+                .validator(is_int)
+                .required(true)
+                .index(2)))
 
     .get_matches();
 }
@@ -83,36 +95,48 @@ pub fn run() {
         handle_relay_matches(&matches);
     }
 
+    if let Some(matches) = matches.subcommand_matches("set_cn") {
+        handle_set_cn_matches(matches);
+    }
+}
+
+fn handle_set_cn_matches(matches: &ArgMatches) {
+    let ccn = matches.value_of("current_cn").unwrap().parse::<u8>().unwrap();
+    let ncn = matches.value_of("new_cn").unwrap().parse::<u8>().unwrap();
+
+    let mut board = Str1xx::new(ccn);
+    board.set_controller_num(ncn);
+    println!("Controller {} -> Controller {}", ccn, ncn);
 }
 
 fn handle_relay_matches(matches: &ArgMatches) {
-        let cn = matches.value_of("controller_num").unwrap().parse::<u8>().unwrap();
-        let mut str116 = Str1xx::new(cn);
+    let cn = matches.value_of("controller_num").unwrap().parse::<u8>().unwrap();
+    let mut str116 = Str1xx::new(cn);
 
-        let rn_matches = matches.value_of("relay_num").unwrap();
+    let rn_matches = matches.value_of("relay_num").unwrap();
 
-        if rn_matches == "all" {
-            str116.list_all_relays();
-            process::exit(0);
-        }
+    if rn_matches == "all" {
+        str116.list_all_relays();
+        process::exit(0);
+    }
 
-        let rn = rn_matches.parse::<u8>().unwrap();
+    let rn = rn_matches.parse::<u8>().unwrap();
 
-        if let Some(state) = matches.value_of("state") {
-            match state.parse::<u8>().unwrap() {
-                1 => {
-                    println!("*click*\nTurning relay {} on controller {} on", rn, cn);
-                    str116.set_relay(rn, State::On)
-                },
-                0 => {
-                    println!("*click*\nTurning relay {} on controller {} off", rn, cn);
-                    str116.set_relay(rn, State::Off)
-                },
-                _ => {}
-            };
-        } else {
-            println!("Controller {} relay {} is {:?}", cn, rn, str116.get_relay(rn));
-        }
+    if let Some(state) = matches.value_of("state") {
+        match state.parse::<u8>().unwrap() {
+            1 => {
+                println!("*click*\nTurning relay {} on controller {} on", rn, cn);
+                str116.set_relay(rn, State::On)
+            },
+            0 => {
+                println!("*click*\nTurning relay {} on controller {} off", rn, cn);
+                str116.set_relay(rn, State::Off)
+            },
+            _ => {}
+        };
+    } else {
+        println!("Controller {} relay {} is {:?}", cn, rn, str116.get_relay(rn));
+    }
 }
 
 fn is_int(arg: String) -> Result<(), String> {

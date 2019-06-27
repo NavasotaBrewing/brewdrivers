@@ -14,10 +14,6 @@ extern crate clap;
 pub mod relays;
 pub mod cli;
 
-use relays::Bytestring;
-
 fn main() {
-    // cli::run();
-    let mut board = relays::Str1xx::new(2);
-    board.get_relay(1);
+    cli::run();
 }
