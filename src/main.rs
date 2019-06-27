@@ -13,17 +13,11 @@ extern crate clap;
 
 pub mod relays;
 pub mod cli;
-mod helpers;
 
-// Temp
-// use serialport::prelude::*;
-// use std::time::Duration;
-// use std::thread::sleep;
+use relays::Bytestring;
 
 fn main() {
     // cli::run();
-    let mut board = relays::Str1xx::new(254);
-    board.set_relay(3, relays::State::Off);
-    board.set_relay(3, relays::State::On);
-    board.get_relay(3);
+    let mut board = relays::Str1xx::new(2);
+    board.get_relay(1);
 }
