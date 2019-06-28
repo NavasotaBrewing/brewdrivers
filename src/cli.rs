@@ -119,11 +119,11 @@ fn handle_relay_matches(matches: &ArgMatches) {
     if let Some(state) = matches.value_of("state") {
         match state.parse::<u8>().unwrap() {
             1 => {
-                println!("*click*\nTurning relay {} on controller {} on", rn, cn);
+                println!("*click*\nController {}, relay {} on", cn, rn);
                 str116.set_relay(rn, State::On)
             },
             0 => {
-                println!("*click*\nTurning relay {} on controller {} off", rn, cn);
+                println!("*click*\nController {}, relay {} off", cn, rn);
                 str116.set_relay(rn, State::Off)
             },
             _ => {}
