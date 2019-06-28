@@ -16,4 +16,6 @@ license = "MIT"
 hex = "0.3.2"
 serialport = "3.3.0"
 clap = "2.33.0"
-
+tokio-modbus = "*"
+futures = "0.1.28"
+tokio = "*"

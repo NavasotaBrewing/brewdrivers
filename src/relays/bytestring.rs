@@ -7,6 +7,7 @@ const MA1: &str = "aa";
 const MAE: &str = "77";
 
 
+#[derive(Debug)]
 pub struct Bytestring {
     pub data: Vec<u8>,
 }

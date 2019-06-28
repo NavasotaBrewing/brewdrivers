@@ -51,11 +51,12 @@ impl Str1xx {
     fn port() -> TTYPort {
         let mut settings: SerialPortSettings = Default::default();
         settings.timeout = Duration::from_millis(20);
-        settings.baud_rate = 19200;
+        settings.baud_rate = 9600;
         settings.data_bits = DataBits::Eight;
         settings.flow_control = FlowControl::None;
         settings.parity = Parity::None;
         settings.stop_bits = StopBits::One;
+
 
         TTYPort::open(&Path::new("/dev/ttyAMA0"), &settings).expect("Couldn't open port")
     }
@@ -107,8 +108,9 @@ impl Str1xx {
     }
 
     pub fn list_all_relays(&mut self) {
-        println!("Controller {} (Dec. {})", Bytestring::to_hex(self.address), self.address);
+        println!("Controller {}", self.address);
         for i in 0..16 {
+            std::thread::sleep(Duration::from_millis(10));
             println!("Relay {}: {:?}", i, self.get_relay(i));
         }
     }

@@ -1,28 +1,21 @@
 //! Command line interaction for all driver modules
 //!
 //! This is the command line interface (CLI) for `brewdrivers`.
-//! It provides a way to a) run the brewdrivers server and
-//! b) interact with the hardware directly from the
-//! command line (normally for debugging and testing).
+//! It provides a way to interact with the hardware directly (normally for debugging and testing).
 //!
-//! To run it, just run the `brewdrivers` binary provided in the Github releases,
-//! or you can run it from Rust through the [`cli::run`](fn.run.html) function
+//! To run it, just run the `brewdrivers` binary provided in the Github releases, or compile the latest version of `brewdrivers`.
+//!
+//!
 //! # Commands
-//! ## Server
-//! ```
-//! Coming soon...
-//! ```
-//! ## Relays
-//! From the CLI you can:
-//! 1. Set a relay
-//! 2. Get a relay status
-//! 3. Get all relay statuses
-//! 4. Set controller number
+//! You can always run `brewdrivers help` or `brewdrivers <subcommand> help`
+//! to get a list of paramaters, extra information about a command, version numbers, etc.
 //!
-//! ```
+//! ## Relays
+//!
+//! ```text
 //! // Set a relay
 //! // Provide controller number, relay number, and new state
-//! // This turns relay 4 on controller #2 on
+//! // This turns relay 4 on controller 2 on
 //! $ brewdrivers relay 2 4 1
 //! // And back off again
 //! $ brewdrivers relay 2 4 0
@@ -31,14 +24,14 @@
 //! // Same as above, but don't provide a state
 //! $ brewdrivers relay 2 4
 //!
-//! // Get all relay statuses
+//! // Get all relay statuses on controller 2
 //! $ brewdrivers relay 2 all
 //! Relay 0: Off
 //! Relay 1: On
 //! ...
 //!
 //! // Set controller number
-//! Coming soon...
+//! $ brewdrivers set_cn 2 3
 //! ```
 //!
 
