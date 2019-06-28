@@ -34,16 +34,16 @@ pub enum BaudRate {
 
 
 #[derive(Debug)]
-pub struct Str1xx {
+pub struct STR1 {
     pub address: u8,
     pub port: TTYPort,
 }
 
-impl Str1xx {
-    pub fn new(address: u8) -> Str1xx {
-        Str1xx {
+impl STR1 {
+    pub fn new(address: u8) -> STR1 {
+        STR1 {
             address,
-            port: Str1xx::port()
+            port: STR1::port()
         }
     }
 
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn get_relay_status() {
-        let mut board = Str1xx::new(2);
+        let mut board = STR1::new(2);
         board.set_relay(0, State::Off);
 
         assert_eq!(State::Off, board.get_relay(0));
