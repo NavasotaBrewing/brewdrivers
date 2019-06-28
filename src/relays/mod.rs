@@ -1,5 +1,16 @@
 //! Drivers for relay boards
 //!
+//! Relay boards contain relays, which can be on or off. Physical devices like valves and pumps
+//! can be connected to relays in order to be toggled on and off. These boards usually communicate over a serial protocol, like RS-485.
+//! Any device on our brew rig that can be toggled, like a pump or a valve, will use a relay.
+//!
+//! Supported Boards:
+//! * [SmartHardware STR116 or STR008](struct.Str1xx.html)
+//! * more to come...
+//!
+//! # Quickstart
+//! If you just want to control an STR116 or and STR008 board, see [here](struct.Str1xx.html).
+//!
 //! **Note:** examples are in the struct documentation. See [here](struct.Str1xx.html#examples) for STR1XX boards.
 //!
 //! # Hardware

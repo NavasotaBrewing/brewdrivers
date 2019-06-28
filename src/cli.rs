@@ -8,7 +8,7 @@
 //!
 //! # Commands
 //! You can always run `brewdrivers help` or `brewdrivers <subcommand> help`
-//! to get a list of paramaters, extra information about a command, version numbers, etc.
+//! to get a list of parameters, extra information about a command, version numbers, etc.
 //!
 //! ## Relays
 //!
@@ -80,8 +80,7 @@ fn matches() -> ArgMatches<'static> {
     .get_matches();
 }
 
-/// Runs the CLi
-pub fn run() {
+pub fn parse_args() {
     let matches = matches();
 
     if let Some(matches) = matches.subcommand_matches("relay") {

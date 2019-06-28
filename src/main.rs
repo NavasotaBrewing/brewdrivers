@@ -1,5 +1,5 @@
 use brewdrivers::cli;
 
 fn main() {
-    cli::run();
+    cli::parse_args();
 }
