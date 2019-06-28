@@ -7,30 +7,29 @@
 //!
 //!
 //! # Commands
-//! You can always run `brewdrivers help` or `brewdrivers <subcommand> help`
-//! to get a list of parameters, extra information about a command, version numbers, etc.
+//! **Note:** *You can always run `brewdrivers help` or `brewdrivers <subcommand> help`
+//! to get a list of parameters, extra information about a command, version numbers, etc.*
 //!
 //! ## Relays
-//!
 //! ```text
-//! // Set a relay
-//! // Provide controller number, relay number, and new state
-//! // This turns relay 4 on controller 2 on
+//! # Set a relay
+//! # Provide controller number, relay number, and new state
+//! # This turns relay 4 on controller 2 on
 //! $ brewdrivers relay 2 4 1
-//! // And back off again
+//! # And back off again
 //! $ brewdrivers relay 2 4 0
 //!
-//! // Get a relay status
-//! // Same as above, but don't provide a state
+//! # Get a relay status
+//! # Same as above, but don't provide a state
 //! $ brewdrivers relay 2 4
 //!
-//! // Get all relay statuses on controller 2
+//! # Get all relay statuses on controller 2
 //! $ brewdrivers relay 2 all
 //! Relay 0: Off
 //! Relay 1: On
 //! ...
 //!
-//! // Set controller number
+//! # Set controller number
 //! $ brewdrivers set_cn 2 3
 //! ```
 //!
