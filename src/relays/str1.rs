@@ -220,8 +220,6 @@ mod tests {
 
     #[test]
     fn get_relay_status() {
-        use std::thread::sleep;
-
         let mut board = STR1::new(254);
         board.set_relay(0, State::Off);
         assert_eq!(State::Off, board.get_relay(0));
