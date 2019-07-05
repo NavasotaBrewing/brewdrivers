@@ -1,8 +1,8 @@
 # Relays
 
 ## What are they
-Relay boards contain relays, which can be on or off. Physical devices like valves and pumps
-can be connected to relays in order to be toggled on and off. Any simple device on our brew rig that can be toggled, like a pump or a valve, will use a relay.
+
+Relay boards contain relays, which can be on or off. Physical devices like valves and pumps can be connected to relays in order to be toggled on and off. Any simple device on our brew rig that can be toggled, like a pump or a valve, will use a relay.
 
 There are many different types of relay boards. They have been used for decades in all sorts of applications. We use the [SmartHardware STR1](https://www.smarthardware.eu/index.php) line of relay boards. They are a reliable board at a reasonable price. SmartHardware also provides a [software guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf) on how to communicate with the board over RS-485. We provide a driver for the STR1 line of boards, contained in this Github repo. All STR1 boards should behave the same.
 
