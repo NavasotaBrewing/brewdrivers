@@ -1,39 +1,3 @@
-//! Command line interaction for all driver modules
-//!
-//! This is the command line interface (CLI) for `brewdrivers`.
-//! It provides a way to interact with the hardware directly (normally for debugging and testing).
-//!
-//! To run it, just run the `brewdrivers` binary provided in the Github releases, or compile the latest version of `brewdrivers`.
-//!
-//!
-//! # Commands
-//! **Note:** *You can always run `brewdrivers help` or `brewdrivers <subcommand> help`
-//! to get a list of parameters, extra information about a command, version numbers, etc.*
-//!
-//! ## Relays
-//! ```text
-//! # Set a relay
-//! # Provide controller number, relay number, and new state
-//! # This turns relay 4 on controller 2 on
-//! $ brewdrivers relay 2 4 1
-//! # And back off again
-//! $ brewdrivers relay 2 4 0
-//!
-//! # Get a relay status
-//! # Same as above, but don't provide a state
-//! $ brewdrivers relay 2 4
-//!
-//! # Get all relay statuses on controller 2
-//! $ brewdrivers relay 2 all
-//! Relay 0: Off
-//! Relay 1: On
-//! ...
-//!
-//! # Set controller number
-//! $ brewdrivers set_cn 2 3
-//! ```
-//!
-
 use std::process;
 
 use crate::relays::STR1;

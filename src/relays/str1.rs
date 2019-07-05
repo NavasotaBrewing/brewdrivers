@@ -1,34 +1,16 @@
-//! Driver for STR1 Relay Boards
-//!
-//! [SmartHardware STR1 Line](struct.STR1.html)
-//!
-//! # Usage
-//!
-//! You can interact with relays through the CLI ([instructions here](crate::cli)) or through your own Rust code.
-//! See [STR1 usage](struct.STR1.html#examples) for instructions and examples.
-//!
-//!
-//! # Links:
-//!
-//! * [Software guide](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
-//! * [Hardware guide](https://www.smarthardware.eu/manual/str1160000h_doc.pdf)
-//! * [STR1 board description on eBay](https://bit.ly/31PUi8W)
-//! * [SmartHardware homepage](https://www.smarthardware.eu/index.php)
-//!
-use std::time::Duration;
-use std::io::Write;
+// std library
+use std::io::{Write, Read};
 use std::path::Path;
+use std::time::Duration;
 
+// extern crates
 use hex;
 use serialport::prelude::*;
 use serialport::posix::TTYPort;
-use std::io::Read;
-
-use retry::retry;
+use retry::{retry, OperationResult};
 use retry::delay::Fixed;
-use retry::OperationResult;
 
-
+// this crate
 use crate::relays::State::{On, Off};
 use crate::relays::Bytestring;
 
@@ -39,52 +21,6 @@ pub enum State {
     Off
 }
 
-
-/// STR1 board struct
-///
-/// This struct communicates with an STR1 board
-///
-/// See [Relays guide](https://github.com/NavasotaBrewing/brewdrivers/blob/master/guides/relays.md)
-/// for more details on the board itself and it's operation.
-///
-/// # Examples
-/// Before anything else
-/// ```toml
-/// # In your Cargo.toml
-/// brewdrivers = "*"
-/// ```
-/// ```rust
-/// // in your crate root (main.rs or lib.rs)
-/// extern crate brewdrivers;
-/// ```
-///
-/// ## Set and get a relay
-/// ```rust
-/// use brewdrivers::relays::*;
-///
-/// // Needs to be mutable
-/// // Give it the address of the board
-/// let mut board = STR1::new(2);
-///
-/// // Set relay 4 on
-/// board.set_relay(4, State::On);
-/// board.set_relay(4, State::Off);
-///
-/// // Get status of relay 4
-/// board.get_relay(4); // State::On or State::Off
-/// ```
-/// ## Set new controller address
-/// Set a new controller address (or controller number). No restart is needed.
-/// ```rust
-/// use brewdrivers::relays::*;
-///
-/// // With current address
-/// let mut board = STR1::new(2);
-/// board.set_controller_num(3);
-///
-/// // I'll set it back to 2
-/// board.set_controller_num(2);
-/// ```
 #[derive(Debug)]
 pub struct STR1 {
     pub address: u8,
@@ -99,7 +35,6 @@ impl STR1 {
         }
     }
 
-    // Returns a port object to write to or read from
     fn port() -> TTYPort {
         let mut settings: SerialPortSettings = Default::default();
         settings.timeout = Duration::from_millis(20);
@@ -120,7 +55,6 @@ impl STR1 {
         port.unwrap()
     }
 
-    // Write to the device and return the bytearray it sends back
     pub fn write(&mut self, bytestring: Bytestring) -> Vec<u8> {
         match self.port.write(&bytestring.to_bytes()) {
             Ok(_) => {},
