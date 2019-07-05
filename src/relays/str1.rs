@@ -2,44 +2,6 @@
 //!
 //! [SmartHardware STR1 Line](struct.STR1.html)
 //!
-//! # Quickstart
-//! See the [STR1 examples](struct.STR1.html#examples) section for usage.
-//!
-//! # Hardware
-//!
-//! Relay boards contain relays, which can be on or off. Physical devices like valves and pumps
-//! can be connected to relays in order to be toggled on and off. These boards usually communicate over a serial protocol, like RS-485.
-//!
-//! This module is for the STR1 line of relay boards from [`SmartHardware`](https://www.smarthardware.eu/index.php), based in Bulgaria.
-//! It has been tested on the STR116 and STR108, but theoretically should work on any STR1 board. You can buy these boards on eBay.
-//! The two boards we use are STR116 and STR008, having 16 or 8 relays respectively.
-//!
-//! ### Hardware: Setup
-//!
-//! I'll ask adaptiman to write a guide [on his website](https://adaptiman.com/) to outline how to physically connect the STR1 boards to a host.
-//! We have it connected to a Raspberry Pi through an RS-232 hat. More details on his site (soon...).
-//!
-//! Relay boards require a bit of setup before before use. This package uses the default settings for the STR1 boards,
-//! but you'll probably want to set the address (controller number). You can program the board to the default settings using a jumper,
-//! the process for which is outlined in the [hardware guide, page 8](https://www.smarthardware.eu/manual/str1160000h_doc.pdf). It's pretty
-//! easy if you have a jumper, I think one is included. Default address is 254 in decimal (that's `fe` in hex, if you care).
-//! You can leave it at 254, or set it to something new to keep track of multiple boards. You can set the address from the command line part of this package, or through rust
-//! with the [`set_controller_num`](struct.STR1.html#method.set_controller_num) method. This package uses "address" and "controller_num" interchangeably.
-//!
-//! You can change the baudrate of these boards with a pretty simple command. We use the default, 9600, because it's easy.
-//!
-//! # Software
-//!
-//! The STR1 board communicates over the RS-485 protocol. Bytestrings are written through the serial port, and the response can be read.
-//! Any serial port can be used, but we use `/dev/ttyAMA0` on our raspberry pi 3 (see
-//! [this blog post](https://adaptiman.com/brewing/communication-issues/) on how to set up the RPI3 for serial communication). On windows, the port
-//! would probably look something like `/com3` but I don't know because I hardly use windows. The serial port can be opened like a normal serial port,
-//! using any common serial package. Rust has `serialport` and python has `pyserial`, but many more exist. Each library handles reading and writing
-//! differently. This package uses the `serialport` crate.
-//!
-//! The most important part of communication with an STR1 board is the [`Bytestring`](crate::relays::bytestring).
-//! The [`Bytestring`](crate::relays::bytestring) struct has documentation on the specifics of bytestring, as well as tools for using them.
-//!
 //! # Usage
 //!
 //! You can interact with relays through the CLI ([instructions here](crate::cli)) or through your own Rust code.
@@ -82,12 +44,17 @@ pub enum State {
 ///
 /// This struct communicates with an STR1 board
 ///
-/// See [module documentation](crate::relays::str1) for more details on the board itself and it's operation.
+/// See [Relays guide](https://github.com/NavasotaBrewing/brewdrivers/blob/master/guides/relays.md)
+/// for more details on the board itself and it's operation.
 ///
 /// # Examples
 /// Before anything else
+/// ```toml
+/// # In your Cargo.toml
+/// brewdrivers = "*"
+/// ```
 /// ```rust
-/// // in your crate root
+/// // in your crate root (main.rs or lib.rs)
 /// extern crate brewdrivers;
 /// ```
 ///
