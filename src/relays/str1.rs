@@ -62,6 +62,10 @@ use serialport::prelude::*;
 use serialport::posix::TTYPort;
 use std::io::Read;
 
+use retry::retry;
+use retry::delay::Fixed;
+use retry::OperationResult;
+
 
 use crate::relays::State::{On, Off};
 use crate::relays::Bytestring;
@@ -139,7 +143,14 @@ impl STR1 {
         settings.stop_bits = StopBits::One;
 
 
-        TTYPort::open(&Path::new("/dev/ttyAMA0"), &settings).expect("Couldn't open port")
+        let port = retry(Fixed::from_millis(10), || {
+            match TTYPort::open(&Path::new("/dev/ttyAMA0"), &settings) {
+                Ok(port) => OperationResult::Ok(port),
+                Err(_) => OperationResult::Retry("Port busy")
+            }
+        });
+
+        port.unwrap()
     }
 
     // Write to the device and return the bytearray it sends back
@@ -175,6 +186,7 @@ impl STR1 {
         let bytestring = Bytestring::from(vec![7, 20, self.address, relay_num, 1]);
         let output_buf = self.write(bytestring);
         let result = hex::encode(output_buf);
+
         match result.chars().nth(7) {
             Some('1') => return On,
             _ => return Off,
@@ -189,10 +201,14 @@ impl STR1 {
     }
 
     pub fn list_all_relays(&mut self) {
-        println!("Controller {}", self.address);
+        // Leave that space there >:(
+        println!(" Controller {}", self.address);
+        println!(
+            "{0: >6} | {1: <6}",
+            "Relay", "Status"
+        );
         for i in 0..16 {
-            std::thread::sleep(Duration::from_millis(10));
-            println!("Relay {}: {:?}", i, self.get_relay(i));
+            println!("{0: >6} | {1: <6?}", i, self.get_relay(i));
         }
     }
 }
@@ -204,12 +220,36 @@ mod tests {
 
     #[test]
     fn get_relay_status() {
-        let mut board = STR1::new(2);
-        board.set_relay(0, State::Off);
+        use std::thread::sleep;
 
+        let mut board = STR1::new(254);
+        board.set_relay(0, State::Off);
         assert_eq!(State::Off, board.get_relay(0));
 
         board.set_relay(0, State::On);
         assert_eq!(State::On, board.get_relay(0));
+    }
+
+    #[test]
+    fn set_controller_number() {
+        let mut board = STR1::new(254);
+
+        // Checks communication
+        board.set_relay(0, State::Off);
+        assert_eq!(State::Off, board.get_relay(0));
+        board.set_relay(0, State::On);
+        assert_eq!(State::On, board.get_relay(0));
+
+        board.set_controller_num(253);
+
+        // Checks communication again
+        board.set_relay(0, State::Off);
+        assert_eq!(State::Off, board.get_relay(0));
+        board.set_relay(0, State::On);
+        assert_eq!(State::On, board.get_relay(0));
+
+        // Set it back
+        board.set_controller_num(254);
+
     }
 }
