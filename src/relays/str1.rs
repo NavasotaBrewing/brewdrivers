@@ -21,6 +21,24 @@ pub enum State {
     Off
 }
 
+impl State {
+    pub fn from(state: bool) -> State {
+        if state {
+            return State::On;
+        };
+        State::Off
+    }
+}
+
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            State::On => write!(f, "on"),
+            State::Off => write!(f, "off"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct STR1 {
     pub address: u8,

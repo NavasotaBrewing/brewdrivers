@@ -79,32 +79,11 @@ fn handle_relay_matches(matches: &ArgMatches) {
     let rn = rn_matches.parse::<u8>().unwrap();
 
     if let Some(state) = matches.value_of("state") {
-        match state.parse::<u8>().unwrap() {
-            1 => {
-                match str116.get_relay(rn) {
-                    State::On => {},
-                    State::Off => {
-                        println!("*click*");
-                        str116.set_relay(rn, State::On);
-                    }
-                };
-                println!("Controller {}, relay {} on", cn, rn);
-            },
-            0 => {
-                match str116.get_relay(rn) {
-                    State::On => {
-                        println!("*click*");
-                        str116.set_relay(rn, State::Off);
-                    },
-                    State::Off => {},
-                };
-                println!("Controller {}, relay {} off", cn, rn);
-            },
-            _ => {}
-        };
-    } else {
-        println!("Controller {} relay {} is {:?}", cn, rn, str116.get_relay(rn));
+        let state_bool = state.parse::<u8>().unwrap() != 0;
+        let state = State::from(state_bool);
+        str116.set_relay(rn, state);
     }
+    println!("Controller {} relay {} is {}", cn, rn, str116.get_relay(rn));
 }
 
 
