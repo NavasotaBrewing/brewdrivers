@@ -97,7 +97,7 @@ impl STR1 {
     pub fn set_controller_num(&mut self, new_cn: u8) {
         // MA0, MA1, 0x06, 0x01, CN, newCN, CS, MAE
         let bytestring = Bytestring::from(vec![6, 1, self.address, new_cn]);
-        println!("{:?}", self.write(bytestring));
+        self.write(bytestring);
         self.address = new_cn;
     }
 
