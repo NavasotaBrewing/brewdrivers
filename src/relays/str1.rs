@@ -11,33 +11,8 @@ use retry::{retry, OperationResult};
 use retry::delay::Fixed;
 
 // this crate
-use crate::relays::State::{On, Off};
-use crate::relays::Bytestring;
-
-
-#[derive(Debug, PartialEq)]
-pub enum State {
-    On,
-    Off
-}
-
-impl State {
-    pub fn from(state: bool) -> State {
-        if state {
-            return State::On;
-        };
-        State::Off
-    }
-}
-
-impl std::fmt::Display for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            State::On => write!(f, "on"),
-            State::Off => write!(f, "off"),
-        }
-    }
-}
+// use crate::relays::State::{On, Off};
+use crate::relays::{State, Board, Bytestring};
 
 #[derive(Debug)]
 pub struct STR1 {
@@ -45,14 +20,43 @@ pub struct STR1 {
     pub port: TTYPort,
 }
 
-impl STR1 {
-    pub fn new(address: u8) -> STR1 {
+
+impl Board for STR1 {
+    fn with_address(address: u8) -> STR1 {
         STR1 {
             address,
             port: STR1::port()
         }
     }
 
+    fn set_relay(&mut self, relay_num: u8, state: State) {
+        let new_state = match state {
+            State::On => 1,
+            State::Off => 0
+        };
+
+        // From the software guide
+        // MA0, MA1, 0x08, 0x17, CN, start number output, number of outputs, 0/1, CS, MAE
+        // MA0, MA1, CS, and MAE are added automatically
+        let bytestring = Bytestring::from(vec![8, 23, self.address, relay_num, 1, new_state]);
+
+        self.write(bytestring);
+    }
+
+    fn get_relay(&mut self, relay_num: u8) -> State {
+        let bytestring = Bytestring::from(vec![7, 20, self.address, relay_num, 1]);
+        let output_buf = self.write(bytestring);
+        let result = hex::encode(output_buf);
+
+        match result.chars().nth(7) {
+            Some('1') => return State::On,
+            _ => return State::Off,
+        }
+    }
+}
+
+
+impl STR1 {
     fn port() -> TTYPort {
         let mut settings: SerialPortSettings = Default::default();
         settings.timeout = Duration::from_millis(20);
@@ -87,31 +91,6 @@ impl STR1 {
         output_buf
     }
 
-    pub fn set_relay(&mut self, relay_num: u8, state: State) {
-        let new_state = match state {
-            On => 1,
-            Off => 0
-        };
-
-        // From the software guide
-        // MA0, MA1, 0x08, 0x17, CN, start number output, number of outputs, 0/1, CS, MAE
-        // MA0, MA1, CS, and MAE are added automatically
-        let bytestring = Bytestring::from(vec![8, 23, self.address, relay_num, 1, new_state]);
-
-        self.write(bytestring);
-    }
-
-    pub fn get_relay(&mut self, relay_num: u8) -> State {
-        let bytestring = Bytestring::from(vec![7, 20, self.address, relay_num, 1]);
-        let output_buf = self.write(bytestring);
-        let result = hex::encode(output_buf);
-
-        match result.chars().nth(7) {
-            Some('1') => return On,
-            _ => return Off,
-        }
-    }
-
     pub fn set_controller_num(&mut self, new_cn: u8) {
         // MA0, MA1, 0x06, 0x01, CN, newCN, CS, MAE
         let bytestring = Bytestring::from(vec![6, 1, self.address, new_cn]);
@@ -139,7 +118,7 @@ mod tests {
 
     #[test]
     fn get_relay_status() {
-        let mut board = STR1::new(254);
+        let mut board = STR1::with_address(254);
         board.set_relay(0, State::Off);
         assert_eq!(State::Off, board.get_relay(0));
 
@@ -149,7 +128,7 @@ mod tests {
 
     #[test]
     fn set_controller_number() {
-        let mut board = STR1::new(254);
+        let mut board = STR1::with_address(254);
 
         // Checks communication
         board.set_relay(0, State::Off);

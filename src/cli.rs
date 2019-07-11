@@ -1,7 +1,6 @@
 use std::process;
 
-use crate::relays::STR1;
-use crate::relays::State;
+use crate::relays::{STR1, State, Board};
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
@@ -60,14 +59,14 @@ fn handle_set_cn_matches(matches: &ArgMatches) {
     let ccn = matches.value_of("current_cn").unwrap().parse::<u8>().unwrap();
     let ncn = matches.value_of("new_cn").unwrap().parse::<u8>().unwrap();
 
-    let mut board = STR1::new(ccn);
+    let mut board = STR1::with_address(ccn);
     board.set_controller_num(ncn);
     println!("Controller {} -> Controller {}", ccn, ncn);
 }
 
 fn handle_relay_matches(matches: &ArgMatches) {
     let cn = matches.value_of("controller_num").unwrap().parse::<u8>().unwrap();
-    let mut str116 = STR1::new(cn);
+    let mut str116 = STR1::with_address(cn);
 
     let rn_matches = matches.value_of("relay_num").unwrap();
 
