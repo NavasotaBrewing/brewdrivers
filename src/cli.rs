@@ -1,7 +1,8 @@
 use std::process;
 
 use crate::RTU::relays::{STR1, State, Board};
-use crate::master::socket;
+use crate::master::socket as master_socket;
+use crate::RTU::socket as rtu_socket;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
@@ -39,8 +40,13 @@ fn matches() -> ArgMatches<'static> {
                 .validator(validators::is_int)
                 .required(true)
                 .index(2)))
-        .subcommand(SubCommand::with_name("master")
-                .about("Runs the Master WebSocket"))
+        .subcommand(SubCommand::with_name("socket")
+            .about("Runs the Master WebSocket")
+            .arg(Arg::with_name("position")
+                .help("'master' or 'rtu'")
+                .validator(validators::is_master_or_rtu)
+                .required(true)
+                .index(1)))
 
     .get_matches();
 }
@@ -56,12 +62,15 @@ pub fn parse_args() {
         handle_set_cn_matches(matches);
     }
 
-    if let Some(_) = matches.subcommand_matches("master") {
-        socket::run();
+    if let Some(matches) = matches.subcommand_matches("socket") {
+        if matches.value_of("position").unwrap() == "master" {
+            master_socket::run();
+        } else {
+            rtu_socket::run();
+        }
     }
+
 }
-
-
 
 fn handle_set_cn_matches(matches: &ArgMatches) {
 
@@ -111,5 +120,12 @@ mod validators {
             }
         }
         Err("needs to be an int or 'all'".to_string())
+    }
+
+    pub fn is_master_or_rtu(arg: String) -> Result<(), String> {
+        if arg.as_str() == "master" || arg.as_str() == "rtu" {
+            return Ok(())
+        }
+        Err("Acceptable values are 'master' or 'rtu'".to_string())
     }
 }
