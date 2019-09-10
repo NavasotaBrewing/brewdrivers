@@ -95,4 +95,18 @@ mod tests {
         let config_string = serde_json::to_string_pretty(&config).expect("Could not serialize configuration");
         println!("{}", config_string);
     }
+
+    #[test]
+    fn minimal_configuration() {
+        let data = r#"{
+            "name": "Minimal Configuration",
+            "description": "This is a minimal configuration, all data here is required",
+            "mode": "Read",
+            "id": "someuniqueid1234",
+            "RTUs": []
+        }"#;
+
+        let config = serde_json::from_str::<Configuration>(&data).unwrap();
+        assert_eq!(config.name, String::from("Minimal Configuration"));
+    }
 }
