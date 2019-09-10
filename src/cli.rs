@@ -1,7 +1,7 @@
 use std::process;
 
-use crate::relays::{STR1, State, Board};
-use crate::api;
+use crate::RTU::relays::{STR1, State, Board};
+use crate::master::api;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 

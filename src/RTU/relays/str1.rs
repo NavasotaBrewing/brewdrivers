@@ -11,8 +11,8 @@ use retry::{retry, OperationResult};
 use retry::delay::Fixed;
 
 // this crate
-// use crate::relays::State::{On, Off};
-use crate::relays::{State, Board, Bytestring};
+// use crate::RTU::relays::State::{On, Off};
+use crate::RTU::relays::{State, Board, Bytestring};
 
 #[derive(Debug)]
 pub struct STR1 {

@@ -4,7 +4,7 @@ use std::net::SocketAddrV4;
 
 use serde::{Serialize, Deserialize};
 
-use crate::relays::State;
+use crate::RTU::relays::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Mode {
