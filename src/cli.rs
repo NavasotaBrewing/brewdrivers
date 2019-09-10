@@ -1,6 +1,7 @@
 use std::process;
 
 use crate::relays::{STR1, State, Board};
+use crate::api;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
@@ -38,6 +39,8 @@ fn matches() -> ArgMatches<'static> {
                 .validator(validators::is_int)
                 .required(true)
                 .index(2)))
+        .subcommand(SubCommand::with_name("api")
+                .about("Runs the WebSocket API"))
 
     .get_matches();
 }
@@ -52,7 +55,13 @@ pub fn parse_args() {
     if let Some(matches) = matches.subcommand_matches("set_cn") {
         handle_set_cn_matches(matches);
     }
+
+    if let Some(_) = matches.subcommand_matches("api") {
+        api::run();
+    }
 }
+
+
 
 fn handle_set_cn_matches(matches: &ArgMatches) {
 

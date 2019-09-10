@@ -4,7 +4,9 @@ pub mod bytestring;
 pub use str1::STR1;
 pub use bytestring::Bytestring;
 
-#[derive(Debug, PartialEq)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum State {
     On,
     Off
