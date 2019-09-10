@@ -1,3 +1,4 @@
+// For RTUs
 #![allow(non_snake_case)]
 use std::net::SocketAddrV4;
 
@@ -43,4 +44,55 @@ pub struct Configuration {
     mode: Mode,
     id: String,
     RTUs: Vec<RTU>
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize_and_deserialize_a_configuration() {
+        let data = r#"
+        {
+            "name": "My configuration",
+            "description": "Some configuration i made to brew in march or something idk",
+            "id": "j3jhsmdnbk23j4gdf6872123",
+            "mode": "Write",
+            "RTUs": [
+                {
+                "name": "Main Valves",
+                "location": "Over there",
+                "id": "1kjhsmdnbfaskudf687234",
+                "ipv4": "192.168.0.34:3012",
+                "devices": [
+                    {
+                        "driver": "STR1",
+                        "addr": 0,
+                        "controller_addr": 243,
+                        "name": "some valve or something",
+                        "state": "On",
+                        "id": "s3h4ma8itu1lhfxcee"
+                    },
+                    {
+                        "driver": "Omega",
+                        "name": "RIMS PID",
+                        "addr": 0,
+                        "pv": 167.4,
+                        "controller_addr": 0,
+                        "id": "j12k3jhgsdkhfgj2h4bv4mnrb",
+                        "sv": 172.0,
+                        "state": "On"
+                    }
+                ]
+                }
+            ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Configuration>(&data.trim()).expect("Couldn't deserialize configuration package");
+        assert_eq!(config.name, String::from("My configuration"));
+        let config_string = serde_json::to_string_pretty(&config).expect("Could not serialize configuration");
+        println!("{}", config_string);
+    }
 }
