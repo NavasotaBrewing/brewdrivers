@@ -8,3 +8,4 @@ extern crate serde_json;
 pub mod relays;
 pub mod cli;
 pub mod api;
+pub mod configuration;
