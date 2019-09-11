@@ -46,6 +46,17 @@ pub struct Configuration {
     RTUs: Vec<RTU>
 }
 
+// impl Configuration {
+//     pub fn RTUs(&self) -> Vec<RTU> {
+//         self.RTUs
+//     }
+// }
+
+// impl RTU {
+//     pub fn ipv4(&self) -> SocketAddrV4 {
+//         self.ipv4
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

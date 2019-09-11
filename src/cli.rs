@@ -62,13 +62,13 @@ pub fn parse_args() {
         handle_set_cn_matches(matches);
     }
 
-    if let Some(matches) = matches.subcommand_matches("socket") {
-        if matches.value_of("position").unwrap() == "master" {
-            master_socket::run();
-        } else {
-            rtu_socket::run();
-        }
-    }
+    // if let Some(matches) = matches.subcommand_matches("socket") {
+    //     if matches.value_of("position").unwrap() == "master" {
+    //         master_socket::run();
+    //     } else {
+    //         rtu_socket::run();
+    //     }
+    // }
 
 }
 
