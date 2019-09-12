@@ -3,6 +3,12 @@
 // send it back to front end
 use rocket_contrib::json::{Json};
 use crate::master::configuration::Configuration;
+use std::fs;
+
+
+fn get_rtu_id() -> String {
+    String::from(fs::read_to_string("/rtu_id").expect("Couldn't read RTU id").trim())
+}
 
 #[get("/")]
 fn index() -> &'static str {
@@ -14,10 +20,15 @@ fn running() -> &'static str {
     r#"{"running":"true"}"#
 }
 
+// Receive a config
 #[post("/configuration", format = "json", data = "<config>")]
 fn receive_config(config: Json<Configuration>) -> String {
-    // Enact
     println!("Config {} with id {} received", config.name, config.id);
+    // Note: this may be logically flipped, test it
+    let rtu = &config.RTUs.iter().find(|&rtu| rtu.id == get_rtu_id());
+    if let Some(rtu) = rtu {
+        // Found an RTU, enact
+    }
     config.stringify().expect("Could not serialize config")
 }
 
