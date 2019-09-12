@@ -2,69 +2,20 @@
 #![allow(non_snake_case)]
 use std::net::SocketAddrV4;
 
-use serde::{Serialize, Deserialize, Deserializer, Serializer};
+use serde::{Serialize, Deserialize};
 
 use crate::RTU::relays::State;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Mode {
     Write,
     Read
 }
 
-impl Serialize for Mode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match *self {
-            Mode::Write => serializer.serialize_unit_variant("write", 0, "Write"),
-            Mode::Read => serializer.serialize_unit_variant("read", 1, "Read"),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Mode {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(match s.as_str() {
-            "write" => Mode::Write,
-            "read" => Mode::Read,
-            _ => Mode::Read,
-        })
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Driver {
     STR1,
     Omega,
-}
-
-impl Serialize for Driver {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match *self {
-            Driver::STR1 => serializer.serialize_unit_variant("STR1", 0, "STR1"),
-            Driver::Omega => serializer.serialize_unit_variant("omega", 1, "Omega"),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Driver {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(match s.as_str() {
-            "STR1" => Driver::STR1,
-            "omega" => Driver::Omega,
-        })
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

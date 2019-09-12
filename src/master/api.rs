@@ -1,7 +1,7 @@
 // Recieve config from front end
 // send config to all RTUs, get it back
 // send it back to front end
-use rocket_contrib::json::{Json, JsonValue};
+use rocket_contrib::json::{Json};
 use crate::master::configuration::Configuration;
 
 #[get("/")]
@@ -10,9 +10,9 @@ fn index() -> &'static str {
 }
 
 #[post("/configuration", format = "json", data = "<config>")]
-fn receive_config(config: Json<Configuration>) -> JsonValue {
-    println!("received config named {} with id {}", config.name, config.id);
-    json!(serde_json::from_str(&config.stringify().unwrap()).unwrap())
+fn receive_config(config: Json<Configuration>) -> String {
+    // Send to all RTUs
+    config.stringify().expect("Could not serialize config")
 }
 
 pub fn run() {
