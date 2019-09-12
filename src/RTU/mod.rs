@@ -1,2 +1,2 @@
 pub mod relays;
-pub mod socket;
+pub mod api;

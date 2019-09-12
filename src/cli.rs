@@ -1,7 +1,8 @@
 use std::process;
 
 use crate::RTU::relays::{STR1, State, Board};
-use crate::RTU::socket;
+use crate::RTU::api as rtu_api;
+use crate::master::api as master_api;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
@@ -39,9 +40,13 @@ fn matches() -> ArgMatches<'static> {
                 .validator(validators::is_int)
                 .required(true)
                 .index(2)))
-        .subcommand(SubCommand::with_name("rtu")
-            .about("Runs the RTU WebSocket"))
-
+        .subcommand(SubCommand::with_name("api")
+            .about("Runs the Master or RTU API")
+            .arg(Arg::with_name("position")
+                .help("'master' or 'rtu'")
+                .validator(validators::is_master_or_rtu)
+                .required(true)
+                .index(1)))
     .get_matches();
 }
 
@@ -56,8 +61,14 @@ pub fn parse_args() {
         handle_set_cn_matches(matches);
     }
 
-    if let Some(matches) = matches.subcommand_matches("rtu") {
-        socket::run();
+    if let Some(matches) = matches.subcommand_matches("api") {
+        if let Some(position) = matches.value_of("position") {
+            if position == "master" {
+                master_api::run();
+            } else {
+                rtu_api::run();
+            }
+        }
     }
 
 }
