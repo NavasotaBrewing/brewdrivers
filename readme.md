@@ -4,5 +4,3 @@ This project provides low level drivers for the hardware that the [Navasota Brew
 ~~To learn more about the code and how to use it, [read the documentation](https://docs.rs/crate/brewdrivers/)~~.
 
 **Note:** all documentation has been removed. The code is changing so fast it's too hard to maintain. It's just confusing. Docs will be added later.
-
-Small edit, ignore me please
