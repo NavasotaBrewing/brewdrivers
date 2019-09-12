@@ -67,6 +67,7 @@ impl STR1 {
         settings.stop_bits = StopBits::One;
 
 
+        // TODO: Set a timeout
         let port = retry(Fixed::from_millis(10), || {
             match TTYPort::open(&Path::new("/dev/ttyAMA0"), &settings) {
                 Ok(port) => OperationResult::Ok(port),
