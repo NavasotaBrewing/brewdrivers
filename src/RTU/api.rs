@@ -43,18 +43,14 @@ fn running() -> &'static str {
 // Receive a config
 #[post("/configuration", format = "json", data = "<config>")]
 fn receive_config(config: Json<Configuration>) -> String {
-    // Get the model of the RTU this is running on
-    let rtu = config.RTUs.iter().filter(|rtu| rtu.id == get_rtu_id()).collect::<Vec<&RTU>>()[0];
-    // Update the values or set the values
-    // let updated_rtu = update(&rtu, &config.mode);
-    // Need a mutable version
-    let mut updated_config = Configuration::from(&config.stringify().unwrap()).unwrap();
-    // Remove the RTU
-    updated_config.RTUs.drain_filter(|rtu| rtu.id == get_rtu_id());
-    // Add back the updated RTU
-    updated_config.RTUs.push(updated_rtu.clone());
-    // Return updated config
-    updated_config.stringify().expect("Could not serialize config")
+    // This is some bad code
+    let new_config = Configuration::update(&config.stringify().unwrap(), &config.mode);
+    new_config.stringify().expect("Could not serialize config")
+
+
+
+    // new_config.update();
+    // new_config.stringify().expect("Could not serialize config")
 }
 
 pub fn run() {

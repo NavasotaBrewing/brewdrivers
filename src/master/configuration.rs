@@ -5,6 +5,7 @@ use std::net::SocketAddrV4;
 use serde::{Serialize, Deserialize};
 
 use crate::RTU::relays::State;
+use crate::RTU::relays::{STR1, Board};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Mode {
@@ -28,6 +29,24 @@ pub struct Device {
     pub controller_addr: u8
 }
 
+impl Device {
+    pub fn update(device: &mut Device, mode: &Mode) {
+        match device.driver {
+            Driver::STR1 => {
+                let mut board = STR1::with_address(device.controller_addr);
+                match mode {
+                    Mode::Write => board.set_relay(device.addr, device.state.clone()),
+                    Mode::Read => {}
+                }
+                device.state = board.get_relay(device.addr);
+            },
+            Driver::Omega => {
+
+            }
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RTU {
     pub name: String,
@@ -49,6 +68,12 @@ impl RTU {
         match serde_json::to_string(&self) {
             Ok(rtu_string) => return Ok(rtu_string),
             Err(e) => return Err(format!("Could not stringify RTU: {}", e)),
+        }
+    }
+
+    pub fn update(rtu: &mut RTU, mode: &Mode) {
+        for mut device in &mut rtu.devices {
+            Device::update(&mut device, &mode);
         }
     }
 }
@@ -76,6 +101,14 @@ impl Configuration {
             Ok(config_string) => return Ok(config_string),
             Err(e) => return Err(format!("Could not stringify config: {}", e)),
         }
+    }
+
+    pub fn update(config_string: &str, mode: &Mode) -> Configuration {
+        let mut config = Configuration::from(&config_string).expect("Couldn't deserialize config");
+        for mut rtu in &mut config.RTUs {
+            RTU::update(&mut rtu, &mode);
+        }
+        config
     }
 }
 
