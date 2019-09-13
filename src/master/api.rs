@@ -18,6 +18,9 @@ fn running() -> &'static str {
 fn receive_config(config: Json<Configuration>) -> String {
     // Send to all RTUs
     println!("Config {} with id {} received", config.name, config.id);
+    // for rtu in &config.RTUs {
+    //     // Make a request
+    // }
     config.stringify().expect("Could not serialize config")
 }
 

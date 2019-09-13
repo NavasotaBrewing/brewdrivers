@@ -6,19 +6,19 @@ use serde::{Serialize, Deserialize};
 
 use crate::RTU::relays::State;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Mode {
     Write,
     Read
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Driver {
     STR1,
     Omega,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Device {
     pub driver: Driver,
     pub name: String,
@@ -28,7 +28,7 @@ pub struct Device {
     pub controller_addr: u8
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RTU {
     pub name: String,
     pub location: String,
@@ -37,7 +37,24 @@ pub struct RTU {
     pub devices: Vec<Device>
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl RTU {
+    pub fn from(json_string: &str) -> Result<RTU, String> {
+        match serde_json::from_str::<RTU>(json_string) {
+            Ok(rtu) => return Ok(rtu),
+            Err(e) => return Err(format!("Could not deserialize json string to RTU: {}", e)),
+        }
+    }
+
+    pub fn stringify(&self) -> Result<String, String> {
+        match serde_json::to_string(&self) {
+            Ok(rtu_string) => return Ok(rtu_string),
+            Err(e) => return Err(format!("Could not stringify RTU: {}", e)),
+        }
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Configuration {
     pub name: String,
     pub description: String,

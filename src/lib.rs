@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro, drain_filter)]
 extern crate serialport;
 extern crate hex;
 extern crate clap;

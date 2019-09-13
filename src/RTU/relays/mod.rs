@@ -6,7 +6,7 @@ pub use bytestring::Bytestring;
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum State {
     On,
     Off
@@ -19,6 +19,13 @@ impl State {
         };
         State::Off
     }
+
+    // pub fn to_u8(&self) -> u8 {
+    //     match self {
+    //         State::On => return 1,
+    //         State::Off => return 0,
+    //     }
+    // }
 }
 
 impl std::fmt::Display for State {
