@@ -10,6 +10,21 @@ use reqwest::header::{HeaderValue, CONTENT_TYPE};
 
 use crate::master::configuration::Configuration;
 
+// Send given configuration to RTU at given address and returns the updated configuration
+fn update(current_config: &Configuration, addr: SocketAddrV4) -> Configuration {
+    let client = reqwest::Client::new();
+    let mut body = client
+        .post(&format!("http://{}/configuration", addr))
+        .body(current_config.stringify())
+        .header(CONTENT_TYPE, HeaderValue::from_static("application/json"))
+        .send()
+        .expect("Something went wrong, could not post to RTU");
+
+    // ...and update current_config with whatever is returned
+    let err_msg = format!("Could not get configuration back from RTU with address {}", addr);
+    Configuration::from(&body.text().unwrap()).expect(&err_msg)
+}
+
 #[get("/")]
 fn index() -> &'static str {
     "Master API, you shouldn't see this"
@@ -22,31 +37,11 @@ fn running() -> &'static str {
 
 #[post("/configuration", format = "json", data = "<config>")]
 fn propogate_to_RTUs(config: Json<Configuration>) -> String {
-    // Client to help us send to RTUs
-    let client = reqwest::Client::new();
-    // Mutable clone of config
     let mut current_config = config.clone();
-    // Gets addresses of all RTUs
     let addrs = current_config.RTUs.iter().map(|rtu| rtu.ipv4 ).collect::<Vec<SocketAddrV4>>();
     for addr in addrs {
-        // TODO: refactor this, maybe into send_to_rtu() or something similar
-        // send config to http://addr/configuration
-        // returned config becomes new config to send out, so they
-        // update as they go along.
-
-        // Send the config to the RTU...
-        let mut body = client
-            .post(&format!("http://{}/configuration", addr))
-            .body(current_config.stringify())
-            .header(CONTENT_TYPE, HeaderValue::from_static("application/json"))
-            .send()
-            .expect("Something went wrong, could not post to RTU");
-
-        // ...and update current_config with whatever is returned
-        current_config = Configuration::from(&body.text().unwrap())
-                                            .expect(&format!("Could not get configuration back from RTU with address {}", addr));
-    };
-    // Return the fully updated config, probably back to the front end
+        current_config = update(&current_config, addr);
+    }
     current_config.stringify()
 }
 
