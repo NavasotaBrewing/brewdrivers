@@ -1,11 +1,17 @@
 // For RTUs
 #![allow(non_snake_case)]
 use std::net::SocketAddrV4;
+use std::fs;
 
 use serde::{Serialize, Deserialize};
 
 use crate::RTU::relays::State;
-use crate::RTU::relays::{STR1, Board};
+// use crate::RTU::relays::{STR1, Board};
+
+
+fn get_rtu_id() -> String {
+    String::from(fs::read_to_string("/rtu_id").expect("Couldn't read RTU id").trim())
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Mode {
@@ -33,16 +39,16 @@ impl Device {
     pub fn update(device: &mut Device, mode: &Mode) {
         match device.driver {
             Driver::STR1 => {
-                let mut board = STR1::with_address(device.controller_addr);
+                // let mut board = STR1::with_address(device.controller_addr);
                 match mode {
-                    Mode::Write => board.set_relay(device.addr, device.state.clone()),
+                    // Mode::Write => board.set_relay(device.addr, device.state.clone()),
+                    Mode::Write => {},
                     Mode::Read => {}
                 }
-                device.state = board.get_relay(device.addr);
+                device.state = State::Off;
+                // device.state = board.get_relay(device.addr);
             },
-            Driver::Omega => {
-
-            }
+            Driver::Omega => {}
         }
     }
 }
@@ -96,17 +102,19 @@ impl Configuration {
         }
     }
 
-    pub fn stringify(&self) -> Result<String, String> {
-        match serde_json::to_string(&self) {
-            Ok(config_string) => return Ok(config_string),
-            Err(e) => return Err(format!("Could not stringify config: {}", e)),
-        }
+    pub fn stringify(&self) -> String {
+        serde_json::to_string(&self).expect("Could not serialize configuration")
     }
 
-    pub fn update(config_string: &str, mode: &Mode) -> Configuration {
-        let mut config = Configuration::from(&config_string).expect("Couldn't deserialize config");
+    pub fn update(source_config: &Configuration, mode: &Mode) -> Configuration {
+        // let mut config = Configuration::from(&config_string).expect("Couldn't deserialize config");
+        let mut config = source_config.clone();
+
         for mut rtu in &mut config.RTUs {
-            RTU::update(&mut rtu, &mode);
+            // Only update this RTU
+            if rtu.id == get_rtu_id() {
+                RTU::update(&mut rtu, &mode);
+            }
         }
         config
     }

@@ -5,10 +5,11 @@ extern crate hex;
 extern crate clap;
 extern crate retry;
 extern crate serde_json;
+extern crate reqwest;
 
 #[macro_use]
 extern crate rocket;
-#[macro_use]
+// #[macro_use]
 extern crate rocket_contrib;
 
 
