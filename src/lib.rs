@@ -7,6 +7,8 @@ extern crate retry;
 extern crate serde_json;
 extern crate reqwest;
 
+extern crate futures;
+
 #[macro_use]
 extern crate rocket;
 // #[macro_use]
