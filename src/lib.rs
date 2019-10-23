@@ -2,7 +2,6 @@
 #![feature(proc_macro_hygiene, decl_macro, drain_filter)]
 extern crate serialport;
 extern crate hex;
-extern crate clap;
 extern crate retry;
 extern crate serde_json;
 extern crate reqwest;
