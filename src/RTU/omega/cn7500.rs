@@ -40,6 +40,22 @@ impl CN7500 {
     pub fn set_sv(&self, temperature: f64) {
         self.instrument.write_register(0x1001, (temperature * 10.0) as u16);
     }
+
+    pub fn run(&self) {
+        self.instrument.write_coil(0x0814, true);
+    }
+
+    pub fn stop(&self) {
+        self.instrument.write_coil(0x0814, false);
+    }
+
+    pub fn is_running(&self) -> bool {
+        let mut running: bool = false;
+        self.instrument.read_coils(0x0814, 1, |response| {
+            running = response[0];
+        });
+        running
+    }
 }
 
 

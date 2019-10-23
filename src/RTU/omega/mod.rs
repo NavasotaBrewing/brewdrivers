@@ -43,6 +43,33 @@ impl Instrument {
         core.run(task).unwrap();
     }
 
+    pub fn read_coils<F>(&self, coil: u16, cnt: u16, handler: F)
+    where F: FnOnce(Vec<bool>) {
+        // TODO: Add a timeout on wrong addr
+        let mut core = Core::new().unwrap();
+
+        let handle = core.handle();
+        let slave = Slave(self.addr);
+
+        let mut settings = SerialPortSettings::default();
+        settings.baud_rate = self.baudrate;
+        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
+
+
+        let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
+            ctx
+                // Read sensor value
+                .read_coils(coil, cnt)
+                // Then pass it to the handler
+                .and_then(move |rsp| {
+                    handler(rsp);
+                    Ok(())
+                })
+        });
+
+        core.run(task);
+    }
+
     pub fn write_register(&self, register: u16, data: u16) {
         // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
