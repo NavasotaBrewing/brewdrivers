@@ -95,6 +95,8 @@ fn newSTR1(config: &ControllerConfig) -> STR1 {
 }
 
 pub fn omega() {
+    println!("Entering Omega CLI");
+
     let mut shell = controller_shell();
 
     shell.new_command("set_sv", "Set the setpoint value", 1, |io, config, new_temp| {
@@ -151,6 +153,8 @@ pub fn omega() {
 }
 
 pub fn relay() {
+    println!("Entering relay CLI");
+
     let mut shell = controller_shell();
 
     shell.new_command("get_relay", "Prints the status of a relay", 1, |io, config, relay_nums| {
