@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::RTU::CN7500;
-use crate::RTU::STR1;
+// CN7500, STR1
+use crate::RTU::*;
 
 use shrust::{Shell, ShellIO};
 use std::io::prelude::*;
@@ -90,6 +90,10 @@ fn newCN7500(config: &ControllerConfig) -> CN7500 {
     CN7500::new(config.addr, &config.port, config.baudrate)
 }
 
+fn newSTR1(config: &ControllerConfig) -> STR1 {
+    STR1::with_address(config.addr)
+}
+
 pub fn omega() {
     let mut shell = controller_shell();
 
@@ -148,6 +152,56 @@ pub fn omega() {
 
 pub fn relay() {
     let mut shell = controller_shell();
+
+    shell.new_command("get_relay", "Prints the status of a relay", 1, |io, config, relay_nums| {
+        let mut board = newSTR1(&config);
+
+        for num in relay_nums {
+            match num.parse::<u8>() {
+                Ok(relay) => writeln!(io, "Relay {} is {}", relay, board.get_relay(relay)).unwrap(),
+                Err(e) => writeln!(io, "Not a valid relay number: {}", e).unwrap()
+            }
+        }
+
+        Ok(())
+    });
+
+    shell.new_command("set_relay", "Sets a relay on or off", 2, |io, config, args| {
+        let mut board = newSTR1(&config);
+        if args.len() > 2 {
+            writeln!(io, "Error: Too many args").unwrap();
+        }
+
+        let mut state: State = State::Off;
+
+        if args[1] == "1" {
+            state = State::On;
+        }
+
+        match args[0].parse::<u8>() {
+            Ok(relay) => {
+                board.set_relay(relay, state);
+                writeln!(io, "Relay {} is {}", relay, board.get_relay(relay)).unwrap();
+            },
+            Err(e) => writeln!(io, "Not a valid relay number: {}", e).unwrap(),
+        }
+
+        Ok(())
+    });
+
+    shell.new_command("set_cn", "Change the controller number of the baord", 1, |io, config, args| {
+        let mut board = newSTR1(&config);
+
+        match args[0].parse::<u8>() {
+            Ok(new_cn) => {
+                board.set_controller_num(new_cn);
+                writeln!(io, "Controller number set to {}", new_cn).unwrap();
+            },
+            Err(e) => writeln!(io, "Invalid controller number: {}", e).unwrap(),
+        }
+
+        Ok(())
+    });
 
     shell.run_loop(&mut ShellIO::default());
 }

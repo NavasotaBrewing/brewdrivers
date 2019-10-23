@@ -1,3 +1,3 @@
 fn main() {
-    brewdrivers::cli::omega();
+    brewdrivers::cli::relay();
 }
