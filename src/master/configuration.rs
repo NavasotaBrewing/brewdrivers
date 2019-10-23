@@ -112,9 +112,12 @@ impl RTU {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Configuration {
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
+    pub slackChannel: Option<String>,
+    pub slackWebhook: Option<String>,
+    pub date: Option<String>,
     pub mode: Mode,
-    pub id: String,
+    pub id: u32,
     pub RTUs: Vec<RTU>
 }
 
@@ -154,7 +157,7 @@ mod tests {
         {
             "name": "My configuration",
             "description": "Some configuration i made to brew in march or something idk",
-            "id": "j3jhsmdnbk23j4gdf6872123",
+            "id": 45,
             "mode": "Write",
             "RTUs": [
                 {
@@ -199,7 +202,7 @@ mod tests {
             "name": "Minimal Configuration",
             "description": "This is a minimal configuration, all data here is required",
             "mode": "Read",
-            "id": "someuniqueid1234",
+            "id": 32,
             "RTUs": []
         }"#;
 
@@ -212,7 +215,7 @@ mod tests {
         let config_string = r#"{
             "name": "My configuration",
             "description": "Some configuration i made to brew in march or something idk",
-            "id": "j3jhsmdnbk23j4gdf6872123",
+            "id": 13,
             "mode": "Write",
             "RTUs": [
                 {
