@@ -27,7 +27,9 @@ fn update_config(config: Json<Configuration>) -> String {
     // Receive a config, consume the Json wrapper, as one does
     let config = config.into_inner();
     // Update the config
+    println!("Got the following: {:?}", config);
     let updated_config = Configuration::update(&config, &config.mode);
+    println!("After updating: {:?}", updated_config);
     // Return to sender
     updated_config.stringify()
 }

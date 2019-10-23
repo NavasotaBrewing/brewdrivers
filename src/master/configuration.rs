@@ -139,8 +139,10 @@ impl Configuration {
 
         for mut rtu in &mut config.RTUs {
             // Only update this RTU
+	    // println!("get_rtu_id(): {}", get_rtu_id());
+	    // println!("rtu.id: {}", rtu.id);
             if rtu.id == get_rtu_id() {
-                RTU::update(&mut rtu, &mode);
+            	RTU::update(&mut rtu, &mode);
             }
         }
         config
