@@ -13,6 +13,7 @@ extern crate futures;
 extern crate rocket;
 // #[macro_use]
 extern crate rocket_contrib;
+extern crate rocket_cors;
 
 
 pub mod master;

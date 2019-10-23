@@ -5,6 +5,11 @@ use std::net::SocketAddrV4;
 
 use rocket::config::{Config, Environment};
 use rocket_contrib::json::{Json};
+use rocket_cors;
+use rocket::http::Method;
+use rocket::{get, routes};
+use rocket_cors::{AllowedHeaders, AllowedOrigins};
+
 use reqwest;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 
@@ -51,8 +56,22 @@ pub fn run() {
         .port(8000)
         .finalize().unwrap();
 
+    let allowed_origins = AllowedOrigins::all();
+
+    let cors = rocket_cors::CorsOptions {
+        allowed_origins,
+        allowed_methods: vec![Method::Get, Method::Post].into_iter().map(From::from).collect(),
+        allowed_headers: AllowedHeaders::some(&["Authorization", "Content-Type", "Accept"]),
+        allow_credentials: true,
+        ..Default::default()
+    }
+    .to_cors().unwrap();
+
     let app = rocket::custom(config);
 
     let routes = routes![index, propogate_to_RTUs, running];
-    app.mount("/", routes).launch();
+    app
+        .mount("/", routes)
+        .attach(cors)
+        .launch();
 }
