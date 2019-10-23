@@ -4,26 +4,20 @@ use crate::RTU::omega::Instrument;
 
 pub struct CN7500 {
     pub instrument: Instrument,
-    addr: u8,
-    port: String,
-    baudrate: u32,
 }
 
 impl CN7500 {
     pub fn new(addr: u8, port: &str, baudrate: u32) -> CN7500 {
         let instrument = Instrument::new(addr, port, baudrate);
         CN7500 {
-            instrument,
-            addr,
-            port: String::from(port),
-            baudrate
+            instrument
         }
     }
 
     pub fn get_pv(&self) -> f64 {
         // Don't know of a better way :(
         let mut pv: f64 = 0.0;
-        self.instrument.read_register(0x1000, 1, |response| {
+        self.instrument.read_registers(0x1000, 1, |response| {
             pv = (response[0] as f64) / 10.0;
         });
         pv
@@ -31,7 +25,7 @@ impl CN7500 {
 
     pub fn get_sv(&self) -> f64 {
         let mut sv: f64 = 0.0;
-        self.instrument.read_register(0x1001, 1, |response| {
+        self.instrument.read_registers(0x1001, 1, |response| {
             sv = (response[0] as f64) / 10.0;
         });
         sv
@@ -66,9 +60,7 @@ mod tests {
     #[test]
     fn test_new_cn7500() {
         let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
-        assert_eq!(cn.addr, 0x16);
-        assert_eq!(cn.port, String::from("/dev/ttyAMA0"));
-        assert_eq!(cn.baudrate, 19200);
+        assert_eq!(cn.instrument.tty_addr, "/dev/ttyAMA0");
     }
 
     #[test]

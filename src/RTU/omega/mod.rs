@@ -1,8 +1,5 @@
-use std::thread::sleep;
-use std::time::Duration;
-
 use futures::future::Future;
-use tokio_core::reactor::{Core, Handle};
+use tokio_core::reactor::Core;
 use tokio_serial::{Serial, SerialPortSettings};
 use tokio_modbus::prelude::*;
 
@@ -40,7 +37,7 @@ impl Instrument {
             ctx.write_single_coil(register, data)
         });
 
-        core.run(task).unwrap();
+        core.run(task).expect("Error running task write_single_coil");
     }
 
     pub fn read_coils<F>(&self, coil: u16, cnt: u16, handler: F)
@@ -67,7 +64,7 @@ impl Instrument {
                 })
         });
 
-        core.run(task);
+        core.run(task).expect("Error running task read_coils");
     }
 
     pub fn write_register(&self, register: u16, data: u16) {
@@ -84,10 +81,10 @@ impl Instrument {
             ctx.write_single_register(register, data)
         });
 
-        core.run(task).unwrap();
+        core.run(task).expect("Error running task write_single_register");
     }
 
-    pub fn read_register<F>(&self, register: u16, cnt: u16, handler: F)
+    pub fn read_registers<F>(&self, register: u16, cnt: u16, handler: F)
     where F: FnOnce(Vec<u16>) {
         // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
@@ -111,7 +108,7 @@ impl Instrument {
                 })
         });
 
-        core.run(task);
+        core.run(task).expect("Error running task read_holding_registers");
     }
 }
 
@@ -121,12 +118,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_register() {
+    fn test_read_registers() {
         let inst = Instrument::new(0x16, "/dev/ttyAMA0", 19200);
-        inst.read_register(0x1000, 1, |response| {
+        inst.read_registers(0x1000, 1, |response| {
             assert!(response[0] > 0);
         });
-        inst.read_register(0x1001, 1, |response| {
+        inst.read_registers(0x1001, 1, |response| {
             assert!(response[0] > 0);
         });
     }
@@ -135,12 +132,12 @@ mod tests {
     fn test_write_register() {
         let inst = Instrument::new(0x16, "/dev/ttyAMA0", 19200);
         inst.write_register(0x1001, 1000);
-        inst.read_register(0x1001, 1, |response| {
+        inst.read_registers(0x1001, 1, |response| {
             assert_eq!(response[0], 1000);
         });
 
         inst.write_register(0x1001, 1300);
-        inst.read_register(0x1001, 1, |response| {
+        inst.read_registers(0x1001, 1, |response| {
             assert_eq!(response[0], 1300);
         });
     }
