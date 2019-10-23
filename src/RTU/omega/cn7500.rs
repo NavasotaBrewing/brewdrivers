@@ -1,7 +1,6 @@
 use crate::RTU::omega::Instrument;
 
-
-
+#[derive(Debug)]
 pub struct CN7500 {
     pub instrument: Instrument,
 }
