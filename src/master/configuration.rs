@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::RTU::relays::State;
 // use crate::RTU::relays::{STR1, Board};
+use crate::RTU::*;
 
 
 fn get_rtu_id() -> String {
@@ -32,23 +33,46 @@ pub struct Device {
     pub id: String,
     pub state: State,
     pub addr: u8,
-    pub controller_addr: u8
+    pub controller_addr: u8,
+    pub pv: Option<f64>,
+    pub sv: Option<f64>,
+
 }
 
 impl Device {
     pub fn update(device: &mut Device, mode: &Mode) {
         match device.driver {
             Driver::STR1 => {
-                // let mut board = STR1::with_address(device.controller_addr);
+                let mut board = STR1::with_address(device.controller_addr);
                 match mode {
-                    // Mode::Write => board.set_relay(device.addr, device.state.clone()),
-                    Mode::Write => {},
+                    Mode::Write => board.set_relay(device.addr, device.state.clone()),
                     Mode::Read => {}
                 }
-                device.state = State::Off;
-                // device.state = board.get_relay(device.addr);
+                // Read|Update
+                device.state = board.get_relay(device.addr);
             },
-            Driver::Omega => {}
+            Driver::Omega => {
+                let cn7500 = CN7500::new(device.controller_addr, "/dev/ttyAMA0", 19200);
+
+                match mode {
+                    Mode::Write => {
+                        cn7500.set_sv(device.sv.unwrap());
+                        match device.state {
+                            State::On => cn7500.run(),
+                            State::Off => cn7500.stop(),
+                        }
+                    },
+                    Mode::Read => {}
+                }
+
+                // Read|Update
+                device.pv = Some(cn7500.get_pv());
+                if cn7500.is_running() {
+                    device.state = State::On;
+                } else {
+                    device.state = State::Off;
+                }
+            }
         }
     }
 }
