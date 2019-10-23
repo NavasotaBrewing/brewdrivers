@@ -1,45 +1,44 @@
-use futures::future::Future;
-use tokio_core::reactor::{Core, Handle};
-use tokio_serial::{Serial, SerialPortSettings};
-use tokio_modbus::prelude::*;
+use crate::RTU::omega::Instrument;
+
 
 
 pub struct CN7500 {
+    pub instrument: Instrument,
     addr: u8,
-    tty_addr: String,
-    baudrate: u32
+    port: String,
+    baudrate: u32,
 }
 
 impl CN7500 {
-
-    pub fn new(addr: u8, tty_addr: &str, baudrate: u32) -> CN7500 {
+    pub fn new(addr: u8, port: &str, baudrate: u32) -> CN7500 {
+        let instrument = Instrument::new(addr, port, baudrate);
         CN7500 {
+            instrument,
             addr,
-            tty_addr: String::from(tty_addr),
+            port: String::from(port),
             baudrate
         }
     }
 
-    pub fn read_register<F>(&self, register: u16, cnt: u16, handler: F)
-    where F: FnOnce(Vec<u16>) -> Result<(), std::io::Error> {
-        // TODO: Add a timeout on wrong addr
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
-        let slave = Slave(self.addr);
-
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = self.baudrate;
-        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
-
-        let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
-            ctx
-                // Read sensor value
-                .read_holding_registers(register, cnt)
-                // Then pass it to the handler
-                .and_then(move |rsp| { handler(rsp) })
+    pub fn get_pv(&self) -> f64 {
+        // Don't know of a better way :(
+        let mut pv: f64 = 0.0;
+        self.instrument.read_register(0x1000, 1, |response| {
+            pv = (response[0] as f64) / 10.0;
         });
+        pv
+    }
 
-        core.run(task).unwrap();
+    pub fn get_sv(&self) -> f64 {
+        let mut sv: f64 = 0.0;
+        self.instrument.read_register(0x1001, 1, |response| {
+            sv = (response[0] as f64) / 10.0;
+        });
+        sv
+    }
+
+    pub fn set_sv(&self, temperature: f64) {
+        self.instrument.write_register(0x1001, (temperature * 10.0) as u16);
     }
 }
 
@@ -49,12 +48,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_pv() {
-        let o = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
-        o.read_register(0x1000, 1, |rsp| {
-            println!("{:?}", rsp);
-            assert!(rsp[0] > 0);
-            Ok(())
-        });
+    fn test_new_cn7500() {
+        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        assert_eq!(cn.addr, 0x16);
+        assert_eq!(cn.port, String::from("/dev/ttyAMA0"));
+        assert_eq!(cn.baudrate, 19200);
+    }
+
+    #[test]
+    fn test_set_sv() {
+        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        cn.set_sv(123.4);
+    }
+
+    #[test]
+    fn test_get_pv() {
+        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        assert!(cn.get_pv() > 0.0);
+    }
+
+    #[test]
+    fn test_get_sv() {
+        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        cn.set_sv(145.7);
+        assert_eq!(cn.get_sv(), 145.7);
+    }
+
+    #[test]
+    fn test_turn_on_relay() {
+        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        cn.run();
+        assert!(cn.is_running());
+        cn.stop();
     }
 }
