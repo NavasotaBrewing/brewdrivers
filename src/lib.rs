@@ -6,6 +6,7 @@ extern crate clap;
 extern crate retry;
 extern crate serde_json;
 extern crate reqwest;
+extern crate shrust;
 
 extern crate futures;
 
@@ -15,6 +16,6 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 
+pub mod master;
 pub mod RTU;
 pub mod cli;
-pub mod master;

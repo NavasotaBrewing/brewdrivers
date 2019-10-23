@@ -1,132 +1,153 @@
-use std::process;
+use std::fmt;
 
-use crate::RTU::relays::{STR1, State, Board};
-use crate::RTU::api as rtu_api;
-use crate::master::api as master_api;
+use crate::RTU::CN7500;
+use crate::RTU::STR1;
 
-use clap::{Arg, App, SubCommand, ArgMatches};
+use shrust::{Shell, ShellIO};
+use std::io::prelude::*;
 
-fn matches() -> ArgMatches<'static> {
-    return App::new("Brewdrivers")
-        .version(env!("CARGO_PKG_VERSION"))
-        .author("llamicron <llamicron@gmail.com>")
-        .about("Hardware drivers")
-        .subcommand(SubCommand::with_name("relay")
-            .about("Controls an STR116 or STR008")
-            .arg(Arg::with_name("controller_num")
-                .help("Board controller number")
-                .validator(validators::is_int)
-                .required(true)
-                .index(1))
-            .arg(Arg::with_name("relay_num")
-                .help("Relay to change")
-                .validator(validators::is_int_or_all)
-                .required(true)
-                .index(2))
-            .arg(Arg::with_name("state")
-                .help("Relay state: 1 or 0")
-                .validator(validators::is_int)
-                .required(false)
-                .index(3)))
-        .subcommand(SubCommand::with_name("set_cn")
-            .about("Programs the controller number of a board")
-            .arg(Arg::with_name("current_cn")
-                .help("Current controller number")
-                .validator(validators::is_int)
-                .required(true)
-                .index(1))
-            .arg(Arg::with_name("new_cn")
-                .help("New controller number to set (0-255)")
-                .validator(validators::is_int)
-                .required(true)
-                .index(2)))
-        .subcommand(SubCommand::with_name("api")
-            .about("Runs the Master or RTU API")
-            .arg(Arg::with_name("position")
-                .help("'master' or 'rtu'")
-                .validator(validators::is_master_or_rtu)
-                .required(true)
-                .index(1)))
-    .get_matches();
+// This is used only for the cli, don't get it confused with Configuration
+#[derive(Debug)]
+struct ControllerConfig {
+    addr: u8,
+    baudrate: u32,
+    port: String
 }
 
-pub fn parse_args() {
-    let matches = matches();
-
-    if let Some(matches) = matches.subcommand_matches("relay") {
-        handle_relay_matches(&matches);
+impl fmt::Display for ControllerConfig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "-- Controller Config --")?;
+        writeln!(f, "Port:      {}", self.port)?;
+        writeln!(f, "Address:   {}", self.addr)?;
+        write!(f,   "Baudrate:  {}", self.baudrate)
     }
+}
 
-    if let Some(matches) = matches.subcommand_matches("set_cn") {
-        handle_set_cn_matches(matches);
-    }
 
-    if let Some(matches) = matches.subcommand_matches("api") {
-        if let Some(position) = matches.value_of("position") {
-            if position == "master" {
-                master_api::run();
-            } else {
-                rtu_api::run();
+fn controller_shell() -> Shell<ControllerConfig> {
+    let config = ControllerConfig {
+        addr: 0x16,
+        baudrate: 19200,
+        port: String::from("/dev/ttyAMA0"),
+    };
+
+    let mut shell = Shell::new(config);
+
+    shell.new_command_noargs("version", "View the current version", |io, _| {
+        writeln!(io, "Brewdrivers v{}", env!("CARGO_PKG_VERSION"))?;
+        Ok(())
+    });
+
+    // Omega
+    shell.new_command("with_addr", "Configure the address of the controller (decimal)", 1, |io, config, addrs| {
+        match addrs[0].parse::<u8>() {
+            Ok(addr) => {
+                config.addr = addr;
+                writeln!(io, "Now using address {}", addr)?;
+            },
+            Err(e) => {
+                writeln!(io, "{}", e)?;
             }
-        }
-    }
+        };
+        Ok(())
+    });
 
-}
-
-fn handle_set_cn_matches(matches: &ArgMatches) {
-
-    let ccn = matches.value_of("current_cn").unwrap().parse::<u8>().unwrap();
-    let ncn = matches.value_of("new_cn").unwrap().parse::<u8>().unwrap();
-
-    let mut board = STR1::with_address(ccn);
-    board.set_controller_num(ncn);
-    println!("Controller {} -> Controller {}", ccn, ncn);
-}
-
-fn handle_relay_matches(matches: &ArgMatches) {
-    let cn = matches.value_of("controller_num").unwrap().parse::<u8>().unwrap();
-    let mut str116 = STR1::with_address(cn);
-
-    let rn_matches = matches.value_of("relay_num").unwrap();
-
-    if rn_matches == "all" {
-        str116.list_all_relays();
-        process::exit(0);
-    }
-
-    let rn = rn_matches.parse::<u8>().unwrap();
-
-    if let Some(state) = matches.value_of("state") {
-        let state_bool = state.parse::<u8>().unwrap() != 0;
-        let state = State::from(state_bool);
-        str116.set_relay(rn, state);
-    }
-    println!("Controller {} relay {} is {}", cn, rn, str116.get_relay(rn));
-}
-
-
-mod validators {
-    pub fn is_int(arg: String) -> Result<(), String> {
-        match arg.parse::<u8>() {
-            Ok(_) => return Ok(()),
-            Err(_) => return Err("needs to be an integer".to_string())
-        }
-    }
-
-    pub fn is_int_or_all(arg: String) -> Result<(), String> {
-        match arg.parse::<u8>() {
-            Ok(_) => return Ok(()),
-            Err(_) => {
-                if arg == "all".to_string() { return Ok(()); }
+    shell.new_command("with_port", "Configure the port of the controller", 1, |io, config, ports| {
+        match ports[0].parse::<String>() {
+            Ok(port) => {
+                writeln!(io, "Now using port {}", port)?;
+                config.port = port;
+            },
+            Err(e) => {
+                writeln!(io, "{}", e)?;
             }
-        }
-        Err("needs to be an int or 'all'".to_string())
-    }
+        };
+        Ok(())
+    });
 
-    pub fn is_master_or_rtu(arg: String) -> Result<(), String> {
-        if arg.as_str() == "master" || arg.as_str() == "rtu" {
-            return Ok(())
-        }
-        Err("Acceptable values are 'master' or 'rtu'".to_string())
-    }
+    shell.new_command("with_baud", "Configure the baudrate of the controller", 1, |io, config, bauds| {
+        match bauds[0].parse::<u32>() {
+            Ok(baud) => {
+                config.baudrate = baud;
+                writeln!(io, "Now using baudrate {}", baud)?;
+            },
+            Err(e) => {
+                writeln!(io, "{}", e)?;
+            }
+        };
+        Ok(())
+    });
+
+    shell.new_command_noargs("config", "View the current controller configuration", |io, config| {
+        writeln!(io, "{}", config)?;
+        Ok(())
+    });
+
+    shell
+}
+
+fn newCN7500(config: &ControllerConfig) -> CN7500 {
+    CN7500::new(config.addr, &config.port, config.baudrate)
+}
+
+pub fn omega() {
+    let mut shell = controller_shell();
+
+    shell.new_command("set_sv", "Set the setpoint value", 1, |io, config, new_temp| {
+        let cn = newCN7500(&config);
+
+        match new_temp[0].parse::<f64>() {
+            Ok(temperature) => {
+                if temperature > 752.0 || temperature < 0.1 {
+                    writeln!(io, "Temperature out of range (0.1-752)")?;
+                } else {
+                    cn.set_sv(temperature);
+                    writeln!(io, "Setting to {}", temperature)?;
+                }
+            },
+            Err(_) => writeln!(io, "Not a number")?
+        };
+
+        Ok(())
+    });
+
+    shell.new_command_noargs("pv", "Get the process value", |io, config| {
+        let cn = newCN7500(&config);
+        writeln!(io, "Process: {}", cn.get_pv())?;
+        Ok(())
+    });
+
+    shell.new_command_noargs("sv", "Get the setpoint value", |io, config| {
+        let cn = newCN7500(&config);
+        writeln!(io, "Setpoint: {}", cn.get_sv())?;
+        Ok(())
+    });
+
+    shell.new_command_noargs("run", "Run the relay", |io, config| {
+        let cn = newCN7500(&config);
+        cn.run();
+        writeln!(io, "running...")?;
+        Ok(())
+    });
+
+    shell.new_command_noargs("stop", "Stop the relay", |io, config| {
+        let cn = newCN7500(&config);
+        cn.stop();
+        writeln!(io, "stopped.")?;
+        Ok(())
+    });
+
+    shell.new_command_noargs("is_running", "Checks if the relay is running", |io, config| {
+        let cn = newCN7500(&config);
+        writeln!(io, "{}", cn.is_running())?;
+        Ok(())
+    });
+
+    shell.run_loop(&mut ShellIO::default());
+}
+
+pub fn relay() {
+    let mut shell = controller_shell();
+
+    shell.run_loop(&mut ShellIO::default());
 }

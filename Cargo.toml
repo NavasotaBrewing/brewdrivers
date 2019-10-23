@@ -25,6 +25,7 @@ futures = "0.1"
 tokio-modbus = { version = "*", default-features = false, features = ["rtu"] }
 tokio-core = "*"
 tokio-serial = "*"
+shrust = "0.0.7"
 
 [dependencies.rocket_contrib]
 version = "0.4.2"

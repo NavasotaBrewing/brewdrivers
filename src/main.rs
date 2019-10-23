@@ -1,3 +1,3 @@
 fn main() {
-    brewdrivers::cli::parse_args();
+    brewdrivers::cli::omega();
 }
