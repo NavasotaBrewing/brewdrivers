@@ -2,6 +2,7 @@ use futures::future::Future;
 use tokio_core::reactor::Core;
 use tokio_serial::{Serial, SerialPortSettings};
 use tokio_modbus::prelude::*;
+use std::time::Duration;
 
 pub mod cn7500;
 pub use cn7500::CN7500;
@@ -11,27 +12,30 @@ pub use cn7500::CN7500;
 pub struct Instrument {
     addr: u8,
     tty_addr: String,
-    baudrate: u32
+    port_settings: SerialPortSettings
 }
 
 impl Instrument {
     pub fn new(addr: u8, tty_addr: &str, baudrate: u32) -> Instrument {
+        let mut port_settings = SerialPortSettings::default();
+        port_settings.baud_rate = baudrate;
+        // This doesn't actually work!!
+        // tokio-modbus is broken :(
+        port_settings.timeout = Duration::from_millis(50);
+
         Instrument {
             addr,
             tty_addr: String::from(tty_addr),
-            baudrate
+            port_settings
         }
     }
 
     pub fn write_coil(&self, register: u16, data: bool) {
-        // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
         let handle = core.handle();
         let slave = Slave(self.addr);
 
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = self.baudrate;
-        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
+        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &self.port_settings, &handle.new_tokio_handle()).unwrap();
 
         let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
             ctx.write_single_coil(register, data)
@@ -42,16 +46,11 @@ impl Instrument {
 
     pub fn read_coils<F>(&self, coil: u16, cnt: u16, handler: F)
     where F: FnOnce(Vec<bool>) {
-        // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
-
         let handle = core.handle();
         let slave = Slave(self.addr);
 
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = self.baudrate;
-        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
-
+        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &self.port_settings, &handle.new_tokio_handle()).unwrap();
 
         let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
             ctx
@@ -68,14 +67,11 @@ impl Instrument {
     }
 
     pub fn write_register(&self, register: u16, data: u16) {
-        // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
         let handle = core.handle();
         let slave = Slave(self.addr);
 
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = self.baudrate;
-        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
+        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &self.port_settings, &handle.new_tokio_handle()).unwrap();
 
         let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
             ctx.write_single_register(register, data)
@@ -86,16 +82,11 @@ impl Instrument {
 
     pub fn read_registers<F>(&self, register: u16, cnt: u16, handler: F)
     where F: FnOnce(Vec<u16>) {
-        // TODO: Add a timeout on wrong addr
         let mut core = Core::new().unwrap();
-
         let handle = core.handle();
         let slave = Slave(self.addr);
 
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = self.baudrate;
-        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &settings, &handle.new_tokio_handle()).unwrap();
-
+        let port = Serial::from_path_with_handle(self.tty_addr.as_str(), &self.port_settings, &handle.new_tokio_handle()).unwrap();
 
         let task = rtu::connect_slave(&handle, port, slave).and_then(|ctx| {
             ctx
