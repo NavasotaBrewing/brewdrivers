@@ -23,7 +23,6 @@ impl fmt::Display for ControllerConfig {
     }
 }
 
-
 fn controller_shell() -> Shell<ControllerConfig> {
     let config = ControllerConfig {
         addr: 0x16,
@@ -94,6 +93,7 @@ fn newSTR1(config: &ControllerConfig) -> STR1 {
     STR1::with_address(config.addr)
 }
 
+// Omega CLI
 pub fn omega() {
     println!("Entering Omega CLI");
 
@@ -149,9 +149,22 @@ pub fn omega() {
         Ok(())
     });
 
+    shell.new_command("set_degrees", "[C/F] Sets the degrees to ˚C or ˚F", 1, |io, config, degrees| {
+        let cn = newCN7500(&config);
+        if degrees[0].to_uppercase().as_str() == "C" {
+            cn.set_degrees(Degree::Celsius);
+            writeln!(io, "Now using ˚C")?;
+        } else {
+            cn.set_degrees(Degree::Fahrenheit);
+            writeln!(io, "Now using ˚F")?;
+        }
+        Ok(())
+    });
+
     shell.run_loop(&mut ShellIO::default());
 }
 
+// Relay CLI
 pub fn relay() {
     println!("Entering relay CLI");
 

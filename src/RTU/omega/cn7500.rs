@@ -1,4 +1,8 @@
-use crate::RTU::omega::Instrument;
+use std::time::Duration;
+use std::thread::sleep;
+
+use crate::RTU::omega::{Instrument, Degree};
+
 
 #[derive(Debug)]
 pub struct CN7500 {
@@ -36,6 +40,14 @@ impl CN7500 {
 
     pub fn run(&self) {
         self.instrument.write_coil(0x0814, true);
+    }
+
+    pub fn set_degrees(&self, mode: Degree) {
+        match mode {
+            Degree::Celsius => self.instrument.write_coil(0x0811, true),
+            Degree::Fahrenheit => self.instrument.write_coil(0x0811, false),
+        }
+        sleep(Duration::from_millis(1000));
     }
 
     pub fn stop(&self) {
