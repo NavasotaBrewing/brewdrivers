@@ -67,6 +67,7 @@ impl Device {
 
                 // Read|Update
                 device.pv = Some(cn7500.get_pv());
+		device.sv = Some(cn7500.get_sv());
                 if cn7500.is_running() {
                     device.state = State::On;
                 } else {
@@ -139,8 +140,8 @@ impl Configuration {
 
         for mut rtu in &mut config.RTUs {
             // Only update this RTU
-	    // println!("get_rtu_id(): {}", get_rtu_id());
-	    // println!("rtu.id: {}", rtu.id);
+            // println!("get_rtu_id(): {}", get_rtu_id());
+            // println!("rtu.id: {}", rtu.id);
             if rtu.id == get_rtu_id() {
             	RTU::update(&mut rtu, &mode);
             }

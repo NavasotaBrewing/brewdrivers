@@ -40,6 +40,8 @@ fn running() -> &'static str {
     r#"{"running":"true"}"#
 }
 
+/// This is the main endpoint for the client site, it POSTs here
+/// and this propogates to all the RTUs in the configuration
 #[post("/configuration", format = "json", data = "<config>")]
 fn propogate_to_RTUs(config: Json<Configuration>) -> String {
     let mut current_config = config.clone();
