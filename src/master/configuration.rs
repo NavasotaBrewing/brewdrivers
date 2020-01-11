@@ -67,7 +67,7 @@ impl Device {
 
                 // Read|Update
                 device.pv = Some(cn7500.get_pv());
-		device.sv = Some(cn7500.get_sv());
+                device.sv = Some(cn7500.get_sv());
                 if cn7500.is_running() {
                     device.state = State::On;
                 } else {
@@ -116,6 +116,7 @@ pub struct Configuration {
     pub description: Option<String>,
     pub slackChannel: Option<String>,
     pub slackWebhook: Option<String>,
+    pub masterAddr: Option<String>,
     pub date: Option<String>,
     pub mode: Mode,
     pub id: u32,
@@ -161,6 +162,9 @@ mod tests {
             "name": "My configuration",
             "description": "Some configuration i made to brew in march or something idk",
             "id": 45,
+            "slackWebhook": "Testing",
+            "slackChannel": "@luke",
+            "masterAddr": "192.168.0.120:8000",
             "mode": "Write",
             "RTUs": [
                 {

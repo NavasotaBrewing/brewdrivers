@@ -27,6 +27,7 @@ fn update(current_config: &Configuration, addr: SocketAddrV4) -> Configuration {
 
     // ...and update current_config with whatever is returned
     let err_msg = format!("Could not get configuration back from RTU with address {}", addr);
+    // Do NOT read body.json() or body.text() before this line, it only works once because crackheads i guess
     Configuration::from(&body.text().unwrap()).expect(&err_msg)
 }
 
