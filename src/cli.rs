@@ -206,7 +206,7 @@ pub fn relay() {
         Ok(())
     });
 
-    shell.new_command("set_cn", "Change the controller number of the baord", 1, |io, config, args| {
+    shell.new_command("set_cn", "Change the controller number of the board", 1, |io, config, args| {
         let mut board = newSTR1(&config);
 
         match args[0].parse::<u8>() {

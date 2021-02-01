@@ -26,6 +26,7 @@ impl Instrument {
         port_settings.baud_rate = baudrate;
         // This doesn't actually work!!
         // tokio-modbus is broken :(
+        // TODO: tokio-modbus has been updated, maybe this is fixed? update to 0.4.0
         port_settings.timeout = Duration::from_millis(50);
 
         Instrument {
