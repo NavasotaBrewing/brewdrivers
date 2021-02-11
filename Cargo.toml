@@ -12,6 +12,13 @@ keywords = ["serial", "hardware", "brewing", "control", "driver"]
 categories = ["hardware-support", "network-programming"]
 license = "MIT"
 
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-none-linux-gnueabihf-gcc"
+
+# [target.armv7-unknown-linux-gnueabihf]
+# image = "navasotabrewing/rtu-compiler:0.1.1"
+
+
 [dependencies]
 hex = "0.3.2"
 serialport = "3.3.0"
