@@ -1,6 +1,6 @@
 [package]
 name = "brewdrivers"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["llamicron <llamicron@gmail.com>"]
 edition = "2018"
 description = "Brewkit drivers"
@@ -23,3 +23,16 @@ tokio-modbus = { version = "0.3.5", default-features = false, features = ["rtu"]
 tokio-core = "0.1"
 tokio-serial = "3.3.0"
 shrust = "0.0.7"
+
+
+
+[dependencies.serde]
+version = "1.0"
+optional = true
+
+[features]
+default = []
+# This enables NavasotaBrewing/network to use parts of brewdrivers
+# in its network communications. You shouldn't need to enable it if
+# you're just using the CLI or drivers as a library
+network = ["serde"]
