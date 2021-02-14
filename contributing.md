@@ -19,3 +19,6 @@ The `omega/` directory contains drivers for OMEGA Engineering devices; we use th
 `relays/` is a little different. Once again, `relays/mod.rs` and `bytestring.rs` contain things that may be common to all relay boards. The `str1.rs` module is a driver for the `STR116` and `STR108` relay boards specifically. We may add support for more relay boards, perhaps of a completely different type, in the `relays/` directory.
 
 Devices could be grouped by family, manufacturer, function, or name. The directory structure should just follow common sense. Things should go where it seems they should go.
+
+## Documentation and Testing
+All added code should be well documented and tested. I may refuse or delay a driver's inclusion here until it's tested and documented. 
