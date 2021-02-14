@@ -1,12 +1,13 @@
 use std::fmt;
 
 // CN7500, STR1
-use crate::RTU::*;
+use crate::relays::{Board, STR1, State};
+use crate::omega::{CN7500, Degree};
 
 use shrust::{Shell, ShellIO};
 use std::io::prelude::*;
 
-// This is used only for the cli, don't get it confused with Configuration
+// This is used only for the cli state
 #[derive(Debug)]
 struct ControllerConfig {
     addr: u8,
@@ -25,6 +26,7 @@ impl fmt::Display for ControllerConfig {
 
 fn controller_shell() -> Shell<ControllerConfig> {
     let config = ControllerConfig {
+        // This is just what I have mine set to
         addr: 0x16,
         baudrate: 19200,
         port: String::from("/dev/ttyAMA0"),

@@ -1,7 +1,7 @@
 use std::time::Duration;
 use std::thread::sleep;
 
-use crate::RTU::omega::{Instrument, Degree};
+use crate::omega::{Instrument, Degree};
 
 
 #[derive(Debug)]
