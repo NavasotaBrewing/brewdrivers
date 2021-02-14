@@ -1,9 +1,10 @@
 [build.env]
 passthrough = [
-    "PKG_CONFIG_PATH",
+    # "PKG_CONFIG_PATH",
     "RUST_BACKTRACE"
 ]
 
 [target.armv7-unknown-linux-gnueabihf]
-image = "navasotabrewing/rtu-compiler:0.1.5"
-linker = "arm-none-linux-gnueabihf-gcc"
+image = "navasotabrewing/rtu-compiler:0.2.1"
+# linker = "arm-none-linux-gnueabihf-gcc"
+linker = "arm-linux-gnueabihf-gcc"
