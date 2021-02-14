@@ -2,8 +2,8 @@ FROM rustembedded/cross:arm-unknown-linux-gnueabihf-0.2.1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
 ENV RPI_TOOLS=/rpi_tools
-ENV MACHINE=armv6
-ENV ARCH=armv6
+ENV MACHINE=armv7
+ENV ARCH=armv7
 ENV CC=gcc
 ENV OPENSSL_DIR=/openssl
 ENV CROSSCOMP_DIR=/rpi_tools/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin
