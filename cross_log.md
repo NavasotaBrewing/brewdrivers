@@ -1,6 +1,11 @@
 # Cross compile
 This is a log of me trying to get cross compilation to work with the `cross` rust tool and Docker.
 
+## Links
+* https://www.reddit.com/r/rust/comments/g86tc1/help_crosscompiling_for_raspberry_pi_zero_w/
+* https://www.acmesystems.it/arm9_toolchain
+* https://github.com/rust-lang/rust/issues/28924
+
 The Dockerfile is almost 100% from this [reddit post](https://www.reddit.com/r/rust/comments/g86tc1/help_crosscompiling_for_raspberry_pi_zero_w/)
 
 Here's the current Dockerfile, it seems to be compiling ok:
