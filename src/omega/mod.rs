@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_read_registers() {
-        let inst = Instrument::new(0x16, "/dev/ttyAMA0", 19200);
+        let inst = Instrument::new(0x16, "/dev/ttyUSB0", 9600);
         inst.read_registers(0x1000, 1, |response| {
             assert!(response[0] > 0);
         });
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_write_register() {
-        let inst = Instrument::new(0x16, "/dev/ttyAMA0", 19200);
+        let inst = Instrument::new(0x16, "/dev/ttyUSB0", 9600);
         inst.write_register(0x1001, 1000);
         inst.read_registers(0x1001, 1, |response| {
             assert_eq!(response[0], 1000);
@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_write_coil() {
-        let inst = Instrument::new(0x16, "/dev/ttyAMA0", 19200);
+        let inst = Instrument::new(0x16, "/dev/ttyUSB0", 9600);
         inst.write_coil(0x0814, true);
         // Assert it's on
         inst.write_coil(0x0814, false);

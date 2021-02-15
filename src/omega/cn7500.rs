@@ -67,35 +67,41 @@ impl CN7500 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_new_cn7500() {
-        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
-        assert_eq!(cn.instrument.tty_addr, "/dev/ttyAMA0");
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        assert_eq!(cn.instrument.tty_addr, "/dev/ttyUSB0");
     }
 
     #[test]
+    #[serial]
     fn test_set_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
         cn.set_sv(123.4);
     }
 
     #[test]
+    #[serial]
     fn test_get_pv() {
-        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
         assert!(cn.get_pv() > 0.0);
     }
 
     #[test]
+    #[serial]
     fn test_get_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
         cn.set_sv(145.7);
         assert_eq!(cn.get_sv(), 145.7);
     }
 
     #[test]
+    #[serial]
     fn test_turn_on_relay() {
-        let cn = CN7500::new(0x16, "/dev/ttyAMA0", 19200);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
         cn.run();
         assert!(cn.is_running());
         cn.stop();
