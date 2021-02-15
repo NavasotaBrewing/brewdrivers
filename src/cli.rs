@@ -1,14 +1,14 @@
-use std::fmt;
+use std::{fmt, writeln};
 
 // CN7500, STR1
 use crate::relays::{STR1, State};
-use crate::omega::{CN7500, Degree};
+use crate::omega::CN7500;
 
 use shrust::{Shell, ShellIO};
 use std::io::prelude::*;
 
 // This is used only for the cli state
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ControllerConfig {
     addr: u8,
     baudrate: u32,
@@ -29,7 +29,7 @@ fn controller_shell() -> Shell<ControllerConfig> {
         // This is just what I have mine set to
         addr: 0x16,
         baudrate: 19200,
-        port: String::from("/dev/ttyAMA0"),
+        port: String::from("/dev/ttyUSB0"),
     };
 
     let mut shell = Shell::new(config);
@@ -87,8 +87,9 @@ fn controller_shell() -> Shell<ControllerConfig> {
     shell
 }
 
-fn newCN7500(config: &ControllerConfig) -> CN7500 {
-    CN7500::new(config.addr, &config.port, config.baudrate)
+#[allow(dead_code)]
+async fn newCN7500(config: &ControllerConfig) -> CN7500 {
+    CN7500::new(config.addr, &config.port, config.baudrate).await
 }
 
 fn newSTR1(config: &ControllerConfig) -> Option<STR1> {
@@ -106,73 +107,111 @@ fn newSTR1(config: &ControllerConfig) -> Option<STR1> {
 
 // Omega CLI
 pub fn omega() {
-    println!("Entering Omega CLI");
+    println!("Omega CLI is disabled for now");
+    // println!("Entering Omega CLI");
 
-    let mut shell = controller_shell();
+    // let mut shell = controller_shell();
 
-    shell.new_command("set_sv", "Set the setpoint value", 1, |io, config, new_temp| {
-        let cn = newCN7500(&config);
+    
+    // shell.new_command("set_sv", "Set the setpoint value", 1, |io, config, new_temp| {
+    //     tokio::task::spawn(async {
+    //         let mut cn = newCN7500(&config).await;
+            
+    //         match new_temp[0].parse::<f64>() {
+    //             Ok(temperature) => {
+    //                 if temperature > 752.0 || temperature < 0.1 {
+    //                     writeln!(io, "Temperature out of range (0.1-752)").unwrap();
+    //                 } else {
+    //                     match cn.set_sv(temperature).await {
+    //                         Ok(_) => writeln!(io, "Setting to {}", temperature).unwrap(),
+    //                         Err(e) => writeln!(io, "Error: {}", e).unwrap()
+    //                     }
+    //                 }
+    //             },
+    //             Err(_) => writeln!(io, "Not a number").unwrap()
+    //         };
+    //     });
 
-        match new_temp[0].parse::<f64>() {
-            Ok(temperature) => {
-                if temperature > 752.0 || temperature < 0.1 {
-                    writeln!(io, "Temperature out of range (0.1-752)")?;
-                } else {
-                    cn.set_sv(temperature);
-                    writeln!(io, "Setting to {}", temperature)?;
-                }
-            },
-            Err(_) => writeln!(io, "Not a number")?
-        };
 
-        Ok(())
-    });
+    //     Ok(())
+    // });
 
-    shell.new_command_noargs("pv", "Get the process value", |io, config| {
-        let cn = newCN7500(&config);
-        writeln!(io, "Process: {}", cn.get_pv())?;
-        Ok(())
-    });
+    // shell.new_command_noargs("pv", "Get the process value", |io, config| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         match cn.get_pv().await {
+    //             Ok(pv) => writeln!(io, "Process: {}", pv),
+    //             Err(e) => writeln!(io, "Error: {}", e),
+    //         }.unwrap();
+    //     };
+    //     Ok(())
+    // });
 
-    shell.new_command_noargs("sv", "Get the setpoint value", |io, config| {
-        let cn = newCN7500(&config);
-        writeln!(io, "Setpoint: {}", cn.get_sv())?;
-        Ok(())
-    });
+    // shell.new_command_noargs("sv", "Get the setpoint value", |io, config| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         match cn.get_sv().await {
+    //             Ok(sv) => writeln!(io, "Setpoint: {}", sv).unwrap(),
+    //             Err(e) => writeln!(io, "Error: {}", e).unwrap(),
+    //         }
+    //     };
+    //     Ok(())
+    // });
 
-    shell.new_command_noargs("run", "Run the relay", |io, config| {
-        let cn = newCN7500(&config);
-        cn.run();
-        writeln!(io, "running...")?;
-        Ok(())
-    });
+    // shell.new_command_noargs("run", "Run the relay", |io, config| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         match cn.run().await {
+    //             Ok(_) => writeln!(io, "running...").unwrap(),
+    //             Err(e) => writeln!(io, "Error: {}", e).unwrap()
+    //         };
+    //     };
+    //     Ok(())
+    // });
 
-    shell.new_command_noargs("stop", "Stop the relay", |io, config| {
-        let cn = newCN7500(&config);
-        cn.stop();
-        writeln!(io, "stopped.")?;
-        Ok(())
-    });
+    // shell.new_command_noargs("stop", "Stop the relay", |io, config| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         match cn.stop().await {
+    //             Ok(_) => writeln!(io, "stopped.").unwrap(),
+    //             Err(e) => writeln!(io, "Error: {}", e).unwrap()
+    //         };
+    //     };
+    //     Ok(())
+    // });
 
-    shell.new_command_noargs("is_running", "Checks if the relay is running", |io, config| {
-        let cn = newCN7500(&config);
-        writeln!(io, "{}", cn.is_running())?;
-        Ok(())
-    });
+    // shell.new_command_noargs("is_running", "Checks if the relay is running", |io, config| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         match cn.is_running().await {
+    //             Ok(running) => writeln!(io, "Running: {}", running).unwrap(),
+    //             Err(e) => writeln!(io, "Error: {}", e).unwrap()
+    //         };
+    //     };
+    //     Ok(())
+    // });
 
-    shell.new_command("set_degrees", "[C/F] Sets the degrees to ˚C or ˚F", 1, |io, config, degrees| {
-        let cn = newCN7500(&config);
-        if degrees[0].to_uppercase().as_str() == "C" {
-            cn.set_degrees(Degree::Celsius);
-            writeln!(io, "Now using ˚C")?;
-        } else {
-            cn.set_degrees(Degree::Fahrenheit);
-            writeln!(io, "Now using ˚F")?;
-        }
-        Ok(())
-    });
+    // shell.new_command("set_degrees", "[C/F] Sets the degrees to ˚C or ˚F", 1, |io, config, degrees| {
+    //     async {
+    //         let mut cn = newCN7500(&config).await;
+    //         let unit: Degree = Degree::Fahrenheit;
+    //         if degrees[0].to_uppercase().as_str() == "C" {
+    //             let unit = Degree::Celsius;
+    //             writeln!(io, "Now using ˚C").unwrap();
+    //         } else {
+    //             let unit = Degree::Fahrenheit;
+    //             writeln!(io, "Now using ˚F").unwrap();
+    //         }
 
-    shell.run_loop(&mut ShellIO::default());
+    //         match cn.set_degrees(unit).await {
+    //             Ok(_) => writeln!(io, "Unit set successfully").unwrap(),
+    //             Err(e) => writeln!(io, "Error: {}", e).unwrap(),
+    //         };
+    //     };
+    //     Ok(())
+    // });
+
+    // shell.run_loop(&mut ShellIO::default());
 }
 
 // Relay CLI

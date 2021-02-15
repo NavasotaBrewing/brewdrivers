@@ -1,6 +1,5 @@
 //! A generic Modbus RTU instrument
 
-
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -66,6 +65,8 @@ pub struct ModbusInstrument {
     pub ctx: Context
 }
 
+
+
 impl ModbusInstrument {
     pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> ModbusInstrument {
         let mut settings = SerialPortSettings::default();
@@ -85,7 +86,7 @@ impl ModbusInstrument {
         };
     }
 
-    pub async fn read_holding_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
+    pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
      
         let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
@@ -204,7 +205,7 @@ mod tests {
         assert!(rsp.is_ok());
 
         // Read SV register, assert we get 1400
-        let old_sv = instr.read_holding_registers(0x1001, 1).await;
+        let old_sv = instr.read_registers(0x1001, 1).await;
         assert!(old_sv.is_ok());
         assert!(old_sv.unwrap()[0] == 1400);
 
@@ -213,7 +214,7 @@ mod tests {
         assert!(rsp2.is_ok());
 
         // Read SV register again, assert we get 1500
-        let new_sv = instr.read_holding_registers(0x1001, 1).await;
+        let new_sv = instr.read_registers(0x1001, 1).await;
         assert!(new_sv.is_ok());
         assert!(new_sv.unwrap()[0] == 1500);
     }

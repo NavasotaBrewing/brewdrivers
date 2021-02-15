@@ -2,7 +2,8 @@ use std::env;
 use std::process::exit;
 
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {
@@ -13,8 +14,8 @@ fn main() {
     }
 
     match args[1].as_str() {
-        // "omega" => brewdrivers::cli::omega(),
-        // "relay" => brewdrivers::cli::relay(),
+        "omega" => brewdrivers::cli::omega(),
+        "relay" => brewdrivers::cli::relay(),
         _ => {}
     }
 }

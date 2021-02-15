@@ -1,109 +1,101 @@
-use std::time::Duration;
-use std::thread::sleep;
+//! An implementation of `ModbusInstrument` for the OMEGA CN7500
+use crate::modbus::{ModbusInstrument, Result};
+use crate::omega::Degree;
 
-use crate::omega::{Instrument, Degree};
-
-
-#[derive(Debug)]
-pub struct CN7500 {
-    pub instrument: Instrument,
-}
+pub struct CN7500(ModbusInstrument);
 
 impl CN7500 {
-    pub fn new(addr: u8, port: &str, baudrate: u32) -> CN7500 {
-        let instrument = Instrument::new(addr, port, baudrate);
-        CN7500 {
-            instrument
+    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Self {
+        CN7500(ModbusInstrument::new(slave_addr, port_path, baudrate).await)
+    }
+
+    pub async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
+        self.0.write_register(0x1001, (new_sv * 10.0) as u16).await
+    }
+
+    pub async fn get_sv(&mut self) -> Result<f64> {
+        self.0
+            .read_registers(0x1001, 1)
+            .await
+            .map(|vec| (vec[0] as f64) / 10.0)
+    }
+
+    pub async fn get_pv(&mut self) -> Result<f64> {
+        self.0
+            .read_registers(0x1000, 1)
+            .await
+            .map(|vec| (vec[0] as f64) / 10.0)
+    }
+
+    pub async fn is_running(&mut self) -> Result<bool> {
+        self.0
+            .read_coils(0x0814, 1)
+            .await
+            .map(|vals| vals[0] )
+    }
+
+    pub async fn run(&mut self) -> Result<()> {
+        self.0.write_coil(0x0814, true).await
+    }
+
+    pub async fn stop(&mut self) -> Result<()> {
+        self.0.write_coil(0x0814, false).await
+    }
+
+    pub async fn set_degrees(&mut self, degree_mode: Degree) -> Result<()> {
+        match degree_mode {
+            Degree::Celsius => self.0.write_coil(0x0811, true).await,
+            Degree::Fahrenheit => self.0.write_coil(0x0811, false).await,
         }
-    }
-
-    pub fn get_pv(&self) -> f64 {
-        // Don't know of a better way :(
-        let mut pv: f64 = 0.0;
-        self.instrument.read_registers(0x1000, 1, |response| {
-            pv = (response[0] as f64) / 10.0;
-        });
-        pv
-    }
-
-    pub fn get_sv(&self) -> f64 {
-        let mut sv: f64 = 0.0;
-        self.instrument.read_registers(0x1001, 1, |response| {
-            sv = (response[0] as f64) / 10.0;
-        });
-        sv
-    }
-
-    pub fn set_sv(&self, temperature: f64) {
-        self.instrument.write_register(0x1001, (temperature * 10.0) as u16);
-    }
-
-    pub fn run(&self) {
-        self.instrument.write_coil(0x0814, true);
-    }
-
-    pub fn set_degrees(&self, mode: Degree) {
-        match mode {
-            Degree::Celsius => self.instrument.write_coil(0x0811, true),
-            Degree::Fahrenheit => self.instrument.write_coil(0x0811, false),
-        }
-        sleep(Duration::from_millis(1000));
-    }
-
-    pub fn stop(&self) {
-        self.instrument.write_coil(0x0814, false);
-    }
-
-    pub fn is_running(&self) -> bool {
-        let mut running: bool = false;
-        self.instrument.read_coils(0x0814, 1, |response| {
-            running = response[0];
-        });
-        running
     }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serial_test::serial;
+    use tokio::test;
 
-    #[test]
-    #[serial]
-    fn test_new_cn7500() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
-        assert_eq!(cn.instrument.tty_addr, "/dev/ttyUSB0");
+    async fn instr() -> CN7500 {
+        CN7500::new(0x16, "/dev/ttyUSB0", 19200).await
     }
 
     #[test]
     #[serial]
-    fn test_set_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
-        cn.set_sv(123.4);
+    async fn test_new_cn7500() {
+        let cn = instr().await;
+        assert_eq!(cn.0.port_path, "/dev/ttyUSB0");
     }
 
     #[test]
     #[serial]
-    fn test_get_pv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
-        assert!(cn.get_pv() > 0.0);
+    async fn test_set_sv() {
+        let mut cn = instr().await;
+        let rsp = cn.set_sv(123.4).await;
+        assert!(rsp.is_ok());
     }
 
     #[test]
     #[serial]
-    fn test_get_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
-        cn.set_sv(145.7);
-        assert_eq!(cn.get_sv(), 145.7);
+    async fn test_get_pv() {
+        let mut cn = instr().await;
+        assert!(cn.get_pv().await.unwrap() > 0.0);
     }
 
     #[test]
     #[serial]
-    fn test_turn_on_relay() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
-        cn.run();
-        assert!(cn.is_running());
-        cn.stop();
+    async fn test_get_sv() {
+        let mut cn = instr().await;
+        assert!(cn.set_sv(145.7).await.is_ok());
+        assert_eq!(cn.get_sv().await.unwrap(), 145.7);
+    }
+
+    #[test]
+    #[serial]
+    async fn test_turn_on_relay() {
+        let mut cn = instr().await;
+        assert!(cn.run().await.is_ok());
+        assert!(cn.is_running().await.unwrap());
+        assert!(cn.stop().await.is_ok());
     }
 }
