@@ -14,8 +14,8 @@ async fn main() {
     }
 
     match args[1].as_str() {
-        "omega" => brewdrivers::cli::omega(),
-        "relay" => brewdrivers::cli::relay(),
+        "cn7500" => brewdrivers::cli::cn7500::run(),
+        "str1" => brewdrivers::cli::str1::run(),
         _ => {}
     }
 }
