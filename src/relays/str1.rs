@@ -77,7 +77,7 @@ impl STR1 {
         let output_buf: Vec<u8> = self.write_to_device(
             vec![0x07, 0x14, self.address, relay_num, 1]
         );
-        
+
         let result = hex::encode(output_buf);
 
         match result.chars().nth(7) {

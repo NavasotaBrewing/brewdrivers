@@ -72,28 +72,28 @@ mod tests {
     #[test]
     #[serial]
     fn test_new_cn7500() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
         assert_eq!(cn.instrument.tty_addr, "/dev/ttyUSB0");
     }
 
     #[test]
     #[serial]
     fn test_set_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
         cn.set_sv(123.4);
     }
 
     #[test]
     #[serial]
     fn test_get_pv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
         assert!(cn.get_pv() > 0.0);
     }
 
     #[test]
     #[serial]
     fn test_get_sv() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
         cn.set_sv(145.7);
         assert_eq!(cn.get_sv(), 145.7);
     }
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_turn_on_relay() {
-        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 9600);
+        let cn = CN7500::new(0x16, "/dev/ttyUSB0", 19200);
         cn.run();
         assert!(cn.is_running());
         cn.stop();
