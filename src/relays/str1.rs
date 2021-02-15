@@ -11,7 +11,6 @@ use retry::{retry, OperationResult};
 use retry::delay::Fixed;
 
 // this crate
-// use crate::RTU::relays::State::{On, Off};
 use crate::relays::{State, Board, Bytestring};
 
 #[derive(Debug)]
@@ -69,7 +68,8 @@ impl STR1 {
 
         // TODO: Set a timeout
         let port = retry(Fixed::from_millis(10), || {
-            match TTYPort::open(&Path::new("/dev/ttyAMA0"), &settings) {
+            println!("About to open port");
+            match TTYPort::open(&Path::new("/dev/ttyUSB0"), &settings) {
                 Ok(port) => OperationResult::Ok(port),
                 Err(_) => OperationResult::Retry("Port busy")
             }

@@ -1,5 +1,8 @@
 use hex;
 
+// Warning: i wrote this before i knew i could do 0xAA and such for hex
+// numbers. I'm using strings and coverting to numbers. I'll fix it later.
+
 // Master start bytes
 const MA0: &str = "55";
 const MA1: &str = "aa";

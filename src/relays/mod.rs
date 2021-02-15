@@ -1,7 +1,8 @@
-pub mod str1;
+// pub mod str1;
+pub mod new_str1;
 pub mod bytestring;
 
-pub use str1::STR1;
+pub use new_str1::STR1;
 pub use bytestring::Bytestring;
 
 #[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
@@ -27,11 +28,4 @@ impl std::fmt::Display for State {
             State::Off => write!(f, "off"),
         }
     }
-}
-
-
-pub trait Board {
-    fn with_address(addr: u8) -> Self;
-    fn set_relay(&mut self, relay_num: u8, new_state: State);
-    fn get_relay(&mut self, relay_num: u8) -> State;
 }
