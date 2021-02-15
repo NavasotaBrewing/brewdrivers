@@ -13,8 +13,8 @@ fn main() {
     }
 
     match args[1].as_str() {
-        // "omega" => brewdrivers::cli::omega(),
-        // "relay" => brewdrivers::cli::relay(),
+        "omega" => brewdrivers::cli::omega(),
+        "relay" => brewdrivers::cli::relay(),
         _ => {}
     }
 }

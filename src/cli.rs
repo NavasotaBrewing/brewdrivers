@@ -1,7 +1,7 @@
 use std::fmt;
 
 // CN7500, STR1
-use crate::relays::{Board, STR1, State};
+use crate::relays::{STR1, State};
 use crate::omega::{CN7500, Degree};
 
 use shrust::{Shell, ShellIO};
@@ -92,7 +92,7 @@ fn newCN7500(config: &ControllerConfig) -> CN7500 {
 }
 
 fn newSTR1(config: &ControllerConfig) -> STR1 {
-    STR1::with_address(config.addr)
+    STR1::new(config.addr, &config.port, config.baudrate)
 }
 
 // Omega CLI

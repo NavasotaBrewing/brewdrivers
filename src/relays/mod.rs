@@ -1,8 +1,7 @@
-// pub mod str1;
-pub mod new_str1;
+pub mod str1;
 pub mod bytestring;
 
-pub use new_str1::STR1;
+pub use str1::STR1;
 pub use bytestring::Bytestring;
 
 #[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
