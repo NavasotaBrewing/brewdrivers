@@ -14,6 +14,7 @@ license = "MIT"
 
 [dependencies]
 hex = "0.3.2"
+# This is for the STR1
 serialport = "4.0"
 retry = "0.5.1"
 futures = "0.1"
@@ -21,6 +22,7 @@ tokio-modbus = { version = "0.3.5", default-features = false, features = ["rtu"]
 # Deprecation notice: tokio-core has been deprecated.
 # See more here: https://github.com/tokio-rs/tokio-core
 tokio-core = "0.1"
+# This is for the omega
 tokio-serial = "3.3.0"
 shrust = "0.0.7"
 
