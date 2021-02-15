@@ -1,32 +1,52 @@
-use std::{io::{Read, Write}, time::Duration};
+use std::{fmt, io::{Read, Write}, time::Duration};
 
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
-use crate::modbus::ModbusDevice;
 use crate::relays::{Bytestring, State};
+
+
+#[derive(Debug)]
+pub struct STR1Error(String);
+
+impl fmt::Display for STR1Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oh no, something bad went down")
+    }
+}
+
+impl std::error::Error for STR1Error {}
 
 #[derive(Debug)]
 pub struct STR1 {
-    port: TTYPort,
-    address: u8,
-    port_path: String,
-    baudrate: u32
+    pub port: TTYPort,
+    pub address: u8,
+    pub port_path: String,
+    pub baudrate: u32
 }
 
 impl STR1 {
-    pub fn new(address: u8, port_path: &str, baudrate: u32) -> Self {
-        let port = STR1::open_port(port_path, baudrate);
-        STR1 {
-            port,
-            address,
-            port_path: String::from(port_path),
-            baudrate
+    pub fn new(address: u8, port_path: &str, baudrate: u32) -> Result<Self, STR1Error> {
+        let port = STR1::open_port(port_path, baudrate).map_err(|err| {
+            STR1Error(format!("Couldn't open serial port at {}: {}", port_path, err))
+        });
+
+        
+        if port.is_err() {
+            return Err(port.unwrap_err());
+        } else {
+            Ok(STR1 {
+                port: port.unwrap(),
+                address,
+                port_path: String::from(port_path),
+                baudrate
+            })
         }
+
     }
 
     /// This is a wrapper around the serialport::new() method. We may want 
     /// to call this again in order to update the values
-    fn open_port(port_path: &str, baudrate: u32) -> TTYPort {
+    fn open_port(port_path: &str, baudrate: u32) -> Result<TTYPort, serialport::Error> {
         serialport::new(port_path, baudrate)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
@@ -34,7 +54,6 @@ impl STR1 {
             .flow_control(FlowControl::None)
             .timeout(Duration::from_millis(15))
             .open_native()
-            .expect(&format!("Couldn't open serial port at {}", port_path))
     }
 
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Vec<u8> {
@@ -95,7 +114,7 @@ impl STR1 {
             0x06, 0x01, self.address, new_cn
         ]);
         self.address = new_cn;
-        self.port = self.open();
+        self.port = STR1::open_port(&self.port_path, self.baudrate).expect("Couldn't open serial port");
     }
 
     pub fn set_baudrate(&mut self, new_baud: u32) -> Result<(), String> {
@@ -111,12 +130,17 @@ impl STR1 {
         self.write_to_device(vec![
             0x08, 0x33, self.address, 0xAA, 0x55, (index.unwrap() as u8)
         ]);
+        self.port = STR1::open_port(&self.port_path, new_baud).expect(
+            &format!("Couldn't reopen serial port after changing baudrate from {} to {}", self.baudrate, new_baud)
+        );
+        self.baudrate = new_baud;
+        
         Ok(())
     }
 
     pub fn relay_count(&mut self) -> Option<u8> {
         let out = self.write_to_device(
-            vec![0x05, 0x02, self.address()]
+            vec![0x05, 0x02, self.address]
         );
         // return:
         // SL0, SL1, 0x09, number of outputs,
@@ -128,85 +152,92 @@ impl STR1 {
             return Some(out[3]);
         }
     }
-}
 
-impl ModbusDevice for STR1 {
-    fn port(&self) -> &str {
-        &self.port_path
-    }
-
-    fn set_port(&mut self, new_path: &str) {
-        self.port_path = String::from(new_path);
-        self.port = STR1::open_port(new_path, self.baudrate);
-    }
-
-    fn baudrate(&self) -> u32 {
-        self.baudrate
-    }
-
-    fn set_baudrate(&mut self, new_baud: u32) {
-        self.baudrate = new_baud;
-        self.port = STR1::open_port(&self.port_path, new_baud);
-    }
-
-    fn address(&self) -> u8 {
-        self.address
-    }
-
-    fn set_address(&mut self, new_addr: u8) {
-        self.address = new_addr;
-        // Don't need to reopen the port, addr is only used
-        // in communication, not opening.
-    }
-
-    /// Opens the port with the configured settings. Does not change any fields of
-    /// the STR1 board.
-    fn open(&self) -> TTYPort {
-        STR1::open_port(&self.port_path, self.baudrate)
+    pub fn connected(&mut self) -> bool {
+        return self.relay_count().is_some()
     }
 }
+
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+
+    fn test_board() -> STR1 {
+        let device = STR1::new(0xFE, "/dev/ttyUSB0", 9600);
+        return device.unwrap();
+    }
+
 
     #[test]
-    fn get_relay_status() {
-        let mut board = STR1::new(0xFE, "/dev/ttyUSB0", 9600);
-        board.set_relay(0, State::On);
-        assert_eq!(State::On, board.get_relay(0));
+    #[serial]
+    fn test_board_connected() {
+        let mut board = test_board();
+        assert!(board.connected());
         
-        board.set_relay(0, State::Off);
-        assert_eq!(State::Off, board.get_relay(0));
-
+        board.address = 4;
+        
+        assert!(!board.connected());
     }
 
     #[test]
+    #[serial]
+    fn test_write_to_device() {
+        let mut board = test_board();
+        // These bytes are the get the amount of relays on the board
+        // Just a test
+        let bytes = vec![0x05, 0x02, board.address];
+        let output = board.write_to_device(bytes);
+        assert!(output.len() > 0);
+    }
+
+    #[test]
+    #[serial]
+    fn set_get_relay_status() {
+        let mut board = test_board();
+
+        board.set_relay(0, State::On);
+        assert_eq!(State::On, board.get_relay(0));
+
+        board.set_relay(0, State::Off);
+        assert_eq!(State::Off, board.get_relay(0));
+    }
+
+    #[test]
+    #[serial]
     fn set_controller_number() {
-        let mut board = STR1::new(0xFE, "/dev/ttyUSB0", 9600);
-
-        // Checks communication
-        board.set_relay(0, State::Off);
-        assert_eq!(State::Off, board.get_relay(0));
-        board.set_relay(0, State::On);
-        assert_eq!(State::On, board.get_relay(0));
-
+        let mut board = test_board();
+        
+        assert!(board.connected());
+        
         board.set_controller_num(253);
-
-        // Checks communication again
-        board.set_relay(0, State::Off);
-        assert_eq!(State::Off, board.get_relay(0));
-        board.set_relay(0, State::On);
-        assert_eq!(State::On, board.get_relay(0));
-
+        
+        assert!(board.connected());
+        
         // Set it back
         board.set_controller_num(254);
-
+        
+        assert!(board.connected());
     }
 
     #[test]
+    #[serial]
     fn test_change_baudrate() {
-        let mut _board = STR1::new(0xFE, "/dev/ttyUSB0", 9600);
+        // Not going to test this because I think the baudrate on the board
+        // doesn't work properly. I was able to connect at 2 different baudrates and
+        // both worked.
+    }
+
+    #[test]
+    #[serial]
+    fn test_relay_count() {
+        let mut board = test_board();
+        // I test on an STR108, so there should be 8. We may test on an STR116 with 16 relays
+        // later though.
+        let count = board.relay_count();
+        assert!(count.is_some());
+        assert!(count.unwrap() % 8 == 0);
     }
 }
