@@ -73,10 +73,10 @@ impl ModbusInstrument {
         settings.baud_rate = 19200;
         let port = Serial::from_path(port_path, &settings).expect(&format!("Couldn't open serial port {}", port_path));
         let slave = Slave(slave_addr);
-        
+
         let ctx = rtu::connect_slave(port, slave).await.unwrap();
 
-        
+
         return ModbusInstrument {
             port_path: String::from(port_path),
             slave_addr,
@@ -88,7 +88,7 @@ impl ModbusInstrument {
 
     pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
-     
+
         let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
         loop {
             tokio::select! {
