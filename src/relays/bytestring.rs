@@ -129,7 +129,8 @@ impl Bytestring {
         format!("{:0>2x}{:0>2x}{}{:0>2x}{:0>2x}", MA0, MA1, data_strings.join(""), self.checksum_as_hex(), MAE)
     }
 
-    /// Returns the full bytestring with all bytes, as a `Vec<u8>`.
+    /// Consumes the Bytestring, returning the full bytestring
+    /// with all bytes, as a `Vec<u8>`.
     ///
     /// ```rust
     /// use brewdrivers::relays::Bytestring;
