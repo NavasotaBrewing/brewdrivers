@@ -1,18 +1,31 @@
 //! A generic Modbus RTU instrument
+//!
+//! A number of devices run on the [Modbus RTU](https://en.wikipedia.org/wiki/Modbus)
+//! protocol. This module provides tools for a generic Modbus device.
+//!
+//! This module uses the `tokio v0.2`, and `tokio v1.0` likely won't work.
 
-use std::error::Error;
-use std::fmt;
-use std::io;
+// std uses
+use std::{
+    error::Error,
+    fmt,
+    io
+};
 
+// external uses
 use tokio::time::{self, Duration};
 use tokio_modbus::{client::{Context, Reader, Writer, rtu}, prelude::Slave};
 use tokio_serial::{Serial, SerialPortSettings};
 
+/// A result type for Modbus device interaction
 pub(crate) type Result<T> = std::result::Result<T, ModbusError>;
 
+/// An error type when interacting with Modbus devices.
 #[derive(Debug)]
 pub enum ModbusError {
+    /// Wraps a [`TimeoutError`](crate::modbus::TimeoutError)
     TimeoutError(TimeoutError),
+    /// Wraps an [`io::Error`](std::io::Error)
     IOError(io::Error),
 }
 
@@ -25,6 +38,7 @@ impl fmt::Display for ModbusError {
     }
 }
 
+/// Returned when a request times out
 #[derive(Debug)]
 pub struct TimeoutError {
     port: String,
@@ -33,6 +47,9 @@ pub struct TimeoutError {
 }
 
 impl TimeoutError {
+    /// This creates an error from a given register and Modbus instrument. This is typically
+    /// used when a read or write times out. The error will contain the attempted register to
+    /// read/write to, and the details of the device for printing.
     pub fn from_device(register: u16, device: &ModbusInstrument) -> TimeoutError {
         TimeoutError {
             port: String::from(&device.port_path),
@@ -56,7 +73,10 @@ impl fmt::Display for TimeoutError {
 impl Error for TimeoutError {}
 
 
-
+/// A generic async Modbus instrument.
+///
+/// Note: according to the Modbus spec, "coils" hold boolean values, while registers
+/// hold `u16` values. This is reflected in the methods in this struct.
 pub struct ModbusInstrument {
     pub port_path: String,
     pub slave_addr: u8,
@@ -68,6 +88,19 @@ pub struct ModbusInstrument {
 
 
 impl ModbusInstrument {
+    /// Creates a new `ModbusInstrument`. Opens a serial port on the given port path.
+    ///
+    /// This will *not* fail if the device is unresponsive, only if the port file (`/dev/ttyUSB0` or similar) doesn't exist.
+    ///
+    /// ## Examples
+    /// ```rust,nocompile
+    /// use brewdrivers::modbus::ModbusInstrument;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    /// }
+    /// ```
     pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> ModbusInstrument {
         let mut settings = SerialPortSettings::default();
         settings.baud_rate = 19200;
@@ -86,6 +119,20 @@ impl ModbusInstrument {
         };
     }
 
+    /// Asyncronously reads a number of registers.
+    ///
+    /// ```rust,nocompile
+    /// use brewdrivers::modbus::ModbusInstrument;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    ///     // This is just an example of interaction with an OMEGA CN7500 PID.
+    ///     let rsp = instr.read_registers(0x1000, 1).await;
+    ///     assert!(rsp.is_ok());
+    ///     assert!(rsp.unwrap().len() == 1);
+    /// }
+    /// ```
     pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
 
@@ -106,8 +153,27 @@ impl ModbusInstrument {
         }
     }
 
-    pub async fn write_coil(&mut self, coil: u16, value: bool) -> Result<()> {
-        let task = self.ctx.write_single_coil(coil, value);
+    /// Writes to a register with the given `u16`. Returns `Ok(())` on success.
+    ///
+    /// ## Examples
+    /// ```rust,nocompile
+    /// use brewdrivers::modbus::ModbusInstrument;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    ///     // This is just an example of interaction with an OMEGA CN7500 PID.
+    ///     // This would set the CN7500 setpoint to 140.0
+    ///     let rsp = instr.write_register(0x1001, 1400).await;
+    ///     if rsp.is_ok() {
+    ///         println!("Register written successfully!");
+    ///     } else {
+    ///         println!("Register couldn't be written to. Error: {}", e.unwrap_err());
+    ///     }
+    /// }
+    /// ```
+    pub async fn write_register(&mut self, register: u16, value: u16) -> Result<()> {
+        let task = self.ctx.write_single_register(register, value);
 
         let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
         loop {
@@ -118,7 +184,7 @@ impl ModbusInstrument {
                 _ = &mut timeout => {
                     return Err(
                         ModbusError::TimeoutError(
-                            TimeoutError::from_device(coil, &self)
+                            TimeoutError::from_device(register, &self)
                         )
                     );
                 },
@@ -126,6 +192,8 @@ impl ModbusInstrument {
         }
     }
 
+
+    /// The same as [`read_registers()`](crate::modbus::ModbusInstrument::read_registers), but for coils
     pub async fn read_coils(&mut self, coil: u16, count: u16) -> Result<Vec<bool>> {
         let task = self.ctx.read_coils(coil, count);
 
@@ -146,8 +214,9 @@ impl ModbusInstrument {
         }
     }
 
-    pub async fn write_register(&mut self, register: u16, value: u16) -> Result<()> {
-        let task = self.ctx.write_single_register(register, value);
+    /// The same as [`write_register()`](crate::modbus::ModbusInstrument::write_register), but for coils
+    pub async fn write_coil(&mut self, coil: u16, value: bool) -> Result<()> {
+        let task = self.ctx.write_single_coil(coil, value);
 
         let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
         loop {
@@ -158,13 +227,14 @@ impl ModbusInstrument {
                 _ = &mut timeout => {
                     return Err(
                         ModbusError::TimeoutError(
-                            TimeoutError::from_device(register, &self)
+                            TimeoutError::from_device(coil, &self)
                         )
                     );
                 },
             }
         }
     }
+
 }
 
 
