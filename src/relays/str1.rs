@@ -196,10 +196,13 @@ impl STR1 {
             "Relay", "Status"
         );
         for i in 0..self.relay_count().unwrap() {
+            // TODO: #14 Replace this with the command that gets all the relays status
             println!("{0: >6} | {1: <6?}", i, self.get_relay(i));
         }
     }
 
+    /// Programs the controller number of the board. Be careful with this, don't forget the number.
+    /// The new controller number should be `0x00`-`0xFF`.
     pub fn set_controller_num(&mut self, new_cn: u8) {
         self.write_to_device(vec![
             0x06, 0x01, self.address, new_cn
@@ -208,6 +211,13 @@ impl STR1 {
         self.port = STR1::open_port(&self.port_path, self.baudrate).expect("Couldn't open serial port");
     }
 
+    /// This theoretically works, but it really doesn't. For some reason, the board is responding
+    /// on multiple baudrates. Use this at your own risk.
+    ///
+    /// The baud must be one of
+    /// ```text
+    /// [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+    /// ```
     pub fn set_baudrate(&mut self, new_baud: u32) -> Result<(), String> {
         // The boards expects a single digit value, 0 = 300, 1 = 600, etc.
         // Just the index of this vector.
@@ -229,6 +239,7 @@ impl STR1 {
         Ok(())
     }
 
+    /// Gets the amount of relays on this board, if any
     pub fn relay_count(&mut self) -> Option<u8> {
         let out = self.write_to_device(
             vec![0x05, 0x02, self.address]
@@ -244,6 +255,7 @@ impl STR1 {
         }
     }
 
+    /// Attempts to communicate with the board, returning true if it responds.
     pub fn connected(&mut self) -> bool {
         return self.relay_count().is_some()
     }
