@@ -10,7 +10,7 @@ fn main() {
 
     // Get the state of a relay
     assert_eq!(board.get_relay(0), State::Off);
-    
+
     // Turn a relay on
     board.set_relay(0, State::On);
     assert_eq!(board.get_relay(0), State::On);

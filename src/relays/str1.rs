@@ -1,21 +1,56 @@
+//! A driver for the `STR1XX` relays boards.
+//!
+//! This module is for the `STR108` and `STR116` relay boards from
+//! [smarthardware](https://www.smarthardware.eu/index.php). The software on these
+//! relays board functions identically, the only difference is the number of relays (8 or 16).
+//!
+//! There's a lot of functionality in these boards, and we don't use it all. This driver will help
+//! you read and write to relays and update the controller number/baudrate. The NBC doesn't use any other functionality,
+//! so we haven't built it in to this package. However, we do support custom commands, so implementing
+//! any other command that the relay boards support in their [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
+//! is trivial.
+//!
+//! See the [`STR1` struct](crate::relays::str1::STR1) or the `str1` example in the
+//! [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples).
+
+// std uses
 use std::{fmt, io::{Read, Write}, time::Duration};
 
+// external uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
+// internal uses
 use crate::relays::{Bytestring, State};
 
 
+/// An error type that may be returned when using the STR1 boards.
 #[derive(Debug)]
 pub struct STR1Error(String);
 
 impl fmt::Display for STR1Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Oh no, something bad went down")
+        write!(f, "{}", self.0)
     }
 }
 
 impl std::error::Error for STR1Error {}
 
+/// An `STR1XX` board.
+///
+/// This struct contains connection details for an STR108 or STR116 relay board.
+///
+/// ## Examples
+/// ```rust
+/// use brewdrivers::relays::{State, STR1};
+///
+/// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+/// board.get_relay(0); // -> State::Off;
+/// board.set_relay(0, State::On);
+/// board.get_relay(0); // -> State::On;
+///
+/// board.relay_count(); // -> Some(8)
+/// ```
+// TODO: #12 Make these field not pub
 #[derive(Debug)]
 pub struct STR1 {
     pub port: TTYPort,
@@ -25,12 +60,24 @@ pub struct STR1 {
 }
 
 impl STR1 {
+    /// Attempts to connect to an STR1 board.
+    ///
+    /// The `address` is the controller number the board is programmed to (default `0xFE`).
+    ///
+    /// ## Examples
+    /// ```rust
+    /// use brewdrivers::relays::{State, STR1};
+    ///
+    /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+    /// board.get_relay(0);
+    /// // ...
+    /// ```
     pub fn new(address: u8, port_path: &str, baudrate: u32) -> Result<Self, STR1Error> {
         let port = STR1::open_port(port_path, baudrate).map_err(|err| {
             STR1Error(format!("Couldn't open serial port at {}: {}", port_path, err))
         });
 
-        
+
         if port.is_err() {
             return Err(port.unwrap_err());
         } else {
@@ -44,8 +91,8 @@ impl STR1 {
 
     }
 
-    /// This is a wrapper around the serialport::new() method. We may want 
-    /// to call this again in order to update the values
+    // This is a wrapper around the serialport::new() method. We may want
+    // to call this again in order to update the values
     fn open_port(port_path: &str, baudrate: u32) -> Result<TTYPort, serialport::Error> {
         serialport::new(port_path, baudrate)
             .data_bits(DataBits::Eight)
@@ -56,6 +103,24 @@ impl STR1 {
             .open_native()
     }
 
+    /// Writes a command to the device. This is useful if you want to use a command
+    /// that we haven't implemented with this struct. See the [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
+    /// for a full list of commands.
+    ///
+    /// This method uses a [`Bytestring`](crate::relays::bytestring::Bytestring) to serialize the bytes you pass in,
+    /// meaning you don't have to add the `MA0`, `MA1`, `CS` (checksum), and `MA0` bytes that the board requires.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use brewdrivers::relays::{State, STR1};
+    /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+    ///
+    /// // These bytes are to read a relay status
+    /// let output_buf: Vec<u8> = board.write_to_device(
+    ///     vec![0x07, 0x14, 0x01, 0x00, 0x01]
+    /// );
+    /// assert!(output_buf.len() > 1);
+    /// ```
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Vec<u8> {
         // Bytestring adds checksum verification and MA1, MAE, etc.
         match self.port.write(&Bytestring::from(bytes).to_bytes()){
@@ -63,16 +128,30 @@ impl STR1 {
             _ => {}
         };
 
-        
+
         let mut output_buf: Vec<u8> = vec![];
         match self.port.read_to_end(&mut output_buf) {
             Ok(_) => {},
-            Err(_) => { /* timeout */ }
+            Err(_) => {
+                // timeout, expected
+                // I'm pretty sure that the port never returns the nunmber of bytes
+                // to be read, and it just times out every time, even on successful writes.
+                // It still reads successfully even after timeouts, so it's fine for now.
+            }
         }
 
         output_buf
     }
 
+    /// Gets the status of a relay, as a [`State`](crate::relays::State).
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use brewdrivers::relays::{State, STR1};
+    /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+    /// assert_eq!(board.get_relay(0), State::Off);
+    /// ```
+    // TODO: #13 Test this with relay indices out of bounds
     pub fn get_relay(&mut self, relay_num: u8) -> State {
         let output_buf: Vec<u8> = self.write_to_device(
             vec![0x07, 0x14, self.address, relay_num, 1]
@@ -86,18 +165,29 @@ impl STR1 {
         }
     }
 
+    /// Sets a relay to On or Off.
+    ///
+    /// ## Example
+    /// ```rust
+    /// use brewdrivers::relays::{State, STR1};
+    ///
+    /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+    /// board.set_relay(0, State::On);
+    /// assert_eq!(board.get_relay(0), State::On);
+    /// board.set_relay(0, State::Off);
+    /// assert_eq!(board.get_relay(0), State::Off);
+    /// ```
     pub fn set_relay(&mut self, relay_num: u8, new_state: State) {
         let new_state_num = match new_state {
             State::On => 1,
             State::Off => 0
         };
 
-        // From the software guide
-        // MA0, MA1, 0x08, 0x17, CN, start number output, number of outputs, 0/1, CS, MAE
-        // MA0, MA1, CS, and MAE are added automatically
         self.write_to_device(vec![0x08, 0x17, self.address, relay_num, 1, new_state_num]);
     }
 
+    /// Lists all relays status. This prints to `stdout`, so it should really only
+    /// be used in scripts and with the CLI.
     pub fn list_all_relays(&mut self) {
         // Leave that space there >:(
         println!(" Controller {} (0x{:X})", self.address, self.address);
@@ -135,7 +225,7 @@ impl STR1 {
             &format!("Couldn't reopen serial port after changing baudrate from {} to {}", self.baudrate, new_baud)
         );
         self.baudrate = new_baud;
-        
+
         Ok(())
     }
 
@@ -177,9 +267,9 @@ mod tests {
     fn test_board_connected() {
         let mut board = test_board();
         assert!(board.connected());
-        
+
         board.address = 4;
-        
+
         assert!(!board.connected());
     }
 
@@ -210,16 +300,16 @@ mod tests {
     #[serial]
     fn set_controller_number() {
         let mut board = test_board();
-        
+
         assert!(board.connected());
-        
+
         board.set_controller_num(253);
-        
+
         assert!(board.connected());
-        
+
         // Set it back
         board.set_controller_num(254);
-        
+
         assert!(board.connected());
     }
 
