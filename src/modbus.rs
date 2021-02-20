@@ -93,7 +93,7 @@ impl ModbusInstrument {
     /// This will *not* fail if the device is unresponsive, only if the port file (`/dev/ttyUSB0` or similar) doesn't exist.
     ///
     /// ## Examples
-    /// ```rust,nocompile
+    /// ```rust,no_run
     /// use brewdrivers::modbus::ModbusInstrument;
     ///
     /// #[tokio::main]
@@ -121,7 +121,7 @@ impl ModbusInstrument {
 
     /// Asyncronously reads a number of registers.
     ///
-    /// ```rust,nocompile
+    /// ```rust,no_run
     /// use brewdrivers::modbus::ModbusInstrument;
     ///
     /// #[tokio::main]
@@ -156,7 +156,7 @@ impl ModbusInstrument {
     /// Writes to a register with the given `u16`. Returns `Ok(())` on success.
     ///
     /// ## Examples
-    /// ```rust,nocompile
+    /// ```rust,no_run
     /// use brewdrivers::modbus::ModbusInstrument;
     ///
     /// #[tokio::main]

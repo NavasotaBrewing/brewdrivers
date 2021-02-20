@@ -40,7 +40,7 @@ impl std::error::Error for STR1Error {}
 /// This struct contains connection details for an STR108 or STR116 relay board.
 ///
 /// ## Examples
-/// ```rust
+/// ```rust,no_run
 /// use brewdrivers::relays::{State, STR1};
 ///
 /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
@@ -65,7 +65,7 @@ impl STR1 {
     /// The `address` is the controller number the board is programmed to (default `0xFE`).
     ///
     /// ## Examples
-    /// ```rust
+    /// ```rust,no_run
     /// use brewdrivers::relays::{State, STR1};
     ///
     /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
@@ -111,7 +111,7 @@ impl STR1 {
     /// meaning you don't have to add the `MA0`, `MA1`, `CS` (checksum), and `MA0` bytes that the board requires.
     ///
     /// ## Example
-    /// ```rust
+    /// ```rust,no_run
     /// # use brewdrivers::relays::{State, STR1};
     /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
     ///
@@ -146,7 +146,7 @@ impl STR1 {
     /// Gets the status of a relay, as a [`State`](crate::relays::State).
     ///
     /// ## Example
-    /// ```rust
+    /// ```rust,no_run
     /// # use brewdrivers::relays::{State, STR1};
     /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
     /// assert_eq!(board.get_relay(0), State::Off);
@@ -168,7 +168,7 @@ impl STR1 {
     /// Sets a relay to On or Off.
     ///
     /// ## Example
-    /// ```rust
+    /// ```rust,no_run
     /// use brewdrivers::relays::{State, STR1};
     ///
     /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
