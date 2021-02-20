@@ -168,7 +168,7 @@ impl ModbusInstrument {
     ///     if rsp.is_ok() {
     ///         println!("Register written successfully!");
     ///     } else {
-    ///         println!("Register couldn't be written to. Error: {}", e.unwrap_err());
+    ///         println!("Register couldn't be written to. Error: {}", rsp.unwrap_err());
     ///     }
     /// }
     /// ```
