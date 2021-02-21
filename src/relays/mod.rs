@@ -1,9 +1,9 @@
 //! Drivers for relay boards.
 //!
-//! This module contains drivers for relay boards.
-//!
 //! Relay boards we support:
 //!  * [`STR1XX`](crate::relays::str1)
+//!
+//! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
 pub mod str1;
 pub mod bytestring;

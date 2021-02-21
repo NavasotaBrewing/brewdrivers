@@ -38,4 +38,5 @@ default = []
 network = ["serde"]
 
 # Command to build and watch docs
-# cargo watch -s 'cargo doc && http target/doc'
+# cargo watch -s 'cargo doc && http-server -p 8000 target/doc'
+# Then open http://localhost:8000/brewdrivers/index.html
