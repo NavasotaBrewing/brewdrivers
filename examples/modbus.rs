@@ -3,7 +3,7 @@ use brewdrivers::modbus::ModbusInstrument;
 #[tokio::main]
 async fn main() {
     // Testing on my OMEGA CN7500 PID
-    let mut inst = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    let mut inst = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
 
     // Read SV
     let pv1 = inst.read_registers(0x1001, 1).await.unwrap();

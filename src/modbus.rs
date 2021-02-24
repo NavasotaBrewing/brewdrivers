@@ -27,6 +27,8 @@ pub enum ModbusError {
     TimeoutError(TimeoutError),
     /// Wraps an [`io::Error`](std::io::Error)
     IOError(io::Error),
+    /// Wraps a 
+    ConnectionError(io::Error)
 }
 
 impl fmt::Display for ModbusError {
@@ -34,7 +36,14 @@ impl fmt::Display for ModbusError {
         match &self {
             ModbusError::TimeoutError(e) => writeln!(f, "{}", e),
             ModbusError::IOError(e) => writeln!(f, "{}", e),
+            ModbusError::ConnectionError(e) => writeln!(f, "{}", e)
         }
+    }
+}
+
+impl From<io::Error> for ModbusError {
+    fn from(e: io::Error) -> Self {
+        ModbusError::ConnectionError(e)
     }
 }
 
@@ -98,25 +107,25 @@ impl ModbusInstrument {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
     /// }
     /// ```
-    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> ModbusInstrument {
+    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Result<ModbusInstrument> {
         let mut settings = SerialPortSettings::default();
         settings.baud_rate = 19200;
-        let port = Serial::from_path(port_path, &settings).expect(&format!("Couldn't open serial port {}", port_path));
+        let port = Serial::from_path(port_path, &settings)?;
         let slave = Slave(slave_addr);
 
-        let ctx = rtu::connect_slave(port, slave).await.unwrap();
+        let ctx = rtu::connect_slave(port, slave).await?;
 
 
-        return ModbusInstrument {
+        Ok(ModbusInstrument {
             port_path: String::from(port_path),
             slave_addr,
             baudrate,
             timeout: 100,
             ctx,
-        };
+        })
     }
 
     /// Asyncronously reads a number of registers.
@@ -126,7 +135,7 @@ impl ModbusInstrument {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
     ///     // This is just an example of interaction with an OMEGA CN7500 PID.
     ///     let rsp = instr.read_registers(0x1000, 1).await;
     ///     assert!(rsp.is_ok());
@@ -161,7 +170,7 @@ impl ModbusInstrument {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await;
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
     ///     // This is just an example of interaction with an OMEGA CN7500 PID.
     ///     // This would set the CN7500 setpoint to 140.0
     ///     let rsp = instr.write_register(0x1001, 1400).await;
@@ -245,7 +254,7 @@ mod tests {
     use serial_test::serial;
 
     async fn instr() -> ModbusInstrument {
-        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await
+        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap()
     }
 
     #[test]

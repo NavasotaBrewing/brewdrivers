@@ -1,7 +1,7 @@
 //! An implementation of `ModbusInstrument` for the OMEGA CN7500.
 //!
 //! The [OMEGA CN7500](https://www.omega.com/en-us/control-monitoring/controllers/pid-controllers/p/CN7200-7500-7600-7800)
-//! is a PID that we use to regulate temperatures within the BCS. This module provides a driver for it, based on the 
+//! is a PID that we use to regulate temperatures within the BCS. This module provides a driver for it, based on the
 //! [`ModbusInstrument`](crate::modbus::ModbusInstrument).
 use crate::modbus::{ModbusInstrument, Result};
 use crate::omega::Degree;
@@ -10,8 +10,11 @@ use crate::omega::Degree;
 pub struct CN7500(ModbusInstrument);
 
 impl CN7500 {
-    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Self {
-        CN7500(ModbusInstrument::new(slave_addr, port_path, baudrate).await)
+    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Result<Self> {
+        ModbusInstrument::new(slave_addr, port_path, baudrate)
+            .await
+            // Wrap the instrument in a CN7500
+            .map(|instr| CN7500(instr))
     }
 
     pub async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
@@ -33,10 +36,7 @@ impl CN7500 {
     }
 
     pub async fn is_running(&mut self) -> Result<bool> {
-        self.0
-            .read_coils(0x0814, 1)
-            .await
-            .map(|vals| vals[0] )
+        self.0.read_coils(0x0814, 1).await.map(|vals| vals[0])
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -62,7 +62,7 @@ mod tests {
     use tokio::test;
 
     async fn instr() -> CN7500 {
-        CN7500::new(0x16, "/dev/ttyUSB0", 19200).await
+        CN7500::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap()
     }
 
     #[test]
