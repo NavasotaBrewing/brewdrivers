@@ -78,6 +78,7 @@ impl STR1 {
         });
 
 
+        // TODO: Refactor this like in waveshare.rs, use the ? operator
         if port.is_err() {
             return Err(port.unwrap_err());
         } else {
