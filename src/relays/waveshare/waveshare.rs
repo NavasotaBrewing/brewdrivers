@@ -10,7 +10,7 @@ const WAVESHARE_BAUD: usize = 9600;
 pub struct Waveshare(Board);
 
 impl Waveshare {
-    pub fn new(address: u8, port_path: &str) -> Result<Waveshare> {
+    pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
         let port = Board::open_port(port_path, WAVESHARE_BAUD).map_err(|err| BoardError(format!("{}", err)) );
 
         Ok(
@@ -65,8 +65,8 @@ impl Waveshare {
     pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
         let statuses: Vec<State> = self.get_all_relays()?;
         
-        if let Some(state) = statuses.get(relay_num as usize) {
-            return Ok(*state)
+        if let Some(&state) = statuses.get(relay_num as usize) {
+            return Ok(state)
         } else {
             return Err(
                 BoardError(format!(
@@ -115,11 +115,12 @@ impl Waveshare {
         let resp = self.0.write_to_device(bytes)?;
         if let Some(status_number) = resp.get(3) {
             // this is a little cursed but i don't know how else to work with binary
-            let binary = format!("{:b}", status_number);
+            let binary = format!("{:08b}", status_number);
             let statuses: Vec<State> = binary
                 .chars()
                 .filter(|&ch| ch == '1' || ch == '0')
                 .map(|ch| State::from(ch == '1'))
+                .rev()
                 .collect();
 
                 Ok(statuses)
@@ -143,13 +144,13 @@ mod tests {
 
     // Helper function
     fn ws() -> Waveshare {
-        Waveshare::new(0x01, "/dev/ttyUSB0").unwrap()
+        Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap()
     }
 
     #[test]
     #[serial]
     fn test_connect_to_waveshare() {
-        let ws = Waveshare::new(0x01, "/dev/ttyUSB0");
+        let ws = Waveshare::connect(0x01, "/dev/ttyUSB0");
         assert!(ws.is_ok());
     }
 
@@ -207,17 +208,22 @@ mod tests {
 
         let expected = vec![
             State::On,
+            State::Off,
+            State::Off,
+            State::Off,
+            State::Off,
+            State::Off,
             State::On,
-            State::On,
-            State::On,
-            State::On,
-            State::On,
-            State::On,
-            State::On
+            State::Off
         ];
-        ws.set_all_relays(State::On).unwrap();
-        assert_eq!(ws.get_all_relays().unwrap(), expected);
-        sleep(Duration::from_millis(200));
+
         ws.set_all_relays(State::Off).unwrap();
+        ws.set_relay(0, State::On).unwrap();
+        ws.set_relay(6, State::On).unwrap();
+        assert_eq!(ws.get_all_relays().unwrap(), expected);
+        sleep(Duration::from_millis(100));
+        ws.set_all_relays(State::Off).unwrap();
+
+
     }
 }

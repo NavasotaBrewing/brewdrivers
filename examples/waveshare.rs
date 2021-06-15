@@ -1,20 +1,25 @@
-use std::io::Write;
-use std::thread::sleep;
+use std::error::Error;
 use std::time::Duration;
+use std::thread::sleep;
+use brewdrivers::relays::{Waveshare, State};
 
-use brewdrivers::relays::*;
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0")?;
+
+    ws.set_relay(0, State::On)?;
+    ws.set_relay(2, State::On)?;
+
+    let statuses = ws.get_all_relays()?;
+    for i in 0..8 {
+        println!("Relay {}: {}", i, statuses[i]);
+    }
+
+    sleep(Duration::from_millis(100));
+
+    sleep(Duration::from_millis(100));
+    ws.set_all_relays(State::Off)?;
 
 
-fn main() {
-    let mut board = STR1::new(1, "/dev/ttyUSB0", 9600).expect("Couldn't build a new device");
 
-    let cmd: Vec<u8> = vec![1, 5, 0, 0, 255, 0, 140, 58];
-
-    board.port.write_all(&cmd).unwrap();
-
-    sleep(Duration::from_millis(500));
-
-    let cmd2: Vec<u8> = vec![1, 5, 0, 0, 0, 0, 205, 202];
-
-    board.port.write_all(&cmd2).unwrap();
+    Ok(())
 }

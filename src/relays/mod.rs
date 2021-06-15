@@ -11,6 +11,7 @@ use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
 
 pub mod waveshare;
+pub use waveshare::waveshare::Waveshare;
 
 /// The state of a relay. This can be 'On' or 'Off'.
 ///
