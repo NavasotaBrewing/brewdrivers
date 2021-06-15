@@ -96,6 +96,33 @@ impl Waveshare {
             return Err(BoardError(format!("Something went wrong, resp: {:?}", resp)));
         }
     }
+
+
+
+    pub fn set_all_relays(&mut self, state: State) -> Result<()> {
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            // These are all constant, reading all relays status
+            0x05,
+            0x00, 0xFF,
+        ];
+
+        match state {
+            State::On => {
+                bytes.push(0xFF);
+                bytes.push(0xFF);
+            },
+            State::Off => {
+                bytes.push(0x00);
+                bytes.push(0x00);
+            }
+        }
+
+        Waveshare::append_checksum(&mut bytes)?;
+
+        self.0.write_to_device(bytes)?;
+        Ok(())
+    }
 }
 
 
@@ -151,6 +178,19 @@ mod tests {
         assert_eq!(ws.get_relay(0).unwrap(), State::On);
 
         ws.set_relay(0, State::Off).unwrap();
-        assert_eq!(ws.get_relay(0).unwrap(), State::On);
+        assert_eq!(ws.get_relay(0).unwrap(), State::Off);
+    }
+
+    #[test]
+    #[serial]
+    fn test_write_all_relays() {
+        let mut ws = ws();
+
+        ws.set_all_relays(State::On).unwrap();
+        for i in 0..8 {
+            assert_eq!(ws.get_relay(i).unwrap(), State::On);
+        }
+        sleep(Duration::from_millis(200));
+        ws.set_all_relays(State::Off).unwrap();
     }
 }
