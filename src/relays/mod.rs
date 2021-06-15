@@ -131,7 +131,7 @@ impl Board {
             .parity(Parity::None)
             .stop_bits(StopBits::One)
             .flow_control(FlowControl::None)
-            .timeout(Duration::from_millis(15))
+            .timeout(Duration::from_millis(45))
             .open_native()
     }
 

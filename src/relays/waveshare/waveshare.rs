@@ -22,6 +22,13 @@ impl Waveshare {
         )
     }
 
+    pub fn append_checksum(bytes: &mut Vec<u8>) -> Result<()> {
+        let checksum = CRC_MODBUS.checksum(&bytes).to_le_bytes();
+        bytes.push(checksum[0]);
+        bytes.push(checksum[1]);
+        Ok(())
+    }
+
     pub fn set_relay(&mut self, relay_num: u8, state: State) -> Result<()> {
         // Example: 01 05 00 00 FF 00 8C 3A
         // 01   	Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
@@ -49,17 +56,45 @@ impl Waveshare {
         // Add on 0x00, because the board needs it I guess
         bytes.push(0x00);
 
-        let checksum = CRC_MODBUS.checksum(&bytes).to_le_bytes();
-        bytes.push(checksum[0]);
-        bytes.push(checksum[1]);
+        Waveshare::append_checksum(&mut bytes).unwrap();
 
-        let resp = self.0.write_to_device(bytes.clone())?;
-        if resp != bytes {
-            return Err(BoardError(
-                format!("Board did not return expected response.\n\tExpected:\t{:?}\n\tRecieved:\t{:?}", bytes, resp)
-            ));
-        }
+        self.0.write_to_device(bytes)?;
         Ok(())
+    }
+
+
+    pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            // These are all constant, reading all relays status
+            0x01,
+            0x00, 0xFF,
+            0x00, 0x01
+        ];
+
+        Waveshare::append_checksum(&mut bytes).unwrap();
+
+        let resp = self.0.write_to_device(bytes)?;
+
+        if let Some(states_number) = resp.get(3) {
+            // This is absolutely fucked
+            // Get the number as binary, but as a String
+            let s = format!("{:b}", states_number);
+            // split each character (bit)
+            let mut states_binary = s.split("").collect::<Vec<&str>>();
+            // remove the first and last because split() includes blank spaces
+            states_binary.remove(0);
+            states_binary.remove(states_binary.len() - 1);
+
+            // Match the nth character (relay number)
+            match states_binary.get(relay_num as usize) {
+                Some(&"1") => return Ok(State::On),
+                Some(&"0") => return Ok(State::Off),
+                _ => return Err(BoardError(format!("Something went wrong with the boards response: {:?}", states_binary)))
+            }
+        } else {
+            return Err(BoardError(format!("Something went wrong, resp: {:?}", resp)));
+        }
     }
 }
 
@@ -69,6 +104,7 @@ impl Waveshare {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::thread::sleep;
     use std::time::Duration;
 
@@ -78,12 +114,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_connect_to_waveshare() {
         let ws = Waveshare::new(0x01, "/dev/ttyUSB0");
         assert!(ws.is_ok());
     }
 
     #[test]
+    #[serial]
     fn test_crc_16_checksum() {
         let checksum = CRC_MODBUS.checksum(&[0x01, 0x05, 0x00, 0x00, 0xFF, 0x00]);
         assert_eq!(checksum, 0x3A8C);
@@ -95,11 +133,24 @@ mod tests {
 
 
     #[test]
+    #[serial]
     fn test_write_relay_state() {
         let mut ws = ws();
 
         assert!(ws.set_relay(0, State::On).is_ok());
         sleep(Duration::from_millis(200));
         assert!(ws.set_relay(0, State::Off).is_ok());
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_relay_status() {
+        let mut ws = ws();
+
+        ws.set_relay(0, State::On).unwrap();
+        assert_eq!(ws.get_relay(0).unwrap(), State::On);
+
+        ws.set_relay(0, State::Off).unwrap();
+        assert_eq!(ws.get_relay(0).unwrap(), State::On);
     }
 }
