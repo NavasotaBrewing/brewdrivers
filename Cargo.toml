@@ -14,13 +14,13 @@ license = "MIT"
 
 [dependencies]
 hex = "0.3.2"
-# This is for the STR1
+# This is for the relay boards
 serialport = "4.0"
+crc = "2.0.0"
 futures = "0.3"
 tokio-modbus = { version = "0.4", default-features = false, features = ["rtu"] }
 tokio = { version = "0.2", features = ["full"] }
 tokio-serial = "4.0"
-# shrust = "0.0.7"
 
 
 [dependencies.serde]

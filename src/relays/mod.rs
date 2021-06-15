@@ -8,7 +8,9 @@
 use std::{error, fmt, time::Duration};
 use std::io::{Read, Write};
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
-// pub use str1::{STR1, STR1Error, Bytestring};
+
+
+pub mod waveshare;
 
 /// The state of a relay. This can be 'On' or 'Off'.
 ///
@@ -52,6 +54,7 @@ impl std::fmt::Display for State {
 
 
 
+/// A generic board error. This is used when communication with any board is unsuccessful.
 #[derive(Debug)]
 pub struct BoardError(String);
 
@@ -64,6 +67,20 @@ impl fmt::Display for BoardError {
 impl error::Error for BoardError {}
 
 
+/// A generic relay board.
+///
+/// This is mostly used as a base for other implementations. It can connect to a board
+/// through a TTYPort (`serial` crate), and write a message and get a response.
+///
+/// Addresses are 0-255 (`u8`), Baudrates are standard baudrates for modbus/rs-485 communication, we use
+/// 9600 because it's the default for our board. 
+///
+/// ```no_run
+/// use brewdrivers::relays::Board;
+/// 
+/// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+/// ```
+#[derive(Debug)]
 pub struct Board {
     address: u8,
     port: TTYPort,
@@ -92,6 +109,11 @@ impl Board {
     }
 
     /// Tries to connect to a Board at the given port and address
+    /// ```no_run
+    /// use brewdrivers::relays::Board;
+    /// 
+    /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+    /// ```
     pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self, BoardError> {
         let port = Board::open_port(port_path, baudrate).map_err(|err| BoardError(format!("{}", err)) );
 
@@ -138,6 +160,7 @@ impl Board {
 
 
 
+// TODO: Make these tests better once you know how to use the Waveshare board
 #[cfg(test)]
 mod tests {
     use super::*;
