@@ -62,42 +62,21 @@ impl Waveshare {
         Ok(())
     }
 
-
     pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
-        let mut bytes: Vec<u8> = vec![
-            self.0.address(),
-            // These are all constant, reading all relays status
-            0x01,
-            0x00, 0xFF,
-            0x00, 0x01
-        ];
-
-        Waveshare::append_checksum(&mut bytes).unwrap();
-
-        let resp = self.0.write_to_device(bytes)?;
-
-        if let Some(states_number) = resp.get(3) {
-            // This is absolutely fucked
-            // Get the number as binary, but as a String
-            let s = format!("{:b}", states_number);
-            // split each character (bit)
-            let mut states_binary = s.split("").collect::<Vec<&str>>();
-            // remove the first and last because split() includes blank spaces
-            states_binary.remove(0);
-            states_binary.remove(states_binary.len() - 1);
-
-            // Match the nth character (relay number)
-            match states_binary.get(relay_num as usize) {
-                Some(&"1") => return Ok(State::On),
-                Some(&"0") => return Ok(State::Off),
-                _ => return Err(BoardError(format!("Something went wrong with the boards response: {:?}", states_binary)))
-            }
+        let statuses: Vec<State> = self.get_all_relays()?;
+        
+        if let Some(state) = statuses.get(relay_num as usize) {
+            return Ok(*state)
         } else {
-            return Err(BoardError(format!("Something went wrong, resp: {:?}", resp)));
+            return Err(
+                BoardError(format!(
+                    "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
+                    relay_num,
+                    statuses
+                ))
+            )
         }
     }
-
-
 
     pub fn set_all_relays(&mut self, state: State) -> Result<()> {
         let mut bytes: Vec<u8> = vec![
@@ -122,6 +101,33 @@ impl Waveshare {
 
         self.0.write_to_device(bytes)?;
         Ok(())
+    }
+
+    pub fn get_all_relays(&mut self) -> Result<Vec<State>> {
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            0x01,
+            0x00, 0xFF,
+            0x00, 0x01
+        ];
+        Waveshare::append_checksum(&mut bytes)?;
+
+        let resp = self.0.write_to_device(bytes)?;
+        if let Some(status_number) = resp.get(3) {
+            // this is a little cursed but i don't know how else to work with binary
+            let binary = format!("{:b}", status_number);
+            let statuses: Vec<State> = binary
+                .chars()
+                .filter(|&ch| ch == '1' || ch == '0')
+                .map(|ch| State::from(ch == '1'))
+                .collect();
+
+                Ok(statuses)
+        } else {
+            Err(
+                BoardError(format!("Board did not return the proper response, got {:?}", resp))
+            )
+        }
     }
 }
 
@@ -190,6 +196,27 @@ mod tests {
         for i in 0..8 {
             assert_eq!(ws.get_relay(i).unwrap(), State::On);
         }
+        sleep(Duration::from_millis(200));
+        ws.set_all_relays(State::Off).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_all_relays_status() {
+        let mut ws = ws();
+
+        let expected = vec![
+            State::On,
+            State::On,
+            State::On,
+            State::On,
+            State::On,
+            State::On,
+            State::On,
+            State::On
+        ];
+        ws.set_all_relays(State::On).unwrap();
+        assert_eq!(ws.get_all_relays().unwrap(), expected);
         sleep(Duration::from_millis(200));
         ws.set_all_relays(State::Off).unwrap();
     }

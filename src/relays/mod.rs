@@ -20,7 +20,7 @@ pub mod waveshare;
 /// Javascript is pretty fast and loose with it's types, and this ensures we get an explicit
 /// 'On' or 'Off' instead of `true`/`false`, `0`/`1`, `null`, etc.
 #[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum State {
     On,
     Off

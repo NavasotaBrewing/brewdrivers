@@ -1,0 +1,226 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Waveshare tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "waveshare",
+                ]
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'brewdrivers'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "brewdrivers",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'cn7500'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=cn7500",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "cn7500",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'cn7500'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=cn7500",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "cn7500",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'modbus'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=modbus",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "modbus",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'modbus'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=modbus",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "modbus",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'bytestring'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=bytestring",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "bytestring",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'bytestring'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=bytestring",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "bytestring",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'str1'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=str1",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "str1",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'str1'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=str1",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "str1",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'waveshare'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=waveshare",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "waveshare",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'waveshare'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=waveshare",
+                    "--package=brewdrivers"
+                ],
+                "filter": {
+                    "name": "waveshare",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
