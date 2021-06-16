@@ -1,6 +1,8 @@
+// ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
 
+// internal uses
 // generic board stuff
 use crate::relays::{Board, BoardError, State};
 
@@ -10,6 +12,7 @@ type Result<T> = std::result::Result<T, BoardError>;
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 // Hardcode the baud, we *probably* won't need to change it
 const WAVESHARE_BAUD: usize = 9600;
+
 
 /// A Waveshare board.
 /// 
@@ -40,7 +43,13 @@ impl Waveshare {
     /// // ...
     /// ```
     pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
-        let port = Board::open_port(port_path, WAVESHARE_BAUD).map_err(|err| BoardError(format!("{}", err)) );
+        let port = Board::open_port(port_path, WAVESHARE_BAUD).map_err(|err| {
+            BoardError {
+                msg: format!("{}", err),
+                address: Some(address)
+            }
+        } );
+
         let mut ws = Waveshare(Board {
             address,
             port: port?,
@@ -111,11 +120,14 @@ impl Waveshare {
             return Ok(state)
         } else {
             return Err(
-                BoardError(format!(
-                    "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
-                    relay_num,
-                    statuses
-                ))
+                BoardError {
+                    msg: format!(
+                        "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
+                        relay_num,
+                        statuses
+                    ),
+                    address: Some(self.0.address())
+                }
             )
         }
     }
@@ -170,7 +182,10 @@ impl Waveshare {
                 Ok(statuses)
         } else {
             Err(
-                BoardError(format!("Board did not return the proper response, got {:?}", resp))
+                BoardError {
+                    msg: format!("Board did not return the proper response, received {:?}", resp),
+                    address: Some(self.0.address())
+                }
             )
         }
     }
@@ -198,13 +213,16 @@ impl Waveshare {
         if let Some(&version_num) = resp.get(3) {
             Ok(format!("v{:.2}", (version_num as f64 / 100.0)))
         } else {
-            Err(BoardError(
-                format!(
-                    "The board didn't return it's software revision correctly. Possible connection issue. Addr 0x{:X} at {:?}, response: {:?}",
-                    self.0.address(),
-                    self.0.port(),
-                    resp)
-            ))
+            Err(
+                BoardError {
+                    msg: format!(
+                        "The board didn't return it's software revision correctly. Possible connection issue. port: {:?}, response: {:?}",
+                        self.0.port(),
+                        resp
+                    ),
+                    address: Some(self.0.address())
+                }
+            )
         }
 
     }

@@ -2,16 +2,23 @@
 //!
 //! Relay boards we support:
 //!  * [`STR1XX`](crate::relays::str1)
+//!  * [Waveshare Modbus RTU Relay](crate::relays::Waveshare)
 //!
 //! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
+// std uses
+use std::str::FromStr;
 use std::{error, fmt, time::Duration};
 use std::io::{Read, Write};
+
+// ext uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
+// internal uses
+mod waveshare;
+pub use waveshare::Waveshare;
 
-pub mod waveshare;
-pub use waveshare::waveshare::Waveshare;
+
 
 /// The state of a relay. This can be 'On' or 'Off'.
 ///
@@ -57,15 +64,45 @@ impl std::fmt::Display for State {
 
 /// A generic board error. This is used when communication with any board is unsuccessful.
 #[derive(Debug)]
-pub struct BoardError(String);
+pub struct BoardError {
+    msg: String,
+    address: Option<u8>
+}
 
 impl fmt::Display for BoardError {
+    /// Displays the given message of a board error, including the board address
+    /// if there is one provided with the error
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if let Some(addr) = self.address {
+            write!(f, "Board 0x{:X?}: {}", addr, self.msg)
+        } else {
+            write!(f, "{}", self.msg)
+        }
     }
 }
 
 impl error::Error for BoardError {}
+
+impl FromStr for BoardError {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(BoardError {
+                msg: String::from(s),
+                address: None
+            })
+    }
+}
+
+// Not sure if this is necessary
+// impl From<Box<dyn std::error::Error>> for BoardError {
+//     fn from(error: Box<dyn std::error::Error>) -> Self {
+//         BoardError {
+//             msg: format!("{}", error),
+//             address: None
+//         }
+//     }
+// }
 
 
 /// A generic relay board.
@@ -82,7 +119,7 @@ impl error::Error for BoardError {}
 /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
 /// ```
 #[derive(Debug)]
-pub struct Board {
+struct Board {
     address: u8,
     port: TTYPort,
     baudrate: usize
@@ -99,11 +136,13 @@ impl Board {
         &self.port
     }
 
+    #[allow(unused)]
     /// Yields the TTYPort, consuming the Board struct
     pub fn owned_port(self) -> TTYPort {
         self.port
     }
 
+    #[allow(unused)]
     /// Returns the baudrate
     pub fn baudrate(&self) -> usize {
         self.baudrate
@@ -116,7 +155,7 @@ impl Board {
     /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
     /// ```
     pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self, BoardError> {
-        let port = Board::open_port(port_path, baudrate).map_err(|err| BoardError(format!("{}", err)) );
+        let port = Board::open_port(port_path, baudrate).map_err(|err| err.to_string().parse::<BoardError>().unwrap() );
 
         Ok(Board {
             address,
@@ -138,7 +177,13 @@ impl Board {
 
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>, BoardError> {
         match self.port.write(&bytes) {
-            Err(e) => return Err(BoardError(format!("Error writing to board: {}", e))),
+            Err(e) => return Err(
+                BoardError {
+                    msg: format!("Error writing to board: {}", e),
+                    address: Some(self.address())
+                }
+            ),
+            // Err(e) => return Err(format!("Error writing to board: {}", e).parse::<BoardError>().unwrap()),
             _ => {}
         };
 
