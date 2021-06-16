@@ -56,7 +56,7 @@ impl Waveshare {
             baudrate: WAVESHARE_BAUD
         });
 
-        ws.software_revision()?;
+        // ws.software_revision()?;
 
         Ok(ws)
     }
@@ -224,8 +224,42 @@ impl Waveshare {
                 }
             )
         }
-
     }
+
+
+    pub fn get_address(&mut self) -> Result<u8> {
+        let mut bytes: Vec<u8> = vec![
+            0x00,
+            0x03,
+            0x40, 0x00,
+            0x0, 0x01
+        ];
+
+        Waveshare::append_checksum(&mut bytes)?;
+
+        let resp = self.0.write_to_device(bytes)?;
+        resp.get(3).ok_or(BoardError {
+            msg: format!("The board didn't return the proper response, recieved: {:?}", resp),
+            address: Some(self.0.address())
+        }).copied()
+    }
+
+    pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            0x06,
+            0x40, 0x00,
+            0x00, new_addr,
+        ];
+
+        Waveshare::append_checksum(&mut bytes)?;
+
+        let _resp = self.0.write_to_device(bytes)?;
+        self.0.set_address(new_addr);
+        Ok(())
+    }
+
+
 }
 
 
@@ -328,6 +362,26 @@ mod tests {
     fn test_software_revision() {
         let mut ws = ws();
         assert_eq!(ws.software_revision().unwrap(), "v1.00");
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_device_address() {
+        let mut ws = ws();
+        let addr = ws.get_address();
+        assert_eq!(addr.unwrap(), 0x01);
+    }
+
+    #[test]
+    #[serial]
+    fn test_set_device_address() {
+        let mut ws = ws();
+        
+        assert_eq!(ws.get_address().unwrap(), 0x01);
+        assert!(ws.set_address(0x05).is_ok());
+        assert_eq!(ws.get_address().unwrap(), 0x05);
+        assert!(ws.set_address(0x01).is_ok());
+        assert_eq!(ws.get_address().unwrap(), 0x01);
     }
 
 }

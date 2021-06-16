@@ -131,6 +131,11 @@ impl Board {
         self.address
     }
 
+    // Updated the stored address
+    pub fn set_address(&mut self, new_addr: u8) {
+        self.address = new_addr;
+    }
+
     /// Returns the borrowed TTYPort
     pub fn port(&self) -> &TTYPort {
         &self.port

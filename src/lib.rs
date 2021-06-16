@@ -13,6 +13,7 @@
 //! to see how to use this library, and see the [organization readme](https://github.com/NavasotaBrewing/readme) for more information about the
 //! hardware and project as a whole.
 
+#![feature(result_copied)]
 #![allow(non_snake_case)]
 pub mod relays;
 pub mod omega;
