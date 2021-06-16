@@ -199,7 +199,11 @@ impl Waveshare {
             Ok(format!("v{:.2}", (version_num as f64 / 100.0)))
         } else {
             Err(BoardError(
-                format!("The board didn't return it's software revision correctly. Response: {:?}. Possible connection issue.", resp)
+                format!(
+                    "The board didn't return it's software revision correctly. Possible connection issue. Addr 0x{:X} at {:?}, response: {:?}",
+                    self.0.address(),
+                    self.0.port(),
+                    resp)
             ))
         }
 

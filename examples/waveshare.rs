@@ -20,6 +20,5 @@ fn main() -> Result<(), Box<dyn Error>> {
     ws.set_all_relays(State::Off)?;
 
 
-
     Ok(())
 }
