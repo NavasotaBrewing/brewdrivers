@@ -5,7 +5,7 @@ use brewdrivers::relays::{Waveshare, State};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0")?;
-
+    let mut ws2 = Waveshare::connect(0x01, "/dev/ttyUSB0")?;
     // getting the software revision is a smoke test
     println!("Board software revision: {:?}", ws.software_revision());
 

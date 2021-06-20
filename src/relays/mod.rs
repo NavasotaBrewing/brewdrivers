@@ -6,6 +6,7 @@
 //!
 //! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
+use std::ops::Not;
 // std uses
 use std::str::FromStr;
 use std::{error, fmt, time::Duration};
@@ -234,4 +235,5 @@ mod tests {
         assert!(resp.is_ok());
         assert!(resp.unwrap().len() > 0);
     }
+
 }

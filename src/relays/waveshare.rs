@@ -32,10 +32,10 @@ pub struct Waveshare(Board);
 
 impl Waveshare {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
-    /// or if the board can't be communicated with. This method will poll the board for it's software 
+    /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning a [`BoardError`](crate::relays::BoardError).
     /// 
-    /// ```rust
+    /// ```no_run
     /// use brewdrivers::relays::Waveshare;
     /// 
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
@@ -71,8 +71,8 @@ impl Waveshare {
 
     /// Sets a relay to the given state. See the [`State`](crate::relays::State) enum.
     /// 
-    /// ```rust
-    /// use brewdrivers::relays::Waveshare;
+    /// ```no_run
+    /// use brewdrivers::relays::{Waveshare, State};
     /// 
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// ws.set_relay(0, State::On).unwrap();
@@ -192,10 +192,10 @@ impl Waveshare {
 
     /// Returns the software revision as a String like "v1.00"
     /// 
-    /// ```rust
+    /// ```no_run
     /// use brewdrivers::relays::Waveshare;
     /// 
-    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap()
+    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// assert_eq!(ws.software_revision().unwrap(), "v1.00");
     /// ```
     pub fn software_revision(&mut self) -> Result<String> {
@@ -226,7 +226,20 @@ impl Waveshare {
         }
     }
 
-
+    /// Attempts to find the address of connected boards in the RS-485 circuit.
+    /// 
+    /// **Note:** The documentation on this is pretty unclear. Apparently, sending a certain message
+    /// on the broadcast address (0x00) gets the address of one board on the circuit (returns it's address). This
+    /// works for one board, but I'm not sure what will happen if there's multiple boards. I'm too poor to afford more than
+    /// one at the moment. Call UTA about reducing my tuition if you want better documentation.
+    /// 
+    /// ```no_run
+    /// # use brewdrivers::relays::Waveshare;
+    /// 
+    /// // address 0x00, the broadcast address
+    /// let mut ws = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();
+    /// assert_eq!(ws.get_address().unwrap(), 0x01);
+    /// ```
     pub fn get_address(&mut self) -> Result<u8> {
         let mut bytes: Vec<u8> = vec![
             0x00,
@@ -238,12 +251,28 @@ impl Waveshare {
         Waveshare::append_checksum(&mut bytes)?;
 
         let resp = self.0.write_to_device(bytes)?;
-        resp.get(3).ok_or(BoardError {
-            msg: format!("The board didn't return the proper response, recieved: {:?}", resp),
-            address: Some(self.0.address())
-        }).copied()
+        resp.get(3).ok_or(
+                BoardError {
+                msg: format!("The board didn't return the proper response, recieved: {:?}", resp),
+                address: Some(self.0.address())
+            }
+        ).copied()
     }
 
+    /// Sets the address of a board. You don't need to reconnect to the board
+    /// after changing it. It's a good idea to remember the controller number in
+    /// case it becomes inaccessible. Almost all communication requires the controller 
+    /// number. The documentation for this board is spotty.
+    /// 
+    /// ```no_run
+    /// # use brewdrivers::relays::Waveshare;
+    /// 
+    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
+    /// let mut unknown_board = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();
+    /// 
+    /// ws.set_address(0x07).unwrap();
+    /// assert_eq!(unknown_board.get_address().unwrap(), 0x07);
+    /// ```
     pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
@@ -258,7 +287,6 @@ impl Waveshare {
         self.0.set_address(new_addr);
         Ok(())
     }
-
 
 }
 
