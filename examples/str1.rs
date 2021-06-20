@@ -1,26 +1,10 @@
 #![allow(non_snake_case)]
-use brewdrivers::relays::{State, str1::STR1};
+use brewdrivers::relays::{Bytestring, STR1, State};
 
 
 fn main() {
-    let mut board = STR1::new(0xFE, "/dev/ttyUSB0", 9600).unwrap();
-
-    // Make sure we're connected
-    assert!(board.connected());
-
-    // Get the state of a relay
-    assert_eq!(board.get_relay(0), State::Off);
-
-    // Turn a relay on
-    board.set_relay(0, State::On);
-    assert_eq!(board.get_relay(0), State::On);
-
-
-    // Set the controller number on the board
-    board.set_controller_num(0x45);
-    // I want to keep it as 0xFE (default)
-    board.set_controller_num(0xFE);
-
-    // Get the amount of relays on the board
-    println!("{:?}", board.relay_count()) // Some(8)
+    let mut str1 = STR1::connect(0xFE, "/dev/ttyUSB0").unwrap();
+    str1.set_relay(3, State::On).unwrap();
+    
+    str1.list_all_relays().unwrap();
 }

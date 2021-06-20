@@ -47,18 +47,9 @@ impl Waveshare {
     /// // ...
     /// ```
     pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
-        let port = Board::open_port(port_path, WAVESHARE_BAUD).map_err(|err| {
-            BoardError {
-                msg: format!("{}", err),
-                address: Some(address)
-            }
-        } );
-
-        Ok(Waveshare(Board {
-            address,
-            port: port?,
-            baudrate: WAVESHARE_BAUD
-        }))
+        Ok(Waveshare(
+            Board::new(address, port_path, WAVESHARE_BAUD)?
+        ))
     }
 
     // Calculates the CRC checksum for the data bytes to send to the board

@@ -19,7 +19,7 @@ mod waveshare;
 pub use waveshare::Waveshare;
 
 mod str1;
-pub use str1::STR1;
+pub use str1::{Bytestring, STR1};
 
 
 /// The state of a relay. This can be 'On' or 'Off'.
@@ -190,7 +190,6 @@ impl Board {
                     address: Some(self.address())
                 }
             ),
-            // Err(e) => return Err(format!("Error writing to board: {}", e).parse::<BoardError>().unwrap()),
             _ => {}
         };
 
