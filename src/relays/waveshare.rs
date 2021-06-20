@@ -11,8 +11,12 @@ type Result<T> = std::result::Result<T, BoardError>;
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 // Hardcode the baud, we *probably* won't need to change it
-const WAVESHARE_BAUD: usize = 9600;
+pub const WAVESHARE_BAUD: usize = 9600;
 
+
+#[allow(dead_code)]
+/// The max index of a relay on the Waveshare board
+pub const RELAY_MAX: u8 = 7;
 
 /// A Waveshare board.
 /// 
@@ -50,15 +54,11 @@ impl Waveshare {
             }
         } );
 
-        let mut ws = Waveshare(Board {
+        Ok(Waveshare(Board {
             address,
             port: port?,
             baudrate: WAVESHARE_BAUD
-        });
-
-        // ws.software_revision()?;
-
-        Ok(ws)
+        }))
     }
 
     // Calculates the CRC checksum for the data bytes to send to the board

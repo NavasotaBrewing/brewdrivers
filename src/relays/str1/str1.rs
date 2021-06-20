@@ -14,26 +14,13 @@
 //! [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples).
 
 // std uses
-use std::{fmt, io::{Read, Write}, time::Duration};
+use std::{io::{Read, Write}, time::Duration};
 
 // external uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
 // internal uses
-use crate::relays::{Bytestring, State};
-
-
-/// An error type that may be returned when using the STR1 boards.
-#[derive(Debug)]
-pub struct STR1Error(String);
-
-impl fmt::Display for STR1Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::error::Error for STR1Error {}
+use crate::relays::{str1::Bytestring, State};
 
 /// An `STR1XX` board.
 ///

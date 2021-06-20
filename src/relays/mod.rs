@@ -6,7 +6,6 @@
 //!
 //! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
-use std::ops::Not;
 // std uses
 use std::str::FromStr;
 use std::{error, fmt, time::Duration};
@@ -19,6 +18,8 @@ use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 mod waveshare;
 pub use waveshare::Waveshare;
 
+mod str1;
+pub use str1::STR1;
 
 
 /// The state of a relay. This can be 'On' or 'Off'.
