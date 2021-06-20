@@ -140,9 +140,11 @@ impl Bytestring {
     /// ```
     pub fn to_bytes(self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![MA0, MA1];
+ 
         for byte in &self.data {
             bytes.push(*byte);
         }
+        
         bytes.push(self.checksum_as_hex());
         bytes.push(MAE);
         return bytes;

@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use brewdrivers::relays::{Bytestring, STR1, State};
+use brewdrivers::relays::{STR1, State};
 
 
 fn main() {
@@ -7,4 +7,6 @@ fn main() {
     str1.set_relay(3, State::On).unwrap();
     
     str1.list_all_relays().unwrap();
+
+    str1.set_relay(3, State::Off).unwrap();
 }
