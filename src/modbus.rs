@@ -15,7 +15,6 @@ use std::{
 // external uses
 use tokio::time::{self, Duration};
 use tokio_modbus::{client::{Context, Reader, Writer, rtu}, prelude::Slave};
-use tokio_serial::{Serial, SerialPortSettings};
 
 /// A result type for Modbus device interaction
 pub(crate) type Result<T> = std::result::Result<T, ModbusError>;
@@ -111,9 +110,8 @@ impl ModbusInstrument {
     /// }
     /// ```
     pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Result<ModbusInstrument> {
-        let mut settings = SerialPortSettings::default();
-        settings.baud_rate = 19200;
-        let port = Serial::from_path(port_path, &settings)?;
+        let builder = tokio_serial::new(port_path, 19200);
+        let port = tokio_serial::SerialStream::open(&builder).unwrap();
         let slave = Slave(slave_addr);
 
         let ctx = rtu::connect_slave(port, slave).await?;
@@ -144,20 +142,16 @@ impl ModbusInstrument {
     /// ```
     pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
+        
+        // TODO: This code is used a lot, maybe abtract it?
+        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
-        let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
-        loop {
-            tokio::select! {
-                rsp = task => {
-                    return rsp.map_err(|ioerror| ModbusError::IOError(ioerror) );
-                }
-                _ = &mut timeout => {
-                    return Err(
-                        ModbusError::TimeoutError(
-                            TimeoutError::from_device(register, &self)
-                        )
-                    );
-                },
+        match timeout.await {
+            Ok(res) => return res.map_err(|err| ModbusError::IOError(err) ),
+            Err(_) => {
+                return Err(ModbusError::TimeoutError(
+                    TimeoutError::from_device(register, &self)
+                ));
             }
         }
     }
@@ -184,19 +178,14 @@ impl ModbusInstrument {
     pub async fn write_register(&mut self, register: u16, value: u16) -> Result<()> {
         let task = self.ctx.write_single_register(register, value);
 
-        let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
-        loop {
-            tokio::select! {
-                rsp = task => {
-                    return rsp.map_err(|ioerror| ModbusError::IOError(ioerror) );
-                }
-                _ = &mut timeout => {
-                    return Err(
-                        ModbusError::TimeoutError(
-                            TimeoutError::from_device(register, &self)
-                        )
-                    );
-                },
+        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+
+        match timeout.await {
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Err(_) => {
+                return Err(ModbusError::TimeoutError(
+                    TimeoutError::from_device(register, &self)
+                ));
             }
         }
     }
@@ -206,19 +195,16 @@ impl ModbusInstrument {
     pub async fn read_coils(&mut self, coil: u16, count: u16) -> Result<Vec<bool>> {
         let task = self.ctx.read_coils(coil, count);
 
-        let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
-        loop {
-            tokio::select! {
-                rsp = task => {
-                    return rsp.map_err(|ioerror| ModbusError::IOError(ioerror) );
-                }
-                _ = &mut timeout => {
-                    return Err(
-                        ModbusError::TimeoutError(
-                            TimeoutError::from_device(coil, &self)
-                        )
-                    );
-                },
+        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+
+        match timeout.await {
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Err(_) => {
+                return Err(
+                    ModbusError::TimeoutError(
+                        TimeoutError::from_device(coil, &self)
+                    )
+                );
             }
         }
     }
@@ -227,19 +213,16 @@ impl ModbusInstrument {
     pub async fn write_coil(&mut self, coil: u16, value: bool) -> Result<()> {
         let task = self.ctx.write_single_coil(coil, value);
 
-        let mut timeout = time::delay_for(Duration::from_millis(self.timeout));
-        loop {
-            tokio::select! {
-                rsp = task => {
-                    return rsp.map_err(|ioerror| ModbusError::IOError(ioerror) );
-                }
-                _ = &mut timeout => {
-                    return Err(
-                        ModbusError::TimeoutError(
-                            TimeoutError::from_device(coil, &self)
-                        )
-                    );
-                },
+        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+
+        match timeout.await {
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Err(_) => {
+                return Err(
+                    ModbusError::TimeoutError(
+                        TimeoutError::from_device(coil, &self)
+                    )
+                );
             }
         }
     }
