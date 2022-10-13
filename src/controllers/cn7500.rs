@@ -4,7 +4,12 @@
 //! is a PID that we use to regulate temperatures within the BCS. This module provides a driver for it, based on the
 //! [`ModbusInstrument`](crate::modbus::ModbusInstrument).
 use crate::drivers::modbus::{ModbusInstrument, Result};
-use crate::controllers::cn7500::Degree;
+
+#[derive(Debug)]
+pub enum Degree {
+    Fahrenheit,
+    Celsius
+}
 
 // TODO: Implement Debug for this
 /// A CN7500 PID Controller.
