@@ -4,7 +4,8 @@ use crc::{Crc, CRC_16_MODBUS};
 
 // internal uses
 // generic board stuff
-use crate::relays::{Board, BoardError, State};
+use crate::drivers::serial_board::{SerialInstrument, BoardError, State};
+
 
 type Result<T> = std::result::Result<T, BoardError>;
 
@@ -32,7 +33,7 @@ pub const RELAY_MAX: u8 = 7;
 /// println!("{:?}", ws.get_all_relays().unwrap());
 /// ```
 #[derive(Debug)]
-pub struct Waveshare(Board);
+pub struct Waveshare(SerialInstrument);
 
 impl Waveshare {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
@@ -48,7 +49,7 @@ impl Waveshare {
     /// ```
     pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
         Ok(Waveshare(
-            Board::new(address, port_path, WAVESHARE_BAUD)?
+            SerialInstrument::new(address, port_path, WAVESHARE_BAUD)?
         ))
     }
 
@@ -72,7 +73,7 @@ impl Waveshare {
     /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: State) -> Result<()> {
         // Example: 01 05 00 00 FF 00 8C 3A
-        // 01   	Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
+        // 01       Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
         // 05       05 Command	        Command for controlling Relay
         // 00 00	Address	            The register address of controlled Relay, 0x00 - 0x0008
         // FF 00	Command	            0xFF00：Open Replay;

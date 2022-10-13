@@ -7,19 +7,13 @@
 //! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
 // std uses
-use std::str::FromStr;
-use std::{error, fmt, time::Duration};
+use std::time::Duration;
 use std::io::{Read, Write};
 
 // ext uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
-// internal uses
-mod waveshare;
-pub use waveshare::Waveshare;
-
-mod str1;
-pub use str1::{Bytestring, STR1};
+use crate::drivers::serial_board::BoardError;
 
 
 /// The state of a relay. This can be 'On' or 'Off'.
@@ -63,50 +57,6 @@ impl std::fmt::Display for State {
 }
 
 
-
-/// A generic board error. This is used when communication with any board is unsuccessful.
-#[derive(Debug)]
-pub struct BoardError {
-    msg: String,
-    address: Option<u8>
-}
-
-impl fmt::Display for BoardError {
-    /// Displays the given message of a board error, including the board address
-    /// if there is one provided with the error
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(addr) = self.address {
-            write!(f, "Board 0x{:X?}: {}", addr, self.msg)
-        } else {
-            write!(f, "{}", self.msg)
-        }
-    }
-}
-
-impl error::Error for BoardError {}
-
-impl FromStr for BoardError {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(BoardError {
-                msg: String::from(s),
-                address: None
-            })
-    }
-}
-
-// Not sure if this is necessary
-// impl From<Box<dyn std::error::Error>> for BoardError {
-//     fn from(error: Box<dyn std::error::Error>) -> Self {
-//         BoardError {
-//             msg: format!("{}", error),
-//             address: None
-//         }
-//     }
-// }
-
-
 /// A generic relay board.
 ///
 /// This is mostly used as a base for other implementations. It can connect to a board
@@ -121,13 +71,13 @@ impl FromStr for BoardError {
 /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
 /// ```
 #[derive(Debug)]
-struct Board {
+pub struct SerialInstrument {
     address: u8,
     port: TTYPort,
     baudrate: usize
 }
 
-impl Board {
+impl SerialInstrument {
     /// Returns the board address
     pub fn address(&self) -> u8 {
         self.address
@@ -162,9 +112,9 @@ impl Board {
     /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
     /// ```
     pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self, BoardError> {
-        let port = Board::open_port(port_path, baudrate).map_err(|err| err.to_string().parse::<BoardError>().unwrap() );
+        let port = SerialInstrument::open_port(port_path, baudrate).map_err(|err| err.to_string().parse::<BoardError>().unwrap() );
 
-        Ok(Board {
+        Ok(SerialInstrument {
             address,
             port: port?,
             baudrate
@@ -220,13 +170,13 @@ mod tests {
     // With a board connected at addr 1 and baud 9600 (Waveshare defaults)
     #[test]
     fn test_open_port() {
-        let board = Board::new(0x01, "/dev/ttyUSB0", 9600);
+        let board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600);
         assert!(board.is_ok());
     }
 
     #[test]
     fn test_write_bytes() {
-        let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+        let mut board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
         // This is the waveshare cmd for getting all relays status
         let cmd: Vec<u8> = vec![0x01, 0x01, 0x00, 0xFF, 0x00, 0x01, 0xCD, 0xFA];
         // Write the command

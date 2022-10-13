@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use crate::omega::CN7500;
-use crate::relays::{STR1, Waveshare};
-
+use crate::controllers::{STR1, CN7500, Waveshare};
 
 
 /// An enum containing all types of controllers that we have drivers for

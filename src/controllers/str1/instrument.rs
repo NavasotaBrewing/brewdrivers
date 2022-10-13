@@ -16,7 +16,7 @@
 pub const STR1_BAUD: usize = 9600;
 
 // internal uses
-use crate::relays::{Board, BoardError, State, str1::Bytestring};
+use crate::drivers::serial_board::{SerialInstrument, BoardError, State, Bytestring};
 
 type Result<T> = std::result::Result<T, BoardError>;
 
@@ -38,7 +38,7 @@ type Result<T> = std::result::Result<T, BoardError>;
 /// ```
 // TODO: #12 Make these field not pub
 #[derive(Debug)]
-pub struct STR1(Board);
+pub struct STR1(SerialInstrument);
 
 impl STR1 {
     /// Attempts to connect to an STR1 board.
@@ -55,7 +55,7 @@ impl STR1 {
     /// ```
     pub fn connect(address: u8, port_path: &str) -> Result<Self> {
         Ok(STR1(
-            Board::new(address, port_path, STR1_BAUD)?
+            SerialInstrument::new(address, port_path, STR1_BAUD)?
         ))
     }
 

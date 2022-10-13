@@ -6,8 +6,6 @@
 //! This module uses the `tokio v0.2`, and `tokio v1.0` likely won't work.
 
 // std uses
-use std::{error::Error, fmt, io};
-use std::fmt::Debug;
 
 // external uses
 use derivative::Derivative;
@@ -17,69 +15,7 @@ use tokio_modbus::{
     prelude::Slave,
 };
 
-/// A result type for Modbus device interaction
-pub(crate) type Result<T> = std::result::Result<T, ModbusError>;
-
-/// An error type when interacting with Modbus devices.
-#[derive(Debug)]
-pub enum ModbusError {
-    /// Wraps a [`TimeoutError`](crate::modbus::TimeoutError)
-    TimeoutError(TimeoutError),
-    /// Wraps an [`io::Error`](std::io::Error)
-    IOError(io::Error),
-    /// Wraps a
-    ConnectionError(io::Error),
-}
-
-impl fmt::Display for ModbusError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ModbusError::TimeoutError(e) => writeln!(f, "{}", e),
-            ModbusError::IOError(e) => writeln!(f, "{}", e),
-            ModbusError::ConnectionError(e) => writeln!(f, "{}", e),
-        }
-    }
-}
-
-impl From<io::Error> for ModbusError {
-    fn from(e: io::Error) -> Self {
-        ModbusError::ConnectionError(e)
-    }
-}
-
-/// Returned when a request times out
-#[derive(Debug)]
-pub struct TimeoutError {
-    port: String,
-    addr: u8,
-    register: u16,
-}
-
-impl TimeoutError {
-    /// This creates an error from a given register and Modbus instrument. This is typically
-    /// used when a read or write times out. The error will contain the attempted register to
-    /// read/write to, and the details of the device for printing.
-    pub fn from_device(register: u16, device: &ModbusInstrument) -> TimeoutError {
-        TimeoutError {
-            port: String::from(&device.port_path),
-            addr: device.slave_addr,
-            register,
-        }
-    }
-}
-
-impl fmt::Display for TimeoutError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-            "Timeout error: Modbus device on port {}, slave addr {} timed out after request to register 0x{:X}",
-            self.port,
-            self.addr,
-            self.register
-        )
-    }
-}
-
-impl Error for TimeoutError {}
+use crate::drivers::modbus::{ModbusError, TimeoutError, Result};
 
 /// A generic async Modbus instrument.
 ///

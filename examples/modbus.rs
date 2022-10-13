@@ -1,4 +1,4 @@
-use brewdrivers::modbus::ModbusInstrument;
+use brewdrivers::drivers::modbus::ModbusInstrument;
 
 #[tokio::main]
 async fn main() {

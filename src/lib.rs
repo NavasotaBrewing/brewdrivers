@@ -14,14 +14,5 @@
 //! hardware and project as a whole.
 
 #![allow(non_snake_case)]
-pub mod relays;
-pub mod omega;
-pub mod modbus;
-pub mod controller_pool;
-
-
-pub mod controllers {
-    pub use super::controller_pool::{ControllerPool, Controller};
-    pub use super::omega::CN7500;
-    pub use super::relays::{STR1, Waveshare};
-}
+pub mod drivers;
+pub mod controllers;
