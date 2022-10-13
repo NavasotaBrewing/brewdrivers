@@ -8,6 +8,7 @@ use crate::omega::Degree;
 
 // TODO: Implement Debug for this
 /// A CN7500 PID Controller.
+#[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
 
 impl CN7500 {

@@ -12,6 +12,8 @@ use std::{
     io
 };
 
+use std::fmt::Debug;
+
 // external uses
 use tokio::time::{self, Duration};
 use tokio_modbus::{client::{Context, Reader, Writer, rtu}, prelude::Slave};
@@ -91,6 +93,22 @@ pub struct ModbusInstrument {
     pub baudrate: u32,
     pub timeout: u64,
     pub ctx: Context
+}
+
+impl Debug for ModbusInstrument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // This is messy
+        write!(
+            f,
+            "{} port_path: {}, slave_addr: {}, baudrate: {}, timeout: {} {}",
+            '{',
+            self.port_path,
+            self.slave_addr,
+            self.baudrate,
+            self.timeout,
+            '}'
+        )
+    }
 }
 
 

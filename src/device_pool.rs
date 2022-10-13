@@ -1,13 +1,32 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 use crate::omega::CN7500;
 use crate::relays::{STR1, Waveshare};
 
 /// An enum containing all types of devices that we have drivers for
+
 pub enum Device {
     STR1(STR1),
     Waveshare(Waveshare),
     CN7500(CN7500)
+}
+
+impl Debug for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // This could probably be refactored
+        match self {
+            Device::STR1(device) => {
+                write!(f, "{:?}", device)
+            },
+            Device::Waveshare(device) => {
+                write!(f, "{:?}", device)
+            },
+            Device::CN7500(device) => {
+                write!(f, "{:?}", device)
+            }
+        }
+    }
 }
 
 pub struct DevicePool {
@@ -18,6 +37,10 @@ impl DevicePool {
     /// Create an empty Pool
     pub fn create() -> Self {
         DevicePool { devices: HashMap::new() }
+    }
+
+    pub fn devices(&self) -> &HashMap<String, Device> {
+        &self.devices
     }
 
     /// Adds a device to the pool under the key. The device must be wrapped
