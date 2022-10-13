@@ -17,3 +17,4 @@
 pub mod relays;
 pub mod omega;
 pub mod modbus;
+pub mod device_pool;

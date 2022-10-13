@@ -6,6 +6,7 @@
 use crate::modbus::{ModbusInstrument, Result};
 use crate::omega::Degree;
 
+// TODO: Implement Debug for this
 /// A CN7500 PID Controller.
 pub struct CN7500(ModbusInstrument);
 
