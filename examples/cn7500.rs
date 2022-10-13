@@ -9,4 +9,20 @@ async fn main() {
     } else {
         println!("Couldn't get PV from device, check the connection details!");
     }
+
+    // We could try to connect again, but our old connection is still active (cn)
+    // Device is busy
+    assert!(
+        CN7500::new(0x16, "/dev/ttyUSB0", 19200)
+            .await
+            .is_err()
+    );
+
+    // Dropping the old connection will allow us to reconnect
+    std::mem::drop(cn);
+
+    let another = CN7500::new(0x16, "/dev/ttyUSB0", 19200).await;
+    assert!(another.is_ok());
+    println!("Another PV: {}", another.unwrap().get_pv().await.unwrap());
+    
 }
