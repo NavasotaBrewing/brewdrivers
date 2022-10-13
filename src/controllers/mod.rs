@@ -10,4 +10,13 @@ pub mod controller_pool;
 pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
-pub use controller_pool::{ControllerPool, Controller};
+pub use controller_pool::ControllerPool;
+
+
+/// An enum containing all types of controllers that we have drivers for
+#[derive(Debug)]
+pub enum Controller {
+    STR1(STR1),
+    Waveshare(Waveshare),
+    CN7500(CN7500)
+}

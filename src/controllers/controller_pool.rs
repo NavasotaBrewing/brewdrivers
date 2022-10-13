@@ -1,16 +1,6 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
 
-use crate::controllers::{STR1, CN7500, Waveshare};
-
-
-/// An enum containing all types of controllers that we have drivers for
-#[derive(Debug)]
-pub enum Controller {
-    STR1(STR1),
-    Waveshare(Waveshare),
-    CN7500(CN7500)
-}
+use crate::controllers::Controller;
 
 pub struct ControllerPool {
     controllers: HashMap<String, Controller>
@@ -42,10 +32,10 @@ impl ControllerPool {
 
 
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::controllers::{STR1, CN7500};
 
     #[tokio::test]
     async fn test_device_pool() {
