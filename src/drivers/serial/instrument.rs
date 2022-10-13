@@ -13,7 +13,8 @@ use std::io::{Read, Write};
 // ext uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
-use crate::drivers::serial_board::BoardError;
+// use crate::drivers::serial::BoardError;
+use crate::drivers::{Result, InstrumentError};
 
 
 /// The state of a relay. This can be 'On' or 'Off'.
@@ -111,18 +112,17 @@ impl SerialInstrument {
     /// 
     /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
     /// ```
-    pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self, BoardError> {
-        let port = SerialInstrument::open_port(port_path, baudrate).map_err(|err| err.to_string().parse::<BoardError>().unwrap() );
-
+    pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self> {
+        let port = SerialInstrument::open_port(port_path, baudrate).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
         Ok(SerialInstrument {
             address,
-            port: port?,
+            port,
             baudrate
         })
     }
 
     /// Opens a TTYPort. This is used in Board::new()
-    fn open_port(port_path: &str, baudrate: usize) -> Result<TTYPort, serialport::Error> {
+    fn open_port(port_path: &str, baudrate: usize) -> std::result::Result<TTYPort, serialport::Error> {
         serialport::new(port_path, baudrate as u32)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
@@ -132,12 +132,12 @@ impl SerialInstrument {
             .open_native()
     }
 
-    pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>, BoardError> {
+    pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
         match self.port.write(&bytes) {
             Err(e) => return Err(
-                BoardError {
+                InstrumentError::SerialError {
                     msg: format!("Error writing to board: {}", e),
-                    address: Some(self.address())
+                    addr: Some(self.address())
                 }
             ),
             _ => {}

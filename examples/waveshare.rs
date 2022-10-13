@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 use std::thread::sleep;
 use brewdrivers::controllers::Waveshare;
-use brewdrivers::drivers::serial_board::State;
+use brewdrivers::drivers::serial::State;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0")?;

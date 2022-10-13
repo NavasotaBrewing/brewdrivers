@@ -23,6 +23,7 @@ tokio-modbus = { version = "0.5.3", default-features = false, features = ["rtu"]
 tokio = { version = "1", features = ["full"] }
 tokio-serial = "5.4.3"
 derivative = "2.2.0"
+thiserror = "1.0.37"
 
 
 [dependencies.serde]

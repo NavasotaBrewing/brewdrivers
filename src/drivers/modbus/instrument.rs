@@ -15,7 +15,7 @@ use tokio_modbus::{
     prelude::Slave,
 };
 
-use crate::drivers::modbus::{ModbusError, TimeoutError, Result};
+use crate::drivers::{Result, InstrumentError};
 
 /// A generic async Modbus instrument.
 ///
@@ -83,11 +83,9 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(res) => return res.map_err(|err| ModbusError::IOError(err)),
+            Ok(res) => return res.map_err(|err| InstrumentError::IOError(err)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
-                    register, &self,
-                )));
+                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, register));
             }
         }
     }
@@ -117,11 +115,9 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
+            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
-                    register, &self,
-                )));
+                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, register));
             }
         }
     }
@@ -133,11 +129,9 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
+            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
-                    coil, &self,
-                )));
+                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, coil));
             }
         }
     }
@@ -149,11 +143,9 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
+            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
-                    coil, &self,
-                )));
+                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, coil));
             }
         }
     }

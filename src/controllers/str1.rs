@@ -16,9 +16,9 @@
 pub const STR1_BAUD: usize = 9600;
 
 // internal uses
-use crate::drivers::serial_board::{SerialInstrument, BoardError, State, Bytestring};
+use crate::drivers::serial::{SerialInstrument, State, Bytestring};
 
-type Result<T> = std::result::Result<T, BoardError>;
+use crate::drivers::{Result, InstrumentError};
 
 
 /// An `STR1XX` board.
@@ -153,10 +153,10 @@ impl STR1 {
         // number of analog outputs, 0, 0, CS, SLE
         if out.len() < 4 {
             return Err(
-                BoardError {
-                    msg: format!("The STR1 board didn't return the correct response, recieved {:?}", out),
-                    address: Some(self.0.address())
-                }
+                InstrumentError::serialError(
+                    format!("The STR1 board didn't return the correct response, recieved {:?}", out),
+                    Some(self.0.address())
+                )
             );
         } else {
             return Ok(out[3]);

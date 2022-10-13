@@ -4,10 +4,9 @@ use crc::{Crc, CRC_16_MODBUS};
 
 // internal uses
 // generic board stuff
-use crate::drivers::serial_board::{SerialInstrument, BoardError, State};
+use crate::drivers::serial::{SerialInstrument, State};
 
-
-type Result<T> = std::result::Result<T, BoardError>;
+use crate::drivers::{Result, InstrumentError};
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
@@ -112,14 +111,14 @@ impl Waveshare {
             return Ok(state)
         } else {
             return Err(
-                BoardError {
-                    msg: format!(
+                InstrumentError::serialError(
+                    format!(
                         "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
                         relay_num,
                         statuses
                     ),
-                    address: Some(self.0.address())
-                }
+                    Some(self.0.address())
+                )
             )
         }
     }
@@ -174,10 +173,10 @@ impl Waveshare {
                 Ok(statuses)
         } else {
             Err(
-                BoardError {
-                    msg: format!("Board did not return the proper response, received {:?}", resp),
-                    address: Some(self.0.address())
-                }
+                InstrumentError::serialError(
+                    format!("Board did not return the proper response, received {:?}", resp),
+                    Some(self.0.address())
+                )
             )
         }
     }
@@ -206,14 +205,14 @@ impl Waveshare {
             Ok(format!("v{:.2}", (version_num as f64 / 100.0)))
         } else {
             Err(
-                BoardError {
-                    msg: format!(
+                InstrumentError::serialError(
+                    format!(
                         "The board didn't return it's software revision correctly. Possible connection issue. port: {:?}, response: {:?}",
                         self.0.port(),
                         resp
                     ),
-                    address: Some(self.0.address())
-                }
+                    Some(self.0.address())
+                )
             )
         }
     }
@@ -244,10 +243,10 @@ impl Waveshare {
 
         let resp = self.0.write_to_device(bytes)?;
         resp.get(3).ok_or(
-                BoardError {
-                msg: format!("The board didn't return the proper response, recieved: {:?}", resp),
-                address: Some(self.0.address())
-            }
+                InstrumentError::serialError(
+                    format!("The board didn't return the proper response, recieved: {:?}", resp),
+                    Some(self.0.address())
+                )
         ).copied()
     }
 

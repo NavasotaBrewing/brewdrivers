@@ -3,7 +3,8 @@
 //! The [OMEGA CN7500](https://www.omega.com/en-us/control-monitoring/controllers/pid-controllers/p/CN7200-7500-7600-7800)
 //! is a PID that we use to regulate temperatures within the BCS. This module provides a driver for it, based on the
 //! [`ModbusInstrument`](crate::modbus::ModbusInstrument).
-use crate::drivers::modbus::{ModbusInstrument, Result};
+use crate::drivers::modbus::ModbusInstrument;
+use crate::drivers::Result;
 
 #[derive(Debug)]
 pub enum Degree {

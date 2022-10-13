@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use brewdrivers::controllers::STR1;
-use brewdrivers::drivers::serial_board::State;
+use brewdrivers::drivers::serial::State;
 
 
 fn main() {
