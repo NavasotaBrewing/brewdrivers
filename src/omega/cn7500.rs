@@ -37,7 +37,7 @@ impl CN7500 {
     }
 
     pub async fn is_running(&mut self) -> Result<bool> {
-        self.0.read_coils(0x0814, 1).await.map(|vals| vals[0])
+        self.0.read_coils(0x0814, 1).await.map(|vals| vals[0] )
     }
 
     pub async fn run(&mut self) -> Result<()> {
