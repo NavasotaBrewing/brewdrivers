@@ -6,17 +6,16 @@
 //! This module uses the `tokio v0.2`, and `tokio v1.0` likely won't work.
 
 // std uses
-use std::{
-    error::Error,
-    fmt,
-    io
-};
-
+use std::{error::Error, fmt, io};
 use std::fmt::Debug;
 
 // external uses
+use derivative::Derivative;
 use tokio::time::{self, Duration};
-use tokio_modbus::{client::{Context, Reader, Writer, rtu}, prelude::Slave};
+use tokio_modbus::{
+    client::{rtu, Context, Reader, Writer},
+    prelude::Slave,
+};
 
 /// A result type for Modbus device interaction
 pub(crate) type Result<T> = std::result::Result<T, ModbusError>;
@@ -28,8 +27,8 @@ pub enum ModbusError {
     TimeoutError(TimeoutError),
     /// Wraps an [`io::Error`](std::io::Error)
     IOError(io::Error),
-    /// Wraps a 
-    ConnectionError(io::Error)
+    /// Wraps a
+    ConnectionError(io::Error),
 }
 
 impl fmt::Display for ModbusError {
@@ -37,7 +36,7 @@ impl fmt::Display for ModbusError {
         match &self {
             ModbusError::TimeoutError(e) => writeln!(f, "{}", e),
             ModbusError::IOError(e) => writeln!(f, "{}", e),
-            ModbusError::ConnectionError(e) => writeln!(f, "{}", e)
+            ModbusError::ConnectionError(e) => writeln!(f, "{}", e),
         }
     }
 }
@@ -64,7 +63,7 @@ impl TimeoutError {
         TimeoutError {
             port: String::from(&device.port_path),
             addr: device.slave_addr,
-            register
+            register,
         }
     }
 }
@@ -82,36 +81,20 @@ impl fmt::Display for TimeoutError {
 
 impl Error for TimeoutError {}
 
-
 /// A generic async Modbus instrument.
 ///
 /// Note: according to the Modbus spec, "coils" hold boolean values, while registers
 /// hold `u16` values. This is reflected in the methods in this struct.
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct ModbusInstrument {
     pub port_path: String,
     pub slave_addr: u8,
     pub baudrate: u32,
     pub timeout: u64,
-    pub ctx: Context
+    #[derivative(Debug = "ignore")]
+    pub ctx: Context,
 }
-
-impl Debug for ModbusInstrument {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // This is messy
-        write!(
-            f,
-            "{} port_path: {}, slave_addr: {}, baudrate: {}, timeout: {} {}",
-            '{',
-            self.port_path,
-            self.slave_addr,
-            self.baudrate,
-            self.timeout,
-            '}'
-        )
-    }
-}
-
-
 
 impl ModbusInstrument {
     /// Creates a new `ModbusInstrument`. Opens a serial port on the given port path.
@@ -133,7 +116,6 @@ impl ModbusInstrument {
         let slave = Slave(slave_addr);
 
         let ctx = rtu::connect_slave(port, slave).await?;
-
 
         Ok(ModbusInstrument {
             port_path: String::from(port_path),
@@ -160,16 +142,16 @@ impl ModbusInstrument {
     /// ```
     pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
-        
+
         // TODO: This code is used a lot, maybe abtract it?
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(res) => return res.map_err(|err| ModbusError::IOError(err) ),
+            Ok(res) => return res.map_err(|err| ModbusError::IOError(err)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(
-                    TimeoutError::from_device(register, &self)
-                ));
+                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
+                    register, &self,
+                )));
             }
         }
     }
@@ -199,15 +181,14 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
             Err(_) => {
-                return Err(ModbusError::TimeoutError(
-                    TimeoutError::from_device(register, &self)
-                ));
+                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
+                    register, &self,
+                )));
             }
         }
     }
-
 
     /// The same as [`read_registers()`](crate::modbus::ModbusInstrument::read_registers), but for coils
     pub async fn read_coils(&mut self, coil: u16, count: u16) -> Result<Vec<bool>> {
@@ -216,13 +197,11 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
             Err(_) => {
-                return Err(
-                    ModbusError::TimeoutError(
-                        TimeoutError::from_device(coil, &self)
-                    )
-                );
+                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
+                    coil, &self,
+                )));
             }
         }
     }
@@ -234,28 +213,26 @@ impl ModbusInstrument {
         let timeout = time::timeout(Duration::from_millis(self.timeout), task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror) ),
+            Ok(resp) => return resp.map_err(|ioerror| ModbusError::IOError(ioerror)),
             Err(_) => {
-                return Err(
-                    ModbusError::TimeoutError(
-                        TimeoutError::from_device(coil, &self)
-                    )
-                );
+                return Err(ModbusError::TimeoutError(TimeoutError::from_device(
+                    coil, &self,
+                )));
             }
         }
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::test;
     use serial_test::serial;
+    use tokio::test;
 
     async fn instr() -> ModbusInstrument {
-        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap()
+        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200)
+            .await
+            .unwrap()
     }
 
     #[test]
@@ -273,7 +250,6 @@ mod tests {
         let value2 = instr.read_coils(0x0814, 1).await;
         assert!(value2.is_ok());
         assert!(!value2.unwrap()[0]);
-
     }
 
     #[test]
@@ -298,5 +274,4 @@ mod tests {
         assert!(new_sv.is_ok());
         assert!(new_sv.unwrap()[0] == 1500);
     }
-
 }
