@@ -9,5 +9,5 @@ async fn main() {
     } else {
         println!("Couldn't get PV from device, check the connection details!");
     }
-
+    
 }
