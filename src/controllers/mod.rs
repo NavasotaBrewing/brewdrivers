@@ -1,5 +1,5 @@
-/// A controller is a specific implementation of driver, made for one
-/// specific instrument. 
+//! A controller is a specific implementation of driver, made for one
+//! specific instrument. 
 
 
 pub mod cn7500;
