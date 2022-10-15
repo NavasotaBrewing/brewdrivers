@@ -6,13 +6,13 @@
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Degree {
     Fahrenheit,
     Celsius
 }
 
-// TODO: Implement Debug for this
+
 /// A CN7500 PID Controller.
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
