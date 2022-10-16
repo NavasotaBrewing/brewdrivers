@@ -1,5 +1,3 @@
-use std::fmt::Binary;
-
 /// A binary state, as used in a relay or similar. This can be 'On' or 'Off'.
 ///
 /// If the `network` feature is enabled, this enum will be serializable with `serde`. If
