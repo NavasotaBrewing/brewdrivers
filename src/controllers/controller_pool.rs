@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::controllers::Controller;
 
+/// A simple controller pool to store device connections. This is useful when you want
+/// to maintain one device connection throughout a program and only use it occasionally.;
 pub struct ControllerPool {
     controllers: HashMap<String, Controller>
 }
@@ -12,14 +14,13 @@ impl ControllerPool {
         ControllerPool { controllers: HashMap::new() }
     }
 
+    /// Returns a reference to all the controllers
     pub fn controllers(&self) -> &HashMap<String, Controller> {
         &self.controllers
     }
 
     /// Adds a controller to the pool under the key. The controller must be wrapped
     /// in the `Controller` enum.
-    /// 
-    /// ```rust
     pub fn add(&mut self, key: &str, controller: Controller) {
         self.controllers.insert(String::from(key), controller);
     }

@@ -1,7 +1,6 @@
 //! A controller is a specific implementation of driver, made for one
 //! specific instrument. 
 
-
 pub mod cn7500;
 pub mod str1;
 pub mod waveshare;

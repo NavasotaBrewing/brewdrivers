@@ -21,5 +21,4 @@ async fn main() {
     // Read run/stop value
     let coil = inst.read_coils(0x0814, 1).await.unwrap();
     println!("Coil 0x0814 is {:?}", coil);
-
 }
