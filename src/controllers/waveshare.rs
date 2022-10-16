@@ -1,10 +1,25 @@
+//! These boards are relatively cheap and (so far) reliable. They can be [found here](https://www.waveshare.com/modbus-rtu-relay.htm).
+//! The [operation wiki](https://www.waveshare.com/wiki/Protocol_Manual_of_Modbus_RTU_Relay) explains how to use it, but you probably won't need that.
+//! 
+//! See the `examples/` directory for a complete example of using this board. Here's a sneak peak
+//! ```rust
+//! use brewdrivers::controllers::Waveshare;
+//! use brewdrivers::controllers::BinaryState;
+//! 
+//! let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
+//! ws.set_relay(3, BinaryState::On).unwrap(); // Turn on the 4th relay (indexed from 0)
+//! println!("{:?}", ws.get_all_relays().unwrap());
+//! ```
+
+
 // ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
 
 // internal uses
 // generic board stuff
-use crate::drivers::serial::{SerialInstrument, State};
+use crate::drivers::serial::SerialInstrument;
+use crate::controllers::BinaryState;
 
 use crate::drivers::{Result, InstrumentError};
 
@@ -19,19 +34,6 @@ pub const WAVESHARE_BAUD: usize = 9600;
 pub const RELAY_MAX: u8 = 7;
 
 /// A Waveshare board.
-/// 
-/// These boards are relatively cheap and (so far) reliable. They can be [found here](https://www.waveshare.com/modbus-rtu-relay.htm).
-/// The [operation wiki](https://www.waveshare.com/wiki/Protocol_Manual_of_Modbus_RTU_Relay) explains how to use it, but you probably won't need that.
-/// 
-/// See the `examples/` directory for a complete example of using this board. Here's a sneak peak
-/// ```rust
-/// use brewdrivers::controllers::Waveshare;
-/// use brewdrivers::drivers::serial::State;
-/// 
-/// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-/// ws.set_relay(3, State::On).unwrap(); // Turn on the 4th relay (indexed from 0)
-/// println!("{:?}", ws.get_all_relays().unwrap());
-/// ```
 #[derive(Debug)]
 pub struct Waveshare(SerialInstrument);
 
@@ -61,18 +63,18 @@ impl Waveshare {
         Ok(())
     }
 
-    /// Sets a relay to the given state. See the [`State`](crate::drivers::serial::State) enum.
+    /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
     /// 
     /// ```rust,no_run
     /// use brewdrivers::controllers::Waveshare;
-    /// use brewdrivers::drivers::serial::State;;
+    /// use brewdrivers::controllers::BinaryState;;
     /// 
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-    /// ws.set_relay(0, State::On).unwrap();
-    /// assert_eq!(ws.get_relay(0).unwrap(), State::On);
-    /// ws.set_relay(0, State::Off);
+    /// ws.set_relay(0, BinaryState::On).unwrap();
+    /// assert_eq!(ws.get_relay(0).unwrap(),BinaryState::On);
+    /// ws.set_relay(0, BinaryState::Off);
     /// ```
-    pub fn set_relay(&mut self, relay_num: u8, state: State) -> Result<()> {
+    pub fn set_relay(&mut self, relay_num: u8, state: BinaryState) -> Result<()> {
         // Example: 01 05 00 00 FF 00 8C 3A
         // 01       Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
         // 05       05 Command	        Command for controlling Relay
@@ -92,8 +94,8 @@ impl Waveshare {
 
         // Add on state
         match state {
-            State::On => bytes.push(0xFF),
-            State::Off => bytes.push(0x00)
+            BinaryState::On => bytes.push(0xFF),
+            BinaryState::Off => bytes.push(0x00)
         };
 
         // Add on 0x00, because the board needs it I guess
@@ -105,9 +107,9 @@ impl Waveshare {
         Ok(())
     }
 
-    /// Gets a relay state. See [`State`](crate::drivers::serial::State).
-    pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
-        let statuses: Vec<State> = self.get_all_relays()?;
+    /// Gets a relay state. See [`State`](crate::controllers::BinaryState).
+    pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+        let statuses: Vec<BinaryState> = self.get_all_relays()?;
         
         if let Some(&state) = statuses.get(relay_num as usize) {
             return Ok(state)
@@ -126,7 +128,7 @@ impl Waveshare {
     }
 
     /// Sets all relays at once to the given state.
-    pub fn set_all_relays(&mut self, state: State) -> Result<()> {
+    pub fn set_all_relays(&mut self, state: BinaryState) -> Result<()> {
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             // These are all constant, reading all relays status
@@ -135,11 +137,11 @@ impl Waveshare {
         ];
 
         match state {
-            State::On => {
+            BinaryState::On => {
                 bytes.push(0xFF);
                 bytes.push(0xFF);
             },
-            State::Off => {
+            BinaryState::Off => {
                 bytes.push(0x00);
                 bytes.push(0x00);
             }
@@ -151,8 +153,8 @@ impl Waveshare {
         Ok(())
     }
 
-    /// Returns a `Vec<State>` of all 8 relays.
-    pub fn get_all_relays(&mut self) -> Result<Vec<State>> {
+    /// Returns a `Vec<BinaryState>` of all 8 relays.
+    pub fn get_all_relays(&mut self) -> Result<Vec<BinaryState>> {
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             0x01,
@@ -165,10 +167,10 @@ impl Waveshare {
         if let Some(status_number) = resp.get(3) {
             // this is a little cursed but i don't know how else to work with binary
             let binary = format!("{:08b}", status_number);
-            let statuses: Vec<State> = binary
+            let statuses: Vec<BinaryState> = binary
                 .chars()
                 .filter(|&ch| ch == '1' || ch == '0')
-                .map(|ch| State::from(ch == '1'))
+                .map(|ch| BinaryState::from(ch.to_string()) )
                 .rev()
                 .collect();
 
@@ -322,9 +324,9 @@ mod tests {
     fn test_write_relay_state() {
         let mut ws = ws();
 
-        assert!(ws.set_relay(0, State::On).is_ok());
+        assert!(ws.set_relay(0,BinaryState::On).is_ok());
         sleep(Duration::from_millis(200));
-        assert!(ws.set_relay(0, State::Off).is_ok());
+        assert!(ws.set_relay(0,BinaryState::Off).is_ok());
     }
 
     #[test]
@@ -332,11 +334,11 @@ mod tests {
     fn test_get_relay_status() {
         let mut ws = ws();
 
-        ws.set_relay(0, State::On).unwrap();
-        assert_eq!(ws.get_relay(0).unwrap(), State::On);
+        ws.set_relay(0,BinaryState::On).unwrap();
+        assert_eq!(ws.get_relay(0).unwrap(),BinaryState::On);
 
-        ws.set_relay(0, State::Off).unwrap();
-        assert_eq!(ws.get_relay(0).unwrap(), State::Off);
+        ws.set_relay(0,BinaryState::Off).unwrap();
+        assert_eq!(ws.get_relay(0).unwrap(),BinaryState::Off);
     }
 
     #[test]
@@ -344,12 +346,12 @@ mod tests {
     fn test_write_all_relays() {
         let mut ws = ws();
 
-        ws.set_all_relays(State::On).unwrap();
+        ws.set_all_relays(BinaryState::On).unwrap();
         for i in 0..8 {
-            assert_eq!(ws.get_relay(i).unwrap(), State::On);
+            assert_eq!(ws.get_relay(i).unwrap(), BinaryState::On);
         }
         sleep(Duration::from_millis(200));
-        ws.set_all_relays(State::Off).unwrap();
+        ws.set_all_relays(BinaryState::Off).unwrap();
     }
 
     #[test]
@@ -358,22 +360,22 @@ mod tests {
         let mut ws = ws();
 
         let expected = vec![
-            State::On,
-            State::Off,
-            State::Off,
-            State::Off,
-            State::Off,
-            State::Off,
-            State::On,
-            State::Off
+           BinaryState::On,
+           BinaryState::Off,
+           BinaryState::Off,
+           BinaryState::Off,
+           BinaryState::Off,
+           BinaryState::Off,
+           BinaryState::On,
+           BinaryState::Off
         ];
 
-        ws.set_all_relays(State::Off).unwrap();
-        ws.set_relay(0, State::On).unwrap();
-        ws.set_relay(6, State::On).unwrap();
+        ws.set_all_relays(BinaryState::Off).unwrap();
+        ws.set_relay(0,BinaryState::On).unwrap();
+        ws.set_relay(6,BinaryState::On).unwrap();
         assert_eq!(ws.get_all_relays().unwrap(), expected);
         sleep(Duration::from_millis(100));
-        ws.set_all_relays(State::Off).unwrap();
+        ws.set_all_relays(BinaryState::Off).unwrap();
 
 
     }

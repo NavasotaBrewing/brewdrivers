@@ -5,11 +5,13 @@ pub mod cn7500;
 pub mod str1;
 pub mod waveshare;
 pub mod controller_pool;
+pub mod states;
 
 pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
 pub use controller_pool::ControllerPool;
+pub use states::BinaryState;
 
 
 /// An enum containing all types of controllers that we have drivers for

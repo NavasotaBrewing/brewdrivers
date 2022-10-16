@@ -16,7 +16,8 @@
 pub const STR1_BAUD: usize = 9600;
 
 // internal uses
-use crate::drivers::serial::{SerialInstrument, State, Bytestring};
+use crate::drivers::serial::{SerialInstrument, Bytestring};
+use crate::controllers::BinaryState;
 
 use crate::drivers::{Result, InstrumentError};
 
@@ -28,12 +29,12 @@ use crate::drivers::{Result, InstrumentError};
 /// ## Examples
 /// ```rust,no_run
 /// use brewdrivers::controllers::STR1;
-/// use brewdrivers::drivers::serial::State;
+/// use brewdrivers::controllers::BinaryState;
 ///
 /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
-/// board.get_relay(0); // -> State::Off;
-/// board.set_relay(0, State::On);
-/// board.get_relay(0); // -> State::On;
+/// board.get_relay(0); // ->BinaryState::Off;
+/// board.set_relay(0,BinaryState::On);
+/// board.get_relay(0); // ->BinaryState::On;
 ///
 /// board.relay_count(); // -> Some(8)
 /// ```
@@ -48,7 +49,7 @@ impl STR1 {
     /// ## Examples
     /// ```rust,no_run
     /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::drivers::serial::State;
+    /// use brewdrivers::controllers::BinaryState;
     ///
     /// let mut board = STR1::connect(0xFE, "/dev/ttyUSB0").expect("Couldn't connect to device");
     /// board.get_relay(0);
@@ -71,7 +72,7 @@ impl STR1 {
     /// ## Example
     /// ```rust,no_run
     /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::drivers::serial::{State, Bytestring};
+    /// use brewdrivers::drivers::serial::Bytestring;
     /// 
     /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
     ///
@@ -85,25 +86,22 @@ impl STR1 {
         self.0.write_to_device(bytestring.to_bytes())
     }
 
-    /// Gets the status of a relay, as a [`State`](crate::drivers::serial::State).
-    pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
+    /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
+    pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;
 
         let result = hex::encode(output_buf);
 
         match result.chars().nth(7) {
-            Some('1') => return Ok(State::On),
-            _ => return Ok(State::Off),
+            Some('1') => return Ok(BinaryState::On),
+            _ => return Ok(BinaryState::Off),
         }
     }
 
     /// Sets a relay to On or Off.
-    pub fn set_relay(&mut self, relay_num: u8, new_state: State) -> Result<()> {
-        let new_state_num = match new_state {
-            State::On => 1,
-            State::Off => 0
-        };
+    pub fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
+        let new_state_num: u8 = new_state.into();
 
         self.write_to_device(
             Bytestring::from(vec![0x08, 0x17, self.0.address(), relay_num, 0x01, new_state_num])
@@ -198,11 +196,11 @@ mod tests {
     fn set_get_relay_status() {
         let mut board = test_board();
 
-        board.set_relay(0, State::On).unwrap();
-        assert_eq!(State::On, board.get_relay(0).unwrap());
+        board.set_relay(0, BinaryState::On).unwrap();
+        assert_eq!(BinaryState::On, board.get_relay(0).unwrap());
 
-        board.set_relay(0, State::Off).unwrap();
-        assert_eq!(State::Off, board.get_relay(0).unwrap());
+        board.set_relay(0, BinaryState::Off).unwrap();
+        assert_eq!(BinaryState::Off, board.get_relay(0).unwrap());
     }
 
     #[test]
@@ -227,11 +225,11 @@ mod tests {
     fn test_all_relays() {
         let mut board = test_board();
         for i in 0..16 {
-            board.set_relay(i, State::On).unwrap();
+            board.set_relay(i, BinaryState::On).unwrap();
         }
 
         for i in 0..16 {
-            board.set_relay(i, State::Off).unwrap();
+            board.set_relay(i, BinaryState::Off).unwrap();
         }
     }
 

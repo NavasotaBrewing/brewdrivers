@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::time::Duration;
 use std::thread::sleep;
-use brewdrivers::controllers::Waveshare;
-use brewdrivers::drivers::serial::State;
+
+use brewdrivers::controllers::{Waveshare, BinaryState};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0")?;
@@ -11,10 +11,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Board software revision: {:?}", ws.software_revision());
 
     // Set a relay on or off
-    ws.set_relay(0, State::On)?;
-    ws.set_relay(2, State::On)?;
+    ws.set_relay(0, BinaryState::On)?;
+    ws.set_relay(2, BinaryState::On)?;
 
-    // Get all the relays statuses as a Vec<State>
+    // Get all the relays statuses as a Vec<BinaryState>
     let statuses = ws.get_all_relays()?;
     // just print the statuses
     for i in 0..8 {
@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Wait a bit
     sleep(Duration::from_millis(100));
     // Make sure they're all off at the end
-    ws.set_all_relays(State::Off)?;
+    ws.set_all_relays(BinaryState::Off)?;
 
 
 

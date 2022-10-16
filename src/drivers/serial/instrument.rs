@@ -14,48 +14,6 @@ use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 // use crate::drivers::serial::BoardError;
 use crate::drivers::{Result, InstrumentError};
 
-
-/// The state of a relay. This can be 'On' or 'Off'.
-///
-/// If the `network` feature is enabled, this enum will be serializable with `serde`.
-///
-/// This enum is mainly here for compatability with the javascript front end.
-/// Javascript is pretty fast and loose with it's types, and this ensures we get an explicit
-/// 'On' or 'Off' instead of `true`/`false`, `0`/`1`, `null`, etc.
-#[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum State {
-    On,
-    Off
-}
-
-impl State {
-    /// Converts a `bool` to a `State`
-    ///
-    /// ```rust
-    /// use brewdrivers::drivers::serial::State;
-    ///
-    /// assert_eq!(State::from(true),  State::On);
-    /// assert_eq!(State::from(false), State::Off);
-    /// ```
-    pub fn from(state: bool) -> State {
-        match state {
-            true  => State::On,
-            false => State::Off
-        }
-    }
-}
-
-impl std::fmt::Display for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            State::On => write!(f, "on"),
-            State::Off => write!(f, "off"),
-        }
-    }
-}
-
-
 /// A generic relay board.
 ///
 /// This is mostly used as a base for other implementations. It can connect to a board
