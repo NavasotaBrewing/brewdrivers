@@ -1,4 +1,4 @@
-//! A `Bytestring`, which is used in the [`str1`](crate::relays::str1) module.
+//! A `Bytestring`, which is used in the [`str1`](crate::controllers::str1) module.
 //!
 //! A `Bytestring` is a vector of `u8` bytes, usually represented with hex numbers. This
 //! bytestring is used to communicate with the STR1XX relay boards. You can read more about
@@ -52,7 +52,7 @@
 //! data bytes.
 //!
 //! ```rust
-//! use brewdrivers::relays::Bytestring;
+//! use brewdrivers::drivers::serial::Bytestring;
 //!
 //! // This command gets the status of relay 0x00 on controller 0x01
 //! let bs = Bytestring::from(vec![0x07, 0x14, 0x01, 0x00, 0x01]);
@@ -65,7 +65,7 @@ const MA1: u8 = 0xAA;
 const MAE: u8 = 0x77;
 
 
-/// The [`Bytestring`](crate::relays::bytestring) struct, representing a message to the STR1XX board.
+/// The [`Bytestring`](crate::drivers::serial::Bytestring) struct, representing a message to the STR1XX board.
 #[derive(Debug)]
 pub struct Bytestring {
     /// The bytes of a datastring, excluding the `MA0`, `MA1`, `CS`, and `MAE`
@@ -77,7 +77,7 @@ impl Bytestring {
     ///
     /// ## Examples
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// // This command gets the status of relay 0x00 on controller 0x01
     /// let bs = Bytestring::from(vec![0x07, 0x14, 0x01, 0x00, 0x01]);
@@ -96,7 +96,7 @@ impl Bytestring {
     ///
     /// ## Example
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let bs = Bytestring::from(vec![0x07, 0x14, 0x01, 0x00, 0x01]);
     /// assert_eq!(bs.checksum_as_hex(), 0x1D);
@@ -104,7 +104,7 @@ impl Bytestring {
     ///
     /// If the checksum is 2 bytes, then the low byte will be kept
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let bs = Bytestring::from(vec![0xF3, 0xF3]);
     /// // 0xF3 + 0xF3 = 0x01E6
@@ -119,7 +119,7 @@ impl Bytestring {
     ///
     /// ## Example
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let bs = Bytestring::from(vec![0xF3, 0xF3]);
     /// assert_eq!(bs.full(), "55aaf3f3e677");
@@ -133,7 +133,7 @@ impl Bytestring {
     /// with all bytes, as a `Vec<u8>`.
     ///
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let bs = Bytestring::from(vec![0xF3, 0xF3]);
     /// assert_eq!(bs.to_bytes(), vec![0x55, 0xAA, 0xF3, 0xF3, 0xE6, 0x77]);
@@ -153,7 +153,7 @@ impl Bytestring {
 
 impl std::fmt::Display for Bytestring {
     /// ```rust
-    /// use brewdrivers::relays::Bytestring;
+    /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let bs = Bytestring::from(vec![0xF3, 0xF3]);
     /// assert_eq!(

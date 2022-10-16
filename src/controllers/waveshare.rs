@@ -37,10 +37,10 @@ pub struct Waveshare(SerialInstrument);
 impl Waveshare {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
     /// or if the board can't be communicated with. This method will poll the board for it's software
-    /// version number and fail if it doesn't return one, returning a [`BoardError`](crate::relays::BoardError).
+    /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
     /// 
     /// ```no_run
-    /// use brewdrivers::relays::Waveshare;
+    /// use brewdrivers::controllers::Waveshare;
     /// 
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// ws.get_relay(0).unwrap();
@@ -60,7 +60,7 @@ impl Waveshare {
         Ok(())
     }
 
-    /// Sets a relay to the given state. See the [`State`](crate::relays::State) enum.
+    /// Sets a relay to the given state. See the [`State`](crate::drivers::serial::State) enum.
     /// 
     /// ```no_run
     /// use brewdrivers::relays::{Waveshare, State};
@@ -103,7 +103,7 @@ impl Waveshare {
         Ok(())
     }
 
-    /// Gets a relay state. See [`State`](crate::relays::State).
+    /// Gets a relay state. See [`State`](crate::drivers::serial::State).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
         let statuses: Vec<State> = self.get_all_relays()?;
         

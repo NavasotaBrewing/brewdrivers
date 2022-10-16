@@ -1,9 +1,7 @@
-//! Drivers for relay boards.
+//! Drivers for serial instruments
 //!
-//! Relay boards we support:
-//!  * [`STR1XX`](crate::relays::str1)
-//!  * [Waveshare Modbus RTU Relay](crate::relays::Waveshare)
-//!
+//! See the [`controllers`](crate::controllers) for the controllers that implement this
+//! 
 //! see the [hardware guides](https://github.com/NavasotaBrewing/readme/tree/master/hardware) for more information.
 
 // std uses
@@ -21,7 +19,7 @@ use crate::drivers::{Result, InstrumentError};
 ///
 /// If the `network` feature is enabled, this enum will be serializable with `serde`.
 ///
-/// This enum is mainly here for compatability with `brewkit`, the javascript front end.
+/// This enum is mainly here for compatability with the javascript front end.
 /// Javascript is pretty fast and loose with it's types, and this ensures we get an explicit
 /// 'On' or 'Off' instead of `true`/`false`, `0`/`1`, `null`, etc.
 #[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
@@ -35,7 +33,7 @@ impl State {
     /// Converts a `bool` to a `State`
     ///
     /// ```rust
-    /// use brewdrivers::relays::State;
+    /// use brewdrivers::drivers::serial::State;
     ///
     /// assert_eq!(State::from(true),  State::On);
     /// assert_eq!(State::from(false), State::Off);
@@ -67,7 +65,7 @@ impl std::fmt::Display for State {
 /// 9600 because it's the default for our board. 
 ///
 /// ```no_run
-/// use brewdrivers::relays::Board;
+/// use brewdrivers::drivers::SerialInstrument;
 /// 
 /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
 /// ```
@@ -107,10 +105,10 @@ impl SerialInstrument {
     }
 
     /// Tries to connect to a Board at the given port and address
-    /// ```no_run
-    /// use brewdrivers::relays::Board;
+    /// ```rust,no_run
+    /// use brewdrivers::drivers::SerialInstrument;
     /// 
-    /// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+    /// let mut si = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
     /// ```
     pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self> {
         let port = SerialInstrument::open_port(port_path, baudrate).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
@@ -121,7 +119,7 @@ impl SerialInstrument {
         })
     }
 
-    /// Opens a TTYPort. This is used in Board::new()
+    /// Opens a TTYPort. This is used in [`SerialInstrument::new()`](crate::drivers::SerialInstrument::new)
     fn open_port(port_path: &str, baudrate: usize) -> std::result::Result<TTYPort, serialport::Error> {
         serialport::new(port_path, baudrate as u32)
             .data_bits(DataBits::Eight)
@@ -132,6 +130,7 @@ impl SerialInstrument {
             .open_native()
     }
 
+    /// Writes a vector of bytes to the device
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
         match self.port.write(&bytes) {
             Err(e) => return Err(
@@ -149,7 +148,7 @@ impl SerialInstrument {
             Ok(_) => {},
             Err(_) => {
                 // timeout, expected
-                // I'm pretty sure that the port never returns the nunmber of bytes
+                // I'm pretty sure that the port never returns the number of bytes
                 // to be read, and it just times out every time, even on successful writes.
                 // It still reads successfully even after timeouts, so it's fine for now.
             }
@@ -162,7 +161,6 @@ impl SerialInstrument {
 
 
 
-// TODO: Make these tests better once you know how to use the Waveshare board
 #[cfg(test)]
 mod tests {
     use super::*;

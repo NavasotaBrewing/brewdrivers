@@ -10,7 +10,7 @@
 //! any other command that the relay boards support in their [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
 //! is trivial.
 //!
-//! See the [`STR1` struct](crate::relays::str1::STR1) or the `str1` example in the
+//! See the [`STR1` struct](crate::controllers::STR1) or the `str1` example in the
 //! [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples).
 
 pub const STR1_BAUD: usize = 9600;
@@ -27,16 +27,16 @@ use crate::drivers::{Result, InstrumentError};
 ///
 /// ## Examples
 /// ```rust,no_run
-/// use brewdrivers::relays::{State, STR1};
+/// use brewdrivers::controllers::STR1;
+/// use brewdrivers::drivers::serial::State;
 ///
-/// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+/// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
 /// board.get_relay(0); // -> State::Off;
 /// board.set_relay(0, State::On);
 /// board.get_relay(0); // -> State::On;
 ///
 /// board.relay_count(); // -> Some(8)
 /// ```
-// TODO: #12 Make these field not pub
 #[derive(Debug)]
 pub struct STR1(SerialInstrument);
 
@@ -47,7 +47,8 @@ impl STR1 {
     ///
     /// ## Examples
     /// ```rust,no_run
-    /// use brewdrivers::relays::{State, STR1};
+    /// use brewdrivers::controllers::STR1;
+    /// use brewdrivers::drivers::serial::State;
     ///
     /// let mut board = STR1::connect(0xFE, "/dev/ttyUSB0").expect("Couldn't connect to device");
     /// board.get_relay(0);
@@ -64,13 +65,15 @@ impl STR1 {
     /// that we haven't implemented with this struct. See the [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
     /// for a full list of commands.
     ///
-    /// This method uses a [`Bytestring`](crate::relays::Bytestring) to serialize the bytes you pass in,
+    /// This method uses a [`Bytestring`](crate::drivers::serial::Bytestring) to serialize the bytes you pass in,
     /// meaning you don't have to add the `MA0`, `MA1`, `CS` (checksum), and `MA0` bytes that the board requires.
     ///
     /// ## Example
     /// ```rust,no_run
-    /// # use brewdrivers::relays::{State, STR1};
-    /// let mut board = STR1::new(0x01, "/dev/ttyUSB0", 9600).expect("Couldn't connect to device");
+    /// use brewdrivers::controllers::STR1;
+    /// use brewdrivers::drivers::serial::State;
+    /// 
+    /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
     ///
     /// // These bytes are to read a relay status
     /// let output_buf: Vec<u8> = board.write_to_device(
@@ -82,7 +85,7 @@ impl STR1 {
         self.0.write_to_device(bytestring.to_bytes())
     }
 
-    /// Gets the status of a relay, as a [`State`](crate::relays::State).
+    /// Gets the status of a relay, as a [`State`](crate::drivers::serial::State).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<State> {
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;

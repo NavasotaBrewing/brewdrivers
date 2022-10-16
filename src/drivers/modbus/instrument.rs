@@ -39,7 +39,7 @@ impl ModbusInstrument {
     ///
     /// ## Examples
     /// ```rust,no_run
-    /// use brewdrivers::modbus::ModbusInstrument;
+    /// use brewdrivers::drivers::ModbusInstrument;
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -65,7 +65,7 @@ impl ModbusInstrument {
     /// Asyncronously reads a number of registers.
     ///
     /// ```rust,no_run
-    /// use brewdrivers::modbus::ModbusInstrument;
+    /// use brewdrivers::drivers::ModbusInstrument;
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -94,7 +94,7 @@ impl ModbusInstrument {
     ///
     /// ## Examples
     /// ```rust,no_run
-    /// use brewdrivers::modbus::ModbusInstrument;
+    /// use brewdrivers::drivers::ModbusInstrument;
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -122,7 +122,7 @@ impl ModbusInstrument {
         }
     }
 
-    /// The same as [`read_registers()`](crate::modbus::ModbusInstrument::read_registers), but for coils
+    /// The same as [`read_registers()`](crate::drivers::ModbusInstrument::read_registers), but for coils
     pub async fn read_coils(&mut self, coil: u16, count: u16) -> Result<Vec<bool>> {
         let task = self.ctx.read_coils(coil, count);
 
@@ -136,7 +136,7 @@ impl ModbusInstrument {
         }
     }
 
-    /// The same as [`write_register()`](crate::modbus::ModbusInstrument::write_register), but for coils
+    /// The same as [`write_register()`](crate::drivers::ModbusInstrument::write_register), but for coils
     pub async fn write_coil(&mut self, coil: u16, value: bool) -> Result<()> {
         let task = self.ctx.write_single_coil(coil, value);
 
