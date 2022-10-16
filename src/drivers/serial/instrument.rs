@@ -67,7 +67,7 @@ impl std::fmt::Display for State {
 /// ```no_run
 /// use brewdrivers::drivers::SerialInstrument;
 /// 
-/// let mut board = Board::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+/// let mut board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
 /// ```
 #[derive(Debug)]
 pub struct SerialInstrument {

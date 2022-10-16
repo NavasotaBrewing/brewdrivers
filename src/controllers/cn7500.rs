@@ -19,15 +19,20 @@ pub enum Degree {
 /// A CN7500 PID Controller.
 /// 
 /// ```rust,no_run
-/// let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.expect("Couldn't get device");
+/// use brewdrivers::controllers::CN7500;
 /// 
-/// match cn.get_pv().await {
-///     Ok(pv) => println!("CN7500 PV: {}", pv),
-///     Err(e) => eprintln!("Error! {}", e)
+/// #[tokio::main]
+/// async fn main() {
+///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.expect("Couldn't get device");
+/// 
+///     match cn.get_pv().await {
+///         Ok(pv) => println!("CN7500 PV: {}", pv),
+///         Err(e) => eprintln!("Error! {}", e)
+///     }
+/// 
+///     cn.set_sv(145.6).await.expect("Couldn't set sv");
+///     assert_eq!(145.6, cn.get_sv().await.unwrap());
 /// }
-/// 
-/// cn.set_sv(145.6).await.expect("Couldn't set sv");
-/// assert_eq!(Ok(145.6), cn.get_sv().await);
 /// ```
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
@@ -36,7 +41,12 @@ impl CN7500 {
     /// Connects to a CN7500 board
     /// 
     /// ```rust,no_run
-    /// let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await?;
+    /// use brewdrivers::controllers::CN7500;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.unwrap();
+    /// }
     /// ```
     pub async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
         ModbusInstrument::new(slave_addr, port_path, 19200)

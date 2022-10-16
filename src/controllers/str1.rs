@@ -71,14 +71,14 @@ impl STR1 {
     /// ## Example
     /// ```rust,no_run
     /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::drivers::serial::State;
+    /// use brewdrivers::drivers::serial::{State, Bytestring};
     /// 
     /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
     ///
     /// // These bytes are to read a relay status
     /// let output_buf: Vec<u8> = board.write_to_device(
-    ///     vec![0x07, 0x14, 0x01, 0x00, 0x01]
-    /// );
+    ///     Bytestring::from(vec![0x07, 0x14, 0x01, 0x00, 0x01])
+    /// ).unwrap();
     /// assert!(output_buf.len() > 1);
     /// ```
     pub fn write_to_device(&mut self, bytestring: Bytestring) -> Result<Vec<u8>> {
