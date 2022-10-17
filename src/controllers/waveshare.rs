@@ -144,7 +144,15 @@ impl Waveshare {
             let statuses: Vec<BinaryState> = binary
                 .chars()
                 .filter(|&ch| ch == '1' || ch == '0')
-                .map(|ch| BinaryState::from(ch.to_string()))
+                .map(|ch| {
+                    // Usually 0 and 1 are stepper states, not binary
+                    // That's why theres no FromStr for BinaryState
+                    match ch {
+                        '1' => BinaryState::On,
+                        '0' => BinaryState::Off,
+                        _ => BinaryState::default()
+                    }
+                } )
                 .rev()
                 .collect();
 

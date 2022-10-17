@@ -1,6 +1,8 @@
 use std::io;
 use thiserror::Error;
 
+use crate::controllers::AnyState;
+
 #[derive(Error, Debug)]
 pub enum InstrumentError {
     #[error("Timeout error: Modbus device on port {port}, slave addr {addr} timed out after request to register 0x{register:X}")]
@@ -13,6 +15,8 @@ pub enum InstrumentError {
     IOError(io::Error),
     #[error("Board 0x{addr:X?}: {msg}")]
     SerialError { msg: String, addr: Option<u8> },
+    #[error("State Error: incorrect state type")]
+    StateError(AnyState)
 }
 
 impl InstrumentError {

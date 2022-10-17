@@ -65,7 +65,10 @@ impl RelayBoard<STR1> for STR1 {
 
     /// Sets a relay to On or Off.
     fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
-        let new_state_num: u8 = new_state.into();
+        let new_state_num = match new_state {
+            BinaryState::Off => 0,
+            BinaryState::On => 1
+        };
 
         self.write_to_device(
             Bytestring::from(vec![0x08, 0x17, self.0.address(), relay_num, 0x01, new_state_num])

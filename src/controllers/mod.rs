@@ -11,7 +11,7 @@ pub mod device_types;
 pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
-pub use states::BinaryState;
+pub use states::{BinaryState, AnyState};
 pub use device_types::{RelayBoard, PID};
 
 
