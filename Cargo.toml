@@ -24,21 +24,16 @@ tokio = { version = "1", features = ["full"] }
 tokio-serial = "5.4.3"
 derivative = "2.2.0"
 thiserror = "1.0.37"
+serde = { version = "1", features = [ "derive" ]}
+async-trait = "0.1.57"
 
-
-[dependencies.serde]
-version = "1.0"
-optional = true
 
 [dev-dependencies]
 serial_test = "0.4.0"
 
 [features]
 default = []
-# This enables NavasotaBrewing/network to use parts of brewdrivers
-# in its network communications. You shouldn't need to enable it if
-# you're just using the CLI or drivers as a library
-network = ["serde"]
+network = []
 
 # Command to build and watch docs
 # cargo watch -s 'cargo doc && http-server -p 8000 target/doc'

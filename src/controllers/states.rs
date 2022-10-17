@@ -1,13 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// A binary state, as used in a relay or similar. This can be 'On' or 'Off'.
-///
-/// If the `network` feature is enabled, this enum will be serializable with `serde`. If
-/// the network component isn't needed, we don't have to compile `serde`, saving some space.
-///
-/// This enum is mainly here for compatability with the javascript front end.
-/// Javascript is pretty fast and loose with it's types, and this ensures we get an explicit
-/// 'On' or 'Off' instead of `true`/`false`, `0`/`1`, `null`, etc.
-#[cfg_attr(features = "network", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BinaryState {
     On,
     Off
@@ -111,4 +105,8 @@ impl std::fmt::Display for BinaryState {
             BinaryState::Off => write!(f, "Off"),
         }
     }
+}
+
+impl Default for BinaryState {
+    fn default() -> Self { BinaryState::Off }
 }

@@ -6,8 +6,12 @@
 //! 
 //! Note: you can set the temperature units (`F` or `C`) of the board with [`CN7500::set_degrees`](crate::controllers::CN7500::set_degrees). 
 //! All units returned from the board or sent to it (when setting the setpoint value) will use the unit that the board is configured to at the time.
+use async_trait::async_trait;
+
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::Result;
+
+use super::device_types::PID;
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -19,7 +23,7 @@ pub enum Degree {
 /// A CN7500 PID Controller.
 /// 
 /// ```rust,no_run
-/// use brewdrivers::controllers::CN7500;
+/// use brewdrivers::controllers::{CN7500, PID};
 /// 
 /// #[tokio::main]
 /// async fn main() {
@@ -37,7 +41,8 @@ pub enum Degree {
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
 
-impl CN7500 {
+#[async_trait]
+impl PID<CN7500> for CN7500 {
     /// Connects to a CN7500 board
     /// 
     /// ```rust,no_run
@@ -48,7 +53,7 @@ impl CN7500 {
     ///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.unwrap();
     /// }
     /// ```
-    pub async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
+    async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
         ModbusInstrument::new(slave_addr, port_path, 19200)
             .await
             // Wrap the instrument in a CN7500
@@ -56,12 +61,12 @@ impl CN7500 {
     }
 
     /// Sets the setpoint value (target) of the CN7500. Should be a decimal between 1.0-999.0.
-    pub async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
+    async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
         self.0.write_register(0x1001, (new_sv * 10.0) as u16).await
     }
 
     /// Gets the setpoint value
-    pub async fn get_sv(&mut self) -> Result<f64> {
+    async fn get_sv(&mut self) -> Result<f64> {
         self.0
             .read_registers(0x1001, 1)
             .await
@@ -69,7 +74,7 @@ impl CN7500 {
     }
 
     /// Gets the process value
-    pub async fn get_pv(&mut self) -> Result<f64> {
+    async fn get_pv(&mut self) -> Result<f64> {
         self.0
             .read_registers(0x1000, 1)
             .await
@@ -79,20 +84,22 @@ impl CN7500 {
     /// Returns `Ok(true)` if the relay is activated. The relay may or may not be on if it's activated,
     /// because the PID will control when to feather the relay on or off to control temperature. The relay
     /// will never be on if it's not active (ie. this method returns `Ok(false)`)
-    pub async fn is_running(&mut self) -> Result<bool> {
+    async fn is_running(&mut self) -> Result<bool> {
         self.0.read_coils(0x0814, 1).await.map(|vals| vals[0] )
     }
 
     /// Activates the relay
-    pub async fn run(&mut self) -> Result<()> {
+    async fn run(&mut self) -> Result<()> {
         self.0.write_coil(0x0814, true).await
     }
 
     /// Deactivates the relay
-    pub async fn stop(&mut self) -> Result<()> {
+    async fn stop(&mut self) -> Result<()> {
         self.0.write_coil(0x0814, false).await
     }
+}
 
+impl CN7500 {
     /// Sets the degree mode of the board to either Fahrenheit or Celsius
     pub async fn set_degrees(&mut self, degree_mode: Degree) -> Result<()> {
         match degree_mode {

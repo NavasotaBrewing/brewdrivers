@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+use brewdrivers::controllers::RelayBoard;
 use brewdrivers::controllers::STR1;
 use brewdrivers::controllers::BinaryState;
 

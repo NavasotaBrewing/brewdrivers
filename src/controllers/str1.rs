@@ -21,6 +21,8 @@ use crate::controllers::BinaryState;
 
 use crate::drivers::{Result, InstrumentError};
 
+use super::device_types::RelayBoard;
+
 
 /// An `STR1XX` board.
 ///
@@ -41,7 +43,7 @@ use crate::drivers::{Result, InstrumentError};
 #[derive(Debug)]
 pub struct STR1(SerialInstrument);
 
-impl STR1 {
+impl RelayBoard<STR1> for STR1 {
     /// Attempts to connect to an STR1 board.
     ///
     /// The `address` is the controller number the board is programmed to (default `0xFE`).
@@ -55,11 +57,38 @@ impl STR1 {
     /// board.get_relay(0);
     /// // ...
     /// ```
-    pub fn connect(address: u8, port_path: &str) -> Result<Self> {
+    fn connect(address: u8, port_path: &str) -> Result<Self> {
         Ok(STR1(
             SerialInstrument::new(address, port_path, STR1_BAUD)?
         ))
     }
+
+    /// Sets a relay to On or Off.
+    fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
+        let new_state_num: u8 = new_state.into();
+
+        self.write_to_device(
+            Bytestring::from(vec![0x08, 0x17, self.0.address(), relay_num, 0x01, new_state_num])
+        )?;
+
+        Ok(())
+    }
+
+    /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
+    fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+        let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
+        let output_buf: Vec<u8> = self.write_to_device(bytes)?;
+
+        let result = hex::encode(output_buf);
+
+        match result.chars().nth(7) {
+            Some('1') => return Ok(BinaryState::On),
+            _ => return Ok(BinaryState::Off),
+        }
+    }
+}
+
+impl STR1 {
 
 
     /// Writes a command to the device. This is useful if you want to use a command
@@ -86,29 +115,6 @@ impl STR1 {
         self.0.write_to_device(bytestring.to_bytes())
     }
 
-    /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
-    pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
-        let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
-        let output_buf: Vec<u8> = self.write_to_device(bytes)?;
-
-        let result = hex::encode(output_buf);
-
-        match result.chars().nth(7) {
-            Some('1') => return Ok(BinaryState::On),
-            _ => return Ok(BinaryState::Off),
-        }
-    }
-
-    /// Sets a relay to On or Off.
-    pub fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
-        let new_state_num: u8 = new_state.into();
-
-        self.write_to_device(
-            Bytestring::from(vec![0x08, 0x17, self.0.address(), relay_num, 0x01, new_state_num])
-        )?;
-
-        Ok(())
-    }
 
     /// Lists all relays status. This prints to `stdout`, so it should really only
     /// be used in scripts and with the CLI.
