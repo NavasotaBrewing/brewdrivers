@@ -16,13 +16,10 @@
 use crc::{Crc, CRC_16_MODBUS};
 
 // internal uses
-// generic board stuff
-use crate::controllers::BinaryState;
+use crate::controllers::{BinaryState, RelayBoard};
 use crate::drivers::serial::SerialInstrument;
-
 use crate::drivers::{InstrumentError, Result};
 
-use super::device_types::RelayBoard;
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);

@@ -10,8 +10,7 @@ use async_trait::async_trait;
 
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::Result;
-
-use super::device_types::PID;
+use crate::controllers::device_types::PID;
 
 #[derive(Debug, Clone)]
 pub enum Degree {

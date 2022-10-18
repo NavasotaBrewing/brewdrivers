@@ -17,11 +17,8 @@ pub const STR1_BAUD: usize = 9600;
 
 // internal uses
 use crate::drivers::serial::{SerialInstrument, Bytestring};
-use crate::controllers::BinaryState;
-
+use crate::controllers::{BinaryState, RelayBoard};
 use crate::drivers::{Result, InstrumentError};
-
-use super::device_types::RelayBoard;
 
 
 /// An `STR1XX` board.
