@@ -17,7 +17,7 @@ pub use device_types::{RelayBoard, PID};
 
 /// These are the types of controllers that the BCS supports. This enum should reflect every
 /// controller in `brewdrivers::controllers`.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Controller {
     /// An STR1XX relay board. They come in STR116 (16-relay) or STR108 (8-relay).
     /// The driver is the same either way.
