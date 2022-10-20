@@ -15,6 +15,8 @@
 
 pub const STR1_BAUD: usize = 9600;
 
+use log::trace;
+
 // internal uses
 use crate::drivers::serial::{SerialInstrument, Bytestring};
 use crate::controllers::{BinaryState, RelayBoard};
@@ -53,6 +55,7 @@ impl RelayBoard<STR1> for STR1 {
     /// // ...
     /// ```
     fn connect(address: u8, port_path: &str) -> Result<Self> {
+        trace!("(STR1 {}) connected", address);
         Ok(STR1(
             SerialInstrument::new(address, port_path, STR1_BAUD)?
         ))
@@ -60,6 +63,7 @@ impl RelayBoard<STR1> for STR1 {
 
     /// Sets a relay to On or Off.
     fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
+        trace!("(STR1 {}) setting relay {relay_num}: {new_state}", self.0.address());
         let new_state_num = match new_state {
             BinaryState::Off => 0,
             BinaryState::On => 1
@@ -74,6 +78,7 @@ impl RelayBoard<STR1> for STR1 {
 
     /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
     fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+        trace!("(STR1 {}) getting relay {relay_num}", self.0.address());
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;
 
@@ -110,6 +115,7 @@ impl STR1 {
     /// assert!(output_buf.len() > 1);
     /// ```
     pub fn write_to_device(&mut self, bytestring: Bytestring) -> Result<Vec<u8>> {
+        trace!("(STR1 {}) writing to device", self.0.address());
         self.0.write_to_device(bytestring.to_bytes())
     }
 
@@ -117,6 +123,7 @@ impl STR1 {
     /// Lists all relays status. This prints to `stdout`, so it should really only
     /// be used in scripts and with the CLI.
     pub fn list_all_relays(&mut self) -> Result<()> {
+        trace!("(STR1 {}) listing all relays", self.0.address());
         // Leave that space there >:(
         println!(" Controller {} (0x{:X})", self.0.address(), self.0.address());
         
@@ -136,6 +143,7 @@ impl STR1 {
     /// Programs the controller number of the board. Be careful with this, don't forget the number.
     /// The new controller number should be `0x00`-`0xFF`.
     pub fn set_controller_num(&mut self, new_cn: u8) -> Result<()> {
+        trace!("(STR1 {}) setting controller number to {new_cn}", self.0.address());
         let bs = Bytestring::from(vec![
             0x06, 0x01, self.0.address(), new_cn
         ]);
@@ -149,6 +157,7 @@ impl STR1 {
 
     /// Gets the amount of relays on this board, if any
     pub fn relay_count(&mut self) -> Result<u8> {
+        trace!("(STR1 {}) getting relay count", self.0.address());
         let out = self.write_to_device(
             Bytestring::from(vec![0x05, 0x02, self.0.address()])
         )?;
@@ -170,7 +179,8 @@ impl STR1 {
 
     /// Attempts to communicate with the board, returning true if it responds.
     pub fn connected(&mut self) -> bool {
-        return self.relay_count().is_ok()
+        trace!("(STR1 {}) connected", self.0.address());
+        self.relay_count().is_ok()
     }
 }
 
@@ -188,7 +198,6 @@ mod tests {
 
 
     #[test]
-    
     fn test_board_connected() {
         let mut board = test_board();
         assert!(board.connected());
@@ -196,7 +205,6 @@ mod tests {
 
 
     #[test]
-    
     fn set_get_relay_status() {
         let mut board = test_board();
 
@@ -208,7 +216,6 @@ mod tests {
     }
 
     #[test]
-    
     fn set_controller_number() {
         let mut board = test_board();
 
@@ -225,7 +232,6 @@ mod tests {
     }
 
     #[test]
-    
     fn test_all_relays() {
         let mut board = test_board();
         for i in 0..16 {
@@ -239,7 +245,6 @@ mod tests {
 
 
     #[test]
-    
     fn test_relay_count() {
         let mut board = test_board();
         // I test on an STR108, so there should be 8. We may test on an STR116 with 16 relays
