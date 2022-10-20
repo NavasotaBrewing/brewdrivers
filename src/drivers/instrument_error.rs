@@ -13,7 +13,7 @@ pub enum InstrumentError {
     },
     #[error("IO Error: {0}")]
     IOError(io::Error),
-    #[error("Board 0x{addr:X?}: {msg}")]
+    #[error("addr {addr:?}: {msg}")]
     SerialError { msg: String, addr: Option<u8> },
     #[error("State Error: incorrect state type")]
     StateError(AnyState)

@@ -92,10 +92,7 @@ impl SerialInstrument {
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
         match self.port.write(&bytes) {
             Err(e) => return Err(
-                InstrumentError::SerialError {
-                    msg: format!("Error writing to board: {}", e),
-                    addr: Some(self.address())
-                }
+                InstrumentError::serialError(format!("Error writing to board: {}", e), Some(self.address()))
             ),
             _ => {}
         };

@@ -9,6 +9,7 @@
 
 // external uses
 use derivative::Derivative;
+use log::{error, trace};
 use tokio::time::{self, Duration};
 use tokio_modbus::{
     client::{rtu, Context, Reader, Writer},
@@ -47,8 +48,24 @@ impl ModbusInstrument {
     /// }
     /// ```
     pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Result<ModbusInstrument> {
+        // TODO: I don't think the baudrate is actually used here. Maybe remove it?
+        trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {} }}", slave_addr, slave_addr, port_path, baudrate);
         let builder = tokio_serial::new(port_path, 19200);
-        let port = tokio_serial::SerialStream::open(&builder).unwrap();
+        
+        let port = match tokio_serial::SerialStream::open(&builder) {
+            Ok(port) => port,
+            Err(serial_err) => {
+                error!("Error when connecting to Modbus Instrument. There is likely no port location at `{}`", port_path);
+                error!("Serial Error: {}", serial_err);
+                return Err(
+                    InstrumentError::serialError(
+                        format!("serial error: {}", serial_err),
+                        Some(slave_addr)
+                    )
+                )
+            }
+        };
+        
         let slave = Slave(slave_addr);
 
         let ctx = rtu::connect_slave(port, slave).await?;
