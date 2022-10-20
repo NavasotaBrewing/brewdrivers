@@ -154,7 +154,7 @@ impl ModbusInstrument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    
     use tokio::test;
 
     async fn instr() -> ModbusInstrument {
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     async fn test_read_write_coil() {
         let mut instr = instr().await;
         let rsp1 = instr.write_coil(0x0814, true).await;
@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     async fn test_read_write_register() {
         let mut instr = instr().await;
         // Set SV in register 0x1001 to 1400

@@ -179,7 +179,7 @@ impl STR1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    
 
     fn test_board() -> STR1 {
         let device = STR1::connect(0xFE, "/dev/ttyUSB0");
@@ -188,7 +188,7 @@ mod tests {
 
 
     #[test]
-    #[serial]
+    
     fn test_board_connected() {
         let mut board = test_board();
         assert!(board.connected());
@@ -196,7 +196,7 @@ mod tests {
 
 
     #[test]
-    #[serial]
+    
     fn set_get_relay_status() {
         let mut board = test_board();
 
@@ -208,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn set_controller_number() {
         let mut board = test_board();
 
@@ -225,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_all_relays() {
         let mut board = test_board();
         for i in 0..16 {
@@ -239,7 +239,7 @@ mod tests {
 
 
     #[test]
-    #[serial]
+    
     fn test_relay_count() {
         let mut board = test_board();
         // I test on an STR108, so there should be 8. We may test on an STR116 with 16 relays

@@ -282,7 +282,7 @@ impl Waveshare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    
     use std::thread::sleep;
     use std::time::Duration;
 
@@ -292,14 +292,14 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_connect_to_waveshare() {
         let ws = Waveshare::connect(0x01, "/dev/ttyUSB0");
         assert!(ws.is_ok());
     }
 
     #[test]
-    #[serial]
+    
     fn test_crc_16_checksum() {
         let checksum = CRC_MODBUS.checksum(&[0x01, 0x05, 0x00, 0x00, 0xFF, 0x00]);
         assert_eq!(checksum, 0x3A8C);
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_write_relay_state() {
         let mut ws = ws();
 
@@ -320,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_get_relay_status() {
         let mut ws = ws();
 
@@ -332,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_write_all_relays() {
         let mut ws = ws();
 
@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_get_all_relays_status() {
         let mut ws = ws();
 
@@ -369,14 +369,14 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_software_revision() {
         let mut ws = ws();
         assert_eq!(ws.software_revision().unwrap(), "v1.00");
     }
 
     #[test]
-    #[serial]
+    
     fn test_get_device_address() {
         let mut ws = ws();
         let addr = ws.get_address();
@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     fn test_set_device_address() {
         let mut ws = ws();
 

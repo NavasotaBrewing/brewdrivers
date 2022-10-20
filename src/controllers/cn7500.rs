@@ -111,7 +111,7 @@ impl CN7500 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    
     use tokio::test;
 
     async fn instr() -> CN7500 {
@@ -119,14 +119,14 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     async fn test_new_cn7500() {
         let cn = instr().await;
         assert_eq!(cn.0.port_path, "/dev/ttyUSB0");
     }
 
     #[test]
-    #[serial]
+    
     async fn test_set_sv() {
         let mut cn = instr().await;
         let rsp = cn.set_sv(123.4).await;
@@ -134,14 +134,14 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     async fn test_get_pv() {
         let mut cn = instr().await;
         assert!(cn.get_pv().await.unwrap() > 0.0);
     }
 
     #[test]
-    #[serial]
+    
     async fn test_get_sv() {
         let mut cn = instr().await;
         assert!(cn.set_sv(145.7).await.is_ok());
@@ -149,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    
     async fn test_turn_on_relay() {
         let mut cn = instr().await;
         assert!(cn.run().await.is_ok());
