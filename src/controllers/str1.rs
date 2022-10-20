@@ -27,8 +27,7 @@ use crate::drivers::{Result, InstrumentError};
 ///
 /// ## Examples
 /// ```rust,no_run
-/// use brewdrivers::controllers::STR1;
-/// use brewdrivers::controllers::BinaryState;
+/// use brewdrivers::controllers::{STR1, RelayBoard, BinaryState};
 ///
 /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
 /// board.get_relay(0); // ->BinaryState::Off;
@@ -47,8 +46,7 @@ impl RelayBoard<STR1> for STR1 {
     ///
     /// ## Examples
     /// ```rust,no_run
-    /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::controllers::BinaryState;
+    /// use brewdrivers::controllers::{STR1, RelayBoard, BinaryState};
     ///
     /// let mut board = STR1::connect(0xFE, "/dev/ttyUSB0").expect("Couldn't connect to device");
     /// board.get_relay(0);
@@ -100,7 +98,7 @@ impl STR1 {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use brewdrivers::controllers::STR1;
+    /// use brewdrivers::controllers::{STR1, RelayBoard};
     /// use brewdrivers::drivers::serial::Bytestring;
     /// 
     /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");

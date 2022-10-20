@@ -16,6 +16,7 @@ license = "MIT"
 hex = "0.3.2"
 # This is for the relay boards
 # TODO: See if this can work with tokio-serial
+# Note: looks like we can't for the STR1 board, maybe for the waveshare. We'll have to keep it for now.
 serialport = "4.0"
 crc = "2.0.0"
 futures = "0.3"
@@ -26,9 +27,10 @@ derivative = "2.2.0"
 thiserror = "1.0.37"
 serde = { version = "1", features = [ "derive" ]}
 async-trait = "0.1.57"
+log = "0.4.17"
 
-tokio-util = "0.7.4"
-bytes = "1.2.1"
+# tokio-util = "0.7.4"
+# bytes = "1.2.1"
 
 
 [dev-dependencies]

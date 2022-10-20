@@ -45,7 +45,7 @@ impl PID<CN7500> for CN7500 {
     /// Connects to a CN7500 board
     /// 
     /// ```rust,no_run
-    /// use brewdrivers::controllers::CN7500;
+    /// use brewdrivers::controllers::{CN7500, PID};
     /// 
     /// #[tokio::main]
     /// async fn main() {
