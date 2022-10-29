@@ -18,10 +18,9 @@ pub const STR1_BAUD: usize = 9600;
 use log::trace;
 
 // internal uses
-use crate::drivers::serial::{SerialInstrument, Bytestring};
 use crate::controllers::{BinaryState, RelayBoard};
-use crate::drivers::{Result, InstrumentError};
-
+use crate::drivers::serial::{Bytestring, SerialInstrument};
+use crate::drivers::{InstrumentError, Result};
 
 /// An `STR1XX` board.
 ///
@@ -56,22 +55,37 @@ impl RelayBoard<STR1> for STR1 {
     /// ```
     fn connect(address: u8, port_path: &str) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
-        Ok(STR1(
-            SerialInstrument::new(address, port_path, STR1_BAUD)?
-        ))
+        let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD)?);
+        str1.connected()?;
+        Ok(str1)
+    }
+
+    /// Attempts to communicate with the board, returning Ok(()) if it responds.
+    fn connected(&mut self) -> Result<()> {
+        trace!("(STR1 {}) connected", self.0.address());
+        self.relay_count()?;
+        Ok(())
     }
 
     /// Sets a relay to On or Off.
     fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
-        trace!("(STR1 {}) setting relay {relay_num}: {new_state}", self.0.address());
+        trace!(
+            "(STR1 {}) setting relay {relay_num}: {new_state}",
+            self.0.address()
+        );
         let new_state_num = match new_state {
             BinaryState::Off => 0,
-            BinaryState::On => 1
+            BinaryState::On => 1,
         };
 
-        self.write_to_device(
-            Bytestring::from(vec![0x08, 0x17, self.0.address(), relay_num, 0x01, new_state_num])
-        )?;
+        self.write_to_device(Bytestring::from(vec![
+            0x08,
+            0x17,
+            self.0.address(),
+            relay_num,
+            0x01,
+            new_state_num,
+        ]))?;
 
         Ok(())
     }
@@ -92,8 +106,6 @@ impl RelayBoard<STR1> for STR1 {
 }
 
 impl STR1 {
-
-
     /// Writes a command to the device. This is useful if you want to use a command
     /// that we haven't implemented with this struct. See the [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
     /// for a full list of commands.
@@ -105,7 +117,7 @@ impl STR1 {
     /// ```rust,no_run
     /// use brewdrivers::controllers::{STR1, RelayBoard};
     /// use brewdrivers::drivers::serial::Bytestring;
-    /// 
+    ///
     /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
     ///
     /// // These bytes are to read a relay status
@@ -119,18 +131,18 @@ impl STR1 {
         self.0.write_to_device(bytestring.to_bytes())
     }
 
-
     /// Lists all relays status. This prints to `stdout`, so it should really only
     /// be used in scripts and with the CLI.
     pub fn list_all_relays(&mut self) -> Result<()> {
         trace!("(STR1 {}) listing all relays", self.0.address());
         // Leave that space there >:(
-        println!(" Controller {} (0x{:X})", self.0.address(), self.0.address());
-        
         println!(
-            "{0: >6} | {1: <6}",
-            "Relay", "Status"
+            " Controller {} (0x{:X})",
+            self.0.address(),
+            self.0.address()
         );
+
+        println!("{0: >6} | {1: <6}", "Relay", "Status");
 
         for i in 0..self.relay_count()? {
             // TODO: #14 Replace this with the command that gets all the relays status
@@ -143,10 +155,11 @@ impl STR1 {
     /// Programs the controller number of the board. Be careful with this, don't forget the number.
     /// The new controller number should be `0x00`-`0xFF`.
     pub fn set_controller_num(&mut self, new_cn: u8) -> Result<()> {
-        trace!("(STR1 {}) setting controller number to {new_cn}", self.0.address());
-        let bs = Bytestring::from(vec![
-            0x06, 0x01, self.0.address(), new_cn
-        ]);
+        trace!(
+            "(STR1 {}) setting controller number to {new_cn}",
+            self.0.address()
+        );
+        let bs = Bytestring::from(vec![0x06, 0x01, self.0.address(), new_cn]);
 
         self.write_to_device(bs)?;
 
@@ -154,55 +167,42 @@ impl STR1 {
         Ok(())
     }
 
-
     /// Gets the amount of relays on this board, if any
     pub fn relay_count(&mut self) -> Result<u8> {
         trace!("(STR1 {}) getting relay count", self.0.address());
-        let out = self.write_to_device(
-            Bytestring::from(vec![0x05, 0x02, self.0.address()])
-        )?;
+        let out = self.write_to_device(Bytestring::from(vec![0x05, 0x02, self.0.address()]))?;
         // return:
         // SL0, SL1, 0x09, number of outputs,
         // number of inputs, number of analog inputs,
         // number of analog outputs, 0, 0, CS, SLE
         if out.len() < 4 {
-            return Err(
-                InstrumentError::serialError(
-                    format!("The STR1 board didn't return the correct response, recieved {:?}", out),
-                    Some(self.0.address())
-                )
-            );
+            return Err(InstrumentError::serialError(
+                format!(
+                    "The STR1 board didn't return the correct response, recieved {:?}",
+                    out
+                ),
+                Some(self.0.address()),
+            ));
         } else {
             return Ok(out[3]);
         }
     }
-
-    /// Attempts to communicate with the board, returning true if it responds.
-    pub fn connected(&mut self) -> bool {
-        trace!("(STR1 {}) connected", self.0.address());
-        self.relay_count().is_ok()
-    }
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     fn test_board() -> STR1 {
         let device = STR1::connect(0xFE, "/dev/ttyUSB0");
         return device.unwrap();
     }
 
-
     #[test]
     fn test_board_connected() {
         let mut board = test_board();
-        assert!(board.connected());
+        assert!(board.connected().is_ok());
     }
-
 
     #[test]
     fn set_get_relay_status() {
@@ -219,16 +219,16 @@ mod tests {
     fn set_controller_number() {
         let mut board = test_board();
 
-        assert!(board.connected());
+        assert!(board.connected().is_ok());
 
         board.set_controller_num(253).unwrap();
 
-        assert!(board.connected());
+        assert!(board.connected().is_ok());
 
         // Set it back
         board.set_controller_num(254).unwrap();
 
-        assert!(board.connected());
+        assert!(board.connected().is_ok());
     }
 
     #[test]
@@ -242,7 +242,6 @@ mod tests {
             board.set_relay(i, BinaryState::Off).unwrap();
         }
     }
-
 
     #[test]
     fn test_relay_count() {

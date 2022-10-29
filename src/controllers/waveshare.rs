@@ -46,11 +46,18 @@ impl RelayBoard<Waveshare> for Waveshare {
     /// // ...
     /// ```
     fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
-        Ok(Waveshare(SerialInstrument::new(
+        let mut ws = Waveshare(SerialInstrument::new(
             address,
             port_path,
             WAVESHARE_BAUD,
-        )?))
+        )?);
+        ws.connected()?;
+        Ok(ws)
+    }
+
+    fn connected(&mut self) -> Result<()> {
+        self.software_revision()?;
+        Ok(())
     }
 
     /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
