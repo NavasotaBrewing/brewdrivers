@@ -6,6 +6,7 @@
 //! level drivers for devices we use in the brewing process.
 //! 
 //! the [`drivers`](crate::drivers) module contains the low level code for implementing Modbus or serial devices.
+//! 
 //! The [`controllers`](crate::controllers) module contains implementations built on those drivers for a specific hardware
 //! controller, like the CN7500 from Omega Instruments for example.
 //!
