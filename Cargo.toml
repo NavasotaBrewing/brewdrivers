@@ -2,7 +2,7 @@
 name = "brewdrivers"
 version = "0.12.3"
 authors = ["llamicron <llamicron@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Brewkit drivers"
 documentation = "https://docs.rs/brewdrivers/"
 homepage = "https://docs.rs/crate/brewdrivers/"
