@@ -23,4 +23,5 @@ pub trait PID<T> {
     async fn is_running(&mut self) -> Result<bool>;
     async fn run(&mut self) -> Result<()>;
     async fn stop(&mut self) -> Result<()>;
+    async fn connected(&mut self) -> Result<()>;
 }

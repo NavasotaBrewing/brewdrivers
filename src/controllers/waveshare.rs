@@ -3,8 +3,7 @@
 //!
 //! See the `examples/` directory for a complete example of using this board. Here's a sneak peak
 //! ```rust
-//! use brewdrivers::controllers::Waveshare;
-//! use brewdrivers::controllers::BinaryState;
+//! use brewdrivers::controllers::*;
 //!
 //! let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
 //! ws.set_relay(3, BinaryState::On).unwrap(); // Turn on the 4th relay (indexed from 0)
@@ -40,7 +39,7 @@ impl RelayBoard<Waveshare> for Waveshare {
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
     ///
     /// ```rust,no_run
-    /// use brewdrivers::controllers::Waveshare;
+    /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// ws.get_relay(0).unwrap();
@@ -57,8 +56,7 @@ impl RelayBoard<Waveshare> for Waveshare {
     /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
     ///
     /// ```rust,no_run
-    /// use brewdrivers::controllers::Waveshare;
-    /// use brewdrivers::controllers::BinaryState;;
+    /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// ws.set_relay(0, BinaryState::On).unwrap();
@@ -99,7 +97,7 @@ impl RelayBoard<Waveshare> for Waveshare {
         Ok(())
     }
 
-    /// Gets a relay state. See [`State`](crate::controllers::BinaryState).
+    /// Gets a relay state. See [`BinaryState`](crate::controllers::BinaryState).
     fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
         let statuses: Vec<BinaryState> = self.get_all_relays()?;
 
@@ -168,7 +166,7 @@ impl Waveshare {
     /// Returns the software revision as a String like "v1.00"
     ///
     /// ```no_run
-    /// use brewdrivers::controllers::Waveshare;
+    /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// assert_eq!(ws.software_revision().unwrap(), "v1.00");
@@ -204,7 +202,7 @@ impl Waveshare {
     /// one at the moment. Call UTA about reducing my tuition if you want better documentation.
     ///
     /// ```no_run
-    /// # use brewdrivers::controllers::Waveshare;
+    /// use brewdrivers::controllers::*;
     ///
     /// // address 0x00, the broadcast address
     /// let mut ws = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();
@@ -233,7 +231,7 @@ impl Waveshare {
     /// number. The documentation for this board is spotty.
     ///
     /// ```no_run
-    /// # use brewdrivers::controllers::Waveshare;
+    /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
     /// let mut unknown_board = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();

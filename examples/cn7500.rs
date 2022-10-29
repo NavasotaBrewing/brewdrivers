@@ -8,5 +8,10 @@ async fn main() {
         Ok(pv) => println!("CN7500 PV: {}", pv),
         Err(e) => eprintln!("Error! {}", e)
     }
+
+    match cn.software_revision().await {
+        Ok(s) => println!("Software revision: {:?}", s),
+        Err(e) => eprintln!("{}", e)
+    }
     
 }
