@@ -1,14 +1,15 @@
 use thiserror::Error;
 
+/// Error types that could occur when working with models
 #[derive(Error, Debug)]
-pub enum RTUError {
-    #[error("Configuration file not found at /etc/NavasotaBrewing/rtu_conf.yaml")]
+pub enum ModelError {
+    #[error("Configuration file not found")]
     FileNotFound,
 
     #[error("IO error: {0}")]
     IOError(std::io::Error),
 
-    #[error("Permission error, cannot access /etc/NavasotaBrewing/rtu_conf.yaml")]
+    #[error("Permission error, cannot access configuration file")]
     PermissionError,
 
     #[error("Serde parse error: {0}")]
@@ -22,10 +23,10 @@ pub enum RTUError {
     }
 }
 
-impl RTUError {
-    /// Constructs an `RTUError::ValidationError`
-    pub fn validation_error(key_value: (&str, &str), msg: &str) -> RTUError {
-        return RTUError::ValidationError {
+impl ModelError {
+    /// Constructs an `ModelError::ValidationError`
+    pub fn validation_error(key_value: (&str, &str), msg: &str) -> ModelError {
+        return ModelError::ValidationError {
             key: key_value.0.to_string(),
             value: key_value.1.to_string(),
             msg: msg.to_string(),

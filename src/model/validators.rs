@@ -1,6 +1,6 @@
 //! Validators for when the RTU is deserialized from the config file
 //!
-//! These are called on the RTU and return an Err([RTUError](crate::model::RTUError)) if
+//! These are called on the RTU and return an Err([ModelError](crate::model::ModelError)) if
 //! the RTU doesn't pass the test. It's another layer of validation on top of `serde_yaml`. This ensures
 //! the values in the RTU are actually correct, not just that it's valid YAML syntax.
 //!
@@ -9,16 +9,16 @@
 use log::{error, info, warn};
 use std::{collections::HashMap, path::Path};
 
-use super::{RTUError, RTU};
+use super::{ModelError, RTU};
 
 /// Returns `Ok(())` if each device in the RTU has a unique ID
-pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), RTUError> {
+pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
     let mut seen: HashMap<&String, bool> = HashMap::new();
     for device in &rtu.devices {
         if seen.get(&device.id).is_some() {
             error!("Found duplicate device ID `{}` in config file", device.id);
             error!("Rename the duplicate ID `{}` to something else", device.id);
-            return Err(RTUError::validation_error(
+            return Err(ModelError::validation_error(
                 ("id", device.id.as_str()),
                 "duplicate id",
             ));
@@ -31,9 +31,9 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), RTUError> {
 }
 
 /// Returns `Ok(())` if the RTU ID and every device ID does not contain whitespace
-pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), RTUError> {
+pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
     if rtu.id.contains(char::is_whitespace) {
-        let err = RTUError::validation_error(("id", &rtu.id), "rtu ID cannot contain whitespace");
+        let err = ModelError::validation_error(("id", &rtu.id), "rtu ID cannot contain whitespace");
         error!("{}", err);
         return Err(err);
     }
@@ -41,7 +41,7 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), RTUError> {
     for dev in &rtu.devices {
         if dev.id.contains(char::is_whitespace) {
             let err =
-                RTUError::validation_error(("id", &dev.id), "device ID cannot contain whitespace");
+                ModelError::validation_error(("id", &dev.id), "device ID cannot contain whitespace");
             error!("{}", err);
             return Err(err);
         }
@@ -57,12 +57,12 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), RTUError> {
 ///
 /// This will however print a `warn!()` statement if the port doesn't exist, if a logger is configured.
 /// That will help if the brewer configures the wrong port or there's an electrical error.
-pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), RTUError> {
+pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
     for dev in &rtu.devices {
         // If they somehow pass an empty string
         // maybe with port: "" in the config file
         if dev.port.len() == 0 {
-            let err = RTUError::validation_error(("port", &dev.port), "serial port cannot be empty");
+            let err = ModelError::validation_error(("port", &dev.port), "serial port cannot be empty");
             error!("{}", err);
             return Err(err);
         }
@@ -70,7 +70,7 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), RTUError> {
         let path = Path::new(&dev.port);
 
         if !path.starts_with("/dev") {
-            let err = RTUError::validation_error(("port", &dev.port), "port path must be in /dev/*");
+            let err = ModelError::validation_error(("port", &dev.port), "port path must be in /dev/*");
             error!("{}", err);
             return Err(err);
         }

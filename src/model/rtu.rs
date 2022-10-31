@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::drivers::InstrumentError;
 
-use super::{validators, Device, RTUError};
+use super::{validators, Device, ModelError};
 
 /// A digital representation of an RTU
 ///
@@ -49,7 +49,7 @@ impl RTU {
     ///
     /// This method calls [`RTU::validate()`](crate::model::RTU::validate) and returns an error if any of
     /// them don't succeed.
-    pub fn generate(conf_path: Option<&str>) -> Result<RTU, RTUError> {
+    pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
         let file_path = conf_path.or(Some(crate::CONFIG_FILE));
 
         // TODO: Get IPv4 here programatically instead of writing it in the file
@@ -59,18 +59,18 @@ impl RTU {
             // this is safe
             file_path.unwrap(),
         )
-        .map_err(|err| RTUError::IOError(err))?;
+        .map_err(|err| ModelError::IOError(err))?;
 
         // Serialize the file. Return an Err if it doesn't succeed
         let rtu = serde_yaml::from_str::<RTU>(&file_contents)
-            .map_err(|err| RTUError::SerdeParseError(err))?;
+            .map_err(|err| ModelError::SerdeParseError(err))?;
 
         rtu.validate()?;
         Ok(rtu)
     }
 
     /// Run all the [`validators`](crate::model::validators). Return an error if any of them don't succeed.
-    pub fn validate(&self) -> Result<(), RTUError> {
+    pub fn validate(&self) -> Result<(), ModelError> {
         validators::devices_have_unique_ids(&self)?;
         validators::id_has_no_whitespace(&self)?;
         validators::serial_port_is_valid(&self)?;
