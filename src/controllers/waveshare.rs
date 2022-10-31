@@ -51,7 +51,12 @@ impl RelayBoard<Waveshare> for Waveshare {
             port_path,
             WAVESHARE_BAUD,
         )?);
-        ws.connected()?;
+        ws.connected().map_err(|instr_err|
+            InstrumentError::serialError(
+                format!("Waveshare board connection failed, likely busy. Error: {}", instr_err),
+                Some(address)
+            )
+        )?;
         Ok(ws)
     }
 

@@ -56,7 +56,12 @@ impl RelayBoard<STR1> for STR1 {
     fn connect(address: u8, port_path: &str) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
         let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD)?);
-        str1.connected()?;
+        str1.connected().map_err(|instr_err|
+            InstrumentError::serialError(
+                format!("STR1 board connection failed, likely busy. Error: {}", instr_err),
+                Some(address)
+            )
+        )?;
         Ok(str1)
     }
 

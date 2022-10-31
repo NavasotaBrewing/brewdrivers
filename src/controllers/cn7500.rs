@@ -55,7 +55,12 @@ impl PID<CN7500> for CN7500 {
     async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
         trace!("(CN7500 {}) connected", slave_addr);
         let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, 19200).await?);
-        cn.connected().await?;
+        cn.connected().await.map_err(|instr_err|
+            InstrumentError::modbusError(
+                format!("CN7500 connection failed, likely busy. Error: {}", instr_err),
+                Some(slave_addr)
+            )
+        )?;
         Ok(cn)
     }
 

@@ -99,6 +99,8 @@ impl SerialInstrument {
 
         let mut output_buf: Vec<u8> = vec![];
 
+        // TODO: I think this is only relevant for the STR1 board because it's stupid.
+        // Try to handle the error when communicating with the Waveshare
         match self.port.read_to_end(&mut output_buf) {
             Ok(_) => {},
             Err(_) => {

@@ -15,6 +15,9 @@ pub enum InstrumentError {
     /// [`std::io::Error`](std::io::Error) wrapper
     #[error("IO Error: {0}")]
     IOError(io::Error),
+    /// General modbus error
+    #[error("addr {addr:?}: {msg}")]
+    ModbusError { msg: String, addr: Option<u8> },
     /// General serial board error
     #[error("addr {addr:?}: {msg}")]
     SerialError { msg: String, addr: Option<u8> },
@@ -32,6 +35,11 @@ impl InstrumentError {
     /// creates a serial error, just a helper function
     pub fn serialError(msg: String, addr: Option<u8>) -> Self {
         Self::SerialError { msg, addr }
+    }
+
+    /// creates a modbus error, just a helper function
+    pub fn modbusError(msg: String, addr: Option<u8>) -> Self {
+        Self::ModbusError { msg, addr }
     }
 }
 
