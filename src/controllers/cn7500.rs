@@ -138,12 +138,15 @@ impl CN7500 {
 
 #[cfg(test)]
 mod tests {
+    use crate::controllers::Controller;
+
     use super::*;
 
     use tokio::test;
 
     async fn instr() -> CN7500 {
-        CN7500::connect(0x16, "/dev/ttyUSB0").await.unwrap()
+        let device = crate::test_device_from_type(Controller::CN7500);
+        CN7500::connect(device.controller_addr, &device.port).await.unwrap()
     }
 
     #[test]

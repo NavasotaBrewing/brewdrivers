@@ -42,7 +42,3 @@ pretty_assertions = "1.3.0"
 [features]
 default = []
 network = []
-
-# Command to build and watch docs
-# cargo watch -s 'cargo doc && http-server -p 8000 target/doc'
-# Then open http://localhost:8000/brewdrivers/index.html
