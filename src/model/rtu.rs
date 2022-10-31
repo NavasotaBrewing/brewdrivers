@@ -41,6 +41,11 @@ impl RTU {
         Ok(())
     }
 
+    /// Returns an optional mutable borrow to a `Device`
+    pub fn device(&mut self, device_id: &str) -> Option<&mut Device> {
+        self.devices.iter_mut().find(|dev| dev.id == device_id)
+    }
+
     /// Reads the configuration file and builds an RTU from that. Note that while this method
     /// does take an optional file path, that's just used for testing purposes. You should pass
     /// `None` to this method and use the defualt configuration file at [`crate::CONFIG_FILE`](crate::CONFIG_FILE).
@@ -74,6 +79,46 @@ impl RTU {
         validators::devices_have_unique_ids(&self)?;
         validators::id_has_no_whitespace(&self)?;
         validators::serial_port_is_valid(&self)?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::controllers::{AnyState, BinaryState};
+
+    use super::*;
+
+    use tokio::test;
+
+    type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+
+    #[test]
+    async fn test_generate_rtu() {
+        let rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE));
+        assert!(rtu.is_ok());
+        assert!(rtu.unwrap().devices.len() > 0);
+    }
+
+    #[test]
+    async fn test_enact_update() -> Result {
+        let mut rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE))?;
+        rtu.update().await?;
+
+        let dev = rtu.device("relay0").unwrap();
+
+        match dev.state {
+            AnyState::BinaryState(BinaryState::On) => {
+                dev.state = AnyState::BinaryState(BinaryState::Off)
+            }
+            AnyState::BinaryState(BinaryState::Off) => {
+                dev.state = AnyState::BinaryState(BinaryState::On)
+            }
+            _ => panic!(),
+        }
+
+        assert!(rtu.enact().await.is_ok());
+
         Ok(())
     }
 }
