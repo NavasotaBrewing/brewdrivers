@@ -286,6 +286,8 @@ impl Waveshare {
 
 #[cfg(test)]
 mod tests {
+    use crate::controllers::Controller;
+    
     use super::*;
     
     use std::thread::sleep;
@@ -293,7 +295,8 @@ mod tests {
 
     // Helper function
     fn ws() -> Waveshare {
-        Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap()
+        let device = crate::test_device_from_type(Controller::Waveshare);
+        Waveshare::connect(device.controller_addr, &device.port).unwrap()
     }
 
     #[test]

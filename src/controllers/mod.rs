@@ -1,5 +1,6 @@
 //! A controller is a specific implementation of driver, made for one
-//! specific instrument. 
+//! specific instrument. This module also includes pieces of data like state enums 
+//! that are used by the controller and above layer but not the driver layer.
 use serde::{Serialize, Deserialize};
 
 pub mod cn7500;
@@ -12,7 +13,7 @@ pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
 pub use states::{BinaryState, AnyState};
-pub use device_types::{RelayBoard, PID};
+pub use device_types::{PID, RelayBoard};
 
 
 /// These are the types of controllers that the BCS supports. This enum should reflect every

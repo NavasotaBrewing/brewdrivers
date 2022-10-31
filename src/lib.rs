@@ -15,5 +15,22 @@
 //! hardware and project as a whole.
 
 #![allow(non_snake_case)]
+
+#[allow(unused)]
+const CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/rtu_conf.yaml";
+#[allow(unused)]
+const TEST_CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/test_conf.yaml";
+
 pub mod drivers;
 pub mod controllers;
+pub mod model;
+
+
+#[cfg(test)]
+/// This is a special little function that will deserialize the test RTU configuration
+/// and return the device details of a given type of controller.
+/// This is just used in tests
+fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
+    let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
+    rtu.devices.iter().find(|dev| dev.controller == con_type ).unwrap().clone()
+}

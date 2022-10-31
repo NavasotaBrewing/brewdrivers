@@ -1,4 +1,5 @@
-//! These traits represent different device types
+//! These traits represent different device types. This is a bridge between the controller layer
+//! and the model layer
 
 use async_trait::async_trait;
 

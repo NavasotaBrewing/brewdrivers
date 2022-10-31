@@ -192,10 +192,11 @@ impl STR1 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::controllers::Controller;
 
     fn test_board() -> STR1 {
-        let device = STR1::connect(0xFE, "/dev/ttyUSB0");
-        return device.unwrap();
+        let device = crate::test_device_from_type(Controller::STR1);
+        STR1::connect(device.controller_addr, &device.port).unwrap()
     }
 
     #[test]
