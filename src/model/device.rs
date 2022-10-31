@@ -144,6 +144,7 @@ impl Device {
         Ok(())
     }
 
+    /// handles updating all controllers that implement RelayBoard
     async fn handle_relay_board_update<C: RelayBoard<C>>(
         &mut self,
         mut controller: C,
@@ -155,6 +156,7 @@ impl Device {
 
     }
 
+    /// handles enacting all controllers that implement RelayBoard
     async fn handle_relay_board_enact<C: RelayBoard<C>>(
         &mut self,
         mut controller: C,
@@ -174,6 +176,7 @@ impl Device {
         
     }
 
+    /// handles updating all controllers that implement PID
     async fn handle_pid_update<C: PID<C>>(&mut self, mut controller: C) -> Result<()> {
         trace!("Handling PID update for device `{}`", self.id);
         self.pv = Some(controller.get_pv().await?);
@@ -185,6 +188,7 @@ impl Device {
         Ok(())
     }
 
+    /// handles enacting all controllers that implement PID
     async fn handle_pid_enact<C: PID<C>>(&mut self, mut controller: C) -> Result<()> {
         trace!("Handing PID enaction for device `{}`", self.id);
         match self.state {
@@ -208,3 +212,26 @@ impl Device {
 
 
 // TODO: write some tests here
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use AnyState as AS;
+    use BinaryState as BS;
+
+    #[tokio::test]
+    async fn test_device_update_and_enact() {
+        let mut dev = crate::test_device_from_id("relay0");
+        assert!(dev.update().await.is_ok());
+        let old_state = dev.state;
+        dev.state = match dev.state {
+            AS::BinaryState(BS::On) => AS::BinaryState(BS::Off),
+            AS::BinaryState(BS::Off) => AS::BinaryState(BS::On),
+            _ => panic!()
+        };
+
+        dev.enact().await.unwrap();
+        dev.update().await.unwrap();
+        assert_ne!(dev.state, old_state);
+    }
+}
