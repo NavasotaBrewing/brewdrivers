@@ -15,5 +15,12 @@
 //! hardware and project as a whole.
 
 #![allow(non_snake_case)]
+
+#[allow(unused)]
+const CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/rtu_conf.yaml";
+#[allow(unused)]
+const TEST_CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/test_conf.yaml";
+
 pub mod drivers;
 pub mod controllers;
+pub mod model;

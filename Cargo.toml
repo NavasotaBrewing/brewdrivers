@@ -14,27 +14,28 @@ license = "MIT"
 
 [dependencies]
 hex = "0.3.2"
-# This is for the relay boards
-# TODO: See if this can work with tokio-serial
-# Note: looks like we can't for the STR1 board, maybe for the waveshare. We'll have to keep it for now.
 serialport = "4.0"
 crc = "2.0.0"
+
 futures = "0.3"
 tokio-modbus = { version = "0.5.3", default-features = false, features = ["rtu"] }
 tokio = { version = "1", features = ["full"] }
 tokio-serial = "5.4.3"
-derivative = "2.2.0"
-thiserror = "1.0.37"
-serde = { version = "1", features = [ "derive" ]}
 async-trait = "0.1.57"
-log = "0.4.17"
 
-# tokio-util = "0.7.4"
-# bytes = "1.2.1"
+# This is used to get the Debug derivation to ignore a field
+derivative = "2.2.0"
+
+thiserror = "1.0.37"
+
+log = "0.4.17"
+env_logger = "0.9.1"
+
+serde = { version = "1", features = [ "derive" ]}
+serde_yaml = "0.9"
 
 
 [dev-dependencies]
-serde_yaml = "0.9.13"
 tokio-test = "0.4.2"
 pretty_assertions = "1.3.0"
 
