@@ -76,5 +76,4 @@ impl RTU {
         validators::serial_port_is_valid(&self)?;
         Ok(())
     }
-
 }

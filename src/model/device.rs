@@ -22,7 +22,7 @@ pub struct Device {
     pub name: String,
     /// The serial port the device runs on.
     /// 
-    /// This will probably be `/dev/ttyUSB0` or `/dev/ttyAMA0`
+    /// This will probably be `/dev/ttyUSB0`
     pub port: String,
     /// The devices specific address (ie. relay number, etc.)
     /// 
