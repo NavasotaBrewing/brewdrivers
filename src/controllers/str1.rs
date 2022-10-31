@@ -31,9 +31,9 @@ use crate::drivers::{InstrumentError, Result};
 /// use brewdrivers::controllers::{STR1, RelayBoard, BinaryState};
 ///
 /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
-/// board.get_relay(0); // ->BinaryState::Off;
+/// board.get_relay(0); // -> BinaryState::Off;
 /// board.set_relay(0,BinaryState::On);
-/// board.get_relay(0); // ->BinaryState::On;
+/// board.get_relay(0); // -> BinaryState::On;
 ///
 /// board.relay_count(); // -> Some(8)
 /// ```
@@ -197,6 +197,15 @@ mod tests {
     fn test_board() -> STR1 {
         let device = crate::test_device_from_type(Controller::STR1);
         STR1::connect(device.controller_addr, &device.port).unwrap()
+    }
+
+    #[test]
+    fn test_error_if_details_are_wrong() {
+        let dev = STR1::connect(0xDD, "/dev/ttyUSB0");
+        assert!(dev.is_err());
+
+        let dev2 = STR1::connect(0xFE, "/dev/doesntexist");
+        assert!(dev2.is_err());
     }
 
     #[test]
