@@ -25,21 +25,25 @@ pub mod drivers;
 pub mod controllers;
 pub mod model;
 
-
 #[cfg(test)]
-/// This is a special little function that will deserialize the test RTU configuration
-/// and return the device details of a given type of controller.
-/// This is just used in tests
-/// 
-/// If we don't have a physical control connected to our workstation (when running tests with cargo),
-/// then this will panic on the unwrap().
-fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
-    let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
-    rtu.devices.iter().find(|dev| dev.controller == con_type ).unwrap().clone()
-}
+mod tests {
+    use super::*;
 
-/// Same as test_device_from_type but filters by ID
-fn test_device_from_id(id: &str) -> model::Device {
-    let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
-    rtu.devices.iter().find(|dev| dev.id == id ).unwrap().clone()
+    /// This is a special little function that will deserialize the test RTU configuration
+    /// and return the device details of a given type of controller.
+    /// This is just used in tests
+    /// 
+    /// If we don't have a physical control connected to our workstation (when running tests with cargo),
+    /// then this will panic on the unwrap().
+    pub fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
+        let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
+        rtu.devices.iter().find(|dev| dev.controller == con_type ).unwrap().clone()
+    }
+    
+    /// Same as test_device_from_type but filters by ID
+    pub fn test_device_from_id(id: &str) -> model::Device {
+        let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
+        rtu.devices.iter().find(|dev| dev.id == id ).unwrap().clone()
+    }
+
 }

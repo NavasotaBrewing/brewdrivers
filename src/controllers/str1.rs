@@ -200,7 +200,7 @@ mod tests {
     use crate::controllers::Controller;
 
     fn test_board() -> STR1 {
-        let device = crate::test_device_from_type(Controller::STR1);
+        let device = crate::tests::test_device_from_type(Controller::STR1);
         STR1::connect(device.controller_addr, &device.port).unwrap()
     }
 

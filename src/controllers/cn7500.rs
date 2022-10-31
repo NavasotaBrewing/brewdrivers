@@ -150,7 +150,7 @@ mod tests {
     use tokio::test;
 
     async fn instr() -> CN7500 {
-        let device = crate::test_device_from_type(Controller::CN7500);
+        let device = crate::tests::test_device_from_type(Controller::CN7500);
         CN7500::connect(device.controller_addr, &device.port).await.unwrap()
     }
 

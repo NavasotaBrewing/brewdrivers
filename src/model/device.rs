@@ -221,7 +221,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_device_update_and_enact() {
-        let mut dev = crate::test_device_from_id("relay0");
+        let mut dev = crate::tests::test_device_from_id("relay0");
         assert!(dev.update().await.is_ok());
         let old_state = dev.state;
         dev.state = match dev.state {

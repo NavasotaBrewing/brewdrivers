@@ -300,7 +300,7 @@ mod tests {
 
     // Helper function
     fn ws() -> Waveshare {
-        let device = crate::test_device_from_type(Controller::Waveshare);
+        let device = crate::tests::test_device_from_type(Controller::Waveshare);
         Waveshare::connect(device.controller_addr, &device.port).unwrap()
     }
 
