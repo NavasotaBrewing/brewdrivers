@@ -10,6 +10,7 @@ use crate::state::{DeviceState, StateError, BinaryState};
 
 type Result<T> = std::result::Result<T, InstrumentError>;
 
+
 /// A digital represenation of a device
 ///
 /// Devices are not controllers. They operate on controllers, and sometimes there is 1 device for 1 controllers.
@@ -37,29 +38,50 @@ pub struct Device {
     pub state: Option<DeviceState>,
 }
 
+
 impl Device {
-    /// Polls a device for it's state and updates `self` to match
-    pub async fn update(&mut self) -> Result<()> {
-        trace!("Updating device `{}`", self.id);
+    async fn update(&mut self) -> Result<DeviceState> {
         match self.controller {
-            Controller::STR1 => self.handle_str1_update().await?,
-            Controller::Waveshare => self.handle_waveshare_update().await?,
-            Controller::CN7500 => self.handle_cn7500_update().await?,
+            Controller::STR1 => STR1::update(&self).await?,
+            Controller::CN7500 => CN7500::update(&self).await?
+            Controller::Waveshare => Waveshare::update(&self).await?
         }
+    
+        Ok(self.state.as_ref().unwrap().clone())
+    }
+    
+    async fn enact(&mut self) -> Result<()> {
+        match self.controller {
+            Controller::STR1 => STR1::enact(&self).await?,
+            Controller::CN7500 => CN7500::enact(&self).await?
+            Controller::Waveshare => Waveshare::enact(&self).await?
+        }
+    
         Ok(())
     }
 
-    /// Writes `self`'s state to the controller
-    pub async fn enact(&mut self) -> Result<()> {
-        trace!("Enacting device `{}`", self.id);
+    // /// Polls a device for it's state and updates `self` to match
+    // pub async fn update(&mut self) -> Result<()> {
+    //     trace!("Updating device `{}`", self.id);
+    //     match self.controller {
+    //         Controller::STR1 => self.handle_str1_update().await?,
+    //         Controller::Waveshare => self.handle_waveshare_update().await?,
+    //         Controller::CN7500 => self.handle_cn7500_update().await?,
+    //     }
+    //     Ok(())
+    // }
 
-        match self.controller {
-            Controller::STR1 => self.handle_str1_enact().await?,
-            Controller::Waveshare => self.handle_waveshare_enact().await?,
-            Controller::CN7500 => self.handle_cn7500_enact().await?,
-        }
-        Ok(())
-    }
+    // /// Writes `self`'s state to the controller
+    // pub async fn enact(&mut self) -> Result<()> {
+    //     trace!("Enacting device `{}`", self.id);
+
+    //     match self.controller {
+    //         Controller::STR1 => self.handle_str1_enact().await?,
+    //         Controller::Waveshare => self.handle_waveshare_enact().await?,
+    //         Controller::CN7500 => self.handle_cn7500_enact().await?,
+    //     }
+    //     Ok(())
+    // }
 
     async fn handle_str1_update(&mut self) -> Result<()> {
         trace!("Updating STR1 device `{}`", self.id);

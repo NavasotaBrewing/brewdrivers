@@ -13,8 +13,10 @@ use serde::{Deserialize, Serialize};
 use crate::controllers::device_types::PID;
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::{InstrumentError, Result};
+use crate::controllers::SCADADevice;
 
-use crate::state::BinaryState;
+use crate::model::Device;
+use crate::state::{BinaryState, DeviceState};
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -54,6 +56,21 @@ pub struct CN7500State {
 /// ```
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
+
+
+#[async_trait]
+impl SCADADevice for CN7500 {
+    async fn update(device: Device) -> Result<DeviceState, InstrumentError> {
+        let mut dev_state = DeviceState::default();
+        let cn = Self::connect(device.controller_addr, &device.port).await?;
+
+        
+        Ok(dev_state)
+    }
+    async fn enact(&mut self) -> Result<(), InstrumentError> {
+
+    }
+}
 
 #[async_trait]
 impl PID<CN7500> for CN7500 {
