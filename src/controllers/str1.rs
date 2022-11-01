@@ -16,11 +16,18 @@
 pub const STR1_BAUD: usize = 9600;
 
 use log::trace;
+use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::controllers::{BinaryState, RelayBoard};
+use crate::controllers::RelayBoard;
+use crate::state::BinaryState;
 use crate::drivers::serial::{Bytestring, SerialInstrument};
 use crate::drivers::{InstrumentError, Result};
+
+
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct STR1State(pub BinaryState);
+
 
 /// An `STR1XX` board.
 ///

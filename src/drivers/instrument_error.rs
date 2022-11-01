@@ -1,7 +1,7 @@
 use std::io;
 use thiserror::Error;
 
-use crate::controllers::AnyState;
+use crate::state::StateError;
 
 /// A general purpose error that may be returned from Instrument interactions
 #[derive(Error, Debug)]
@@ -22,8 +22,8 @@ pub enum InstrumentError {
     #[error("addr {addr:?}: {msg}")]
     SerialError { msg: String, addr: Option<u8> },
     /// State error, when provided the wrong type of state
-    #[error("State Error: incorrect state type")]
-    StateError(AnyState)
+    #[error("State Error: {0:?}")]
+    StateError(StateError)
 }
 
 impl InstrumentError {

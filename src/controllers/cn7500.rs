@@ -8,15 +8,30 @@
 //! All units returned from the board or sent to it (when setting the setpoint value) will use the unit that the board is configured to at the time.
 use async_trait::async_trait;
 use log::trace;
+use serde::{Deserialize, Serialize};
 
 use crate::controllers::device_types::PID;
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::{InstrumentError, Result};
 
+use crate::state::BinaryState;
+
 #[derive(Debug, Clone)]
 pub enum Degree {
     Fahrenheit,
     Celsius,
+}
+
+
+/// The state components of the CN7500
+/// 
+/// This is what is returned when polling the device, and what should be written
+/// when controlling the device.
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct CN7500State {
+    pub relay_state: BinaryState,
+    pub pv: f64,
+    pub sv: f64
 }
 
 /// A CN7500 PID Controller.

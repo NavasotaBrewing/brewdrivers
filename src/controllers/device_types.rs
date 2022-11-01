@@ -4,7 +4,7 @@
 use async_trait::async_trait;
 
 use crate::drivers::InstrumentError;
-use crate::controllers::BinaryState;
+use crate::state::BinaryState;
 
 type Result<T> = std::result::Result<T, InstrumentError>;
 

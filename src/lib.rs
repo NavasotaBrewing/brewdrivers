@@ -24,6 +24,7 @@ const TEST_CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/test_conf.yaml";
 pub mod drivers;
 pub mod controllers;
 pub mod model;
+pub mod state;
 
 #[cfg(test)]
 mod tests {

@@ -85,8 +85,6 @@ impl RTU {
 
 #[cfg(test)]
 mod tests {
-    use crate::controllers::{AnyState, BinaryState};
-
     use super::*;
 
     use tokio::test;
@@ -98,27 +96,5 @@ mod tests {
         let rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE));
         assert!(rtu.is_ok());
         assert!(rtu.unwrap().devices.len() > 0);
-    }
-
-    #[test]
-    async fn test_enact_update() -> Result {
-        let mut rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE))?;
-        rtu.update().await?;
-
-        let dev = rtu.device("relay0").unwrap();
-
-        match dev.state {
-            AnyState::BinaryState(BinaryState::On) => {
-                dev.state = AnyState::BinaryState(BinaryState::Off)
-            }
-            AnyState::BinaryState(BinaryState::Off) => {
-                dev.state = AnyState::BinaryState(BinaryState::On)
-            }
-            _ => panic!(),
-        }
-
-        assert!(rtu.enact().await.is_ok());
-
-        Ok(())
     }
 }

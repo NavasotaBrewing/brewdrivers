@@ -97,10 +97,8 @@ mod test_validators {
 
     use std::{net::Ipv4Addr, str::FromStr};
 
-    use crate::controllers::*;
+    use crate::{controllers::*, state::{DeviceState, BinaryState}};
     use tokio_test::{assert_err, assert_ok};
-    use AnyState as AS;
-    use BinaryState as BS;
 
     use crate::model::{Device, RTU};
 
@@ -122,7 +120,7 @@ mod test_validators {
         addr: u8,
         controller: Controller,
         controller_addr: u8,
-        state: AnyState,
+        state: DeviceState,
     ) -> Device {
         Device {
             id: String::from(id),
@@ -131,9 +129,7 @@ mod test_validators {
             addr,
             controller,
             controller_addr,
-            state,
-            pv: None,
-            sv: None,
+            state: Some(state)
         }
     }
 
@@ -147,7 +143,11 @@ mod test_validators {
                 0,
                 Controller::STR1,
                 254,
-                AS::BinaryState(BS::On),
+                DeviceState {
+                    relay_state: Some(BinaryState::On),
+                    pv: None,
+                    sv: None
+                }
             ),
             device(
                 "pump",
@@ -156,7 +156,11 @@ mod test_validators {
                 1,
                 Controller::STR1,
                 254,
-                AS::BinaryState(BS::On),
+                DeviceState {
+                    relay_state: Some(BinaryState::On),
+                    pv: None,
+                    sv: None
+                }
             ),
             device(
                 "pump2",
@@ -165,7 +169,11 @@ mod test_validators {
                 2,
                 Controller::STR1,
                 254,
-                AS::BinaryState(BS::On),
+                DeviceState {
+                    relay_state: Some(BinaryState::On),
+                    pv: None,
+                    sv: None
+                }
             ),
         ];
 
@@ -185,7 +193,11 @@ mod test_validators {
             0,
             Controller::STR1,
             254,
-            AS::BinaryState(BS::On),
+            DeviceState {
+                relay_state: Some(BinaryState::On),
+                pv: None,
+                sv: None
+            }
         )];
 
         let mut rtu = rtu("Testing RTU", "testing id with whitespace", devices);
@@ -208,7 +220,11 @@ mod test_validators {
                 0,
                 Controller::STR1,
                 254,
-                AS::BinaryState(BS::On),
+                DeviceState {
+                    relay_state: Some(BinaryState::On),
+                    pv: None,
+                    sv: None
+                }
             )
         ];
         
@@ -223,7 +239,11 @@ mod test_validators {
             1,
             Controller::STR1,
             254,
-            AS::BinaryState(BS::On),
+            DeviceState {
+                relay_state: Some(BinaryState::On),
+                pv: None,
+                sv: None
+            }
         ));
 
         assert_ok!(serial_port_is_valid(&rtu));
@@ -235,7 +255,11 @@ mod test_validators {
             1,
             Controller::STR1,
             254,
-            AS::BinaryState(BS::On),
+            DeviceState {
+                relay_state: Some(BinaryState::On),
+                pv: None,
+                sv: None
+            }
         ));
 
         assert_err!(serial_port_is_valid(&rtu));

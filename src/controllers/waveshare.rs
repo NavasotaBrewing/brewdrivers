@@ -13,9 +13,11 @@
 // ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
+use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::controllers::{BinaryState, RelayBoard};
+use crate::controllers::RelayBoard;
+use crate::state::BinaryState;
 use crate::drivers::serial::SerialInstrument;
 use crate::drivers::{InstrumentError, Result};
 
@@ -28,6 +30,10 @@ pub const WAVESHARE_BAUD: usize = 9600;
 #[allow(dead_code)]
 /// The max index of a relay on the Waveshare board
 pub const RELAY_MAX: u8 = 7;
+
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct WaveshareState(pub BinaryState);
+
 
 /// A Waveshare board.
 #[derive(Debug)]
