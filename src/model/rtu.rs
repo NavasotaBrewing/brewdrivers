@@ -89,8 +89,6 @@ mod tests {
 
     use tokio::test;
 
-    type Result = std::result::Result<(), Box<dyn std::error::Error>>;
-
     #[test]
     async fn test_generate_rtu() {
         let rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE));

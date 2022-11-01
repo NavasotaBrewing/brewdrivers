@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 use std::thread::sleep;
 
-use brewdrivers::controllers::{Waveshare, RelayBoard};
+use brewdrivers::controllers::Waveshare;
 use brewdrivers::state::BinaryState;
 
 fn main() -> Result<(), Box<dyn Error>> {

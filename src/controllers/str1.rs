@@ -15,14 +15,17 @@
 
 pub const STR1_BAUD: usize = 9600;
 
+use async_trait::async_trait;
 use log::trace;
 use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::controllers::RelayBoard;
-use crate::state::BinaryState;
+use crate::model::Device;
+use crate::state::{BinaryState, DeviceState, StateError};
 use crate::drivers::serial::{Bytestring, SerialInstrument};
 use crate::drivers::{InstrumentError, Result};
+
+use crate::model::SCADADevice;
 
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
@@ -35,7 +38,8 @@ pub struct STR1State(pub BinaryState);
 ///
 /// ## Examples
 /// ```rust,no_run
-/// use brewdrivers::controllers::{STR1, RelayBoard, BinaryState};
+/// use brewdrivers::controllers::STR1;
+/// use brewdrivers::state::BinaryState;
 ///
 /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
 /// board.get_relay(0); // -> BinaryState::Off;
@@ -47,20 +51,57 @@ pub struct STR1State(pub BinaryState);
 #[derive(Debug)]
 pub struct STR1(SerialInstrument);
 
-impl RelayBoard<STR1> for STR1 {
+#[async_trait]
+impl SCADADevice for STR1 {
+    async fn update(device: &mut Device) -> Result<()> {
+        trace!("Updating STR1 device `{}`", device.id);
+
+        let mut board = STR1::connect(device.controller_addr, &device.port)?;
+
+        if device.state.is_none() {
+            device.state = Some(DeviceState::default())
+        }
+
+        if let Some(state) = device.state.as_mut() {
+            state.relay_state = Some(board.get_relay(device.addr)?);
+        }
+
+        Ok(())
+    }
+    async fn enact(device: &mut Device) -> Result<()> {
+        trace!("Enacting STR1 device `{}`", device.id);
+        let mut board = STR1::connect(device.controller_addr, &device.port)?;
+
+        if let Some(new_state) = &device.state {
+            let new_rs = new_state.relay_state.ok_or(InstrumentError::StateError(
+                StateError::BadValue(new_state.clone())
+            ))?;
+            board.set_relay(device.addr, new_rs)?;
+        } else {
+            return Err(
+                InstrumentError::StateError(StateError::NullState)
+            )
+        }
+
+        Ok(())
+    }
+}
+
+impl STR1 {
     /// Attempts to connect to an STR1 board.
     ///
     /// The `address` is the controller number the board is programmed to (default `0xFE`).
     ///
     /// ## Examples
     /// ```rust,no_run
-    /// use brewdrivers::controllers::{STR1, RelayBoard, BinaryState};
+    /// use brewdrivers::controllers::STR1;
+    /// use brewdrivers::state::BinaryState;
     ///
     /// let mut board = STR1::connect(0xFE, "/dev/ttyUSB0").expect("Couldn't connect to device");
     /// board.get_relay(0);
     /// // ...
     /// ```
-    fn connect(address: u8, port_path: &str) -> Result<Self> {
+    pub fn connect(address: u8, port_path: &str) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
         let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD)?);
         str1.connected().map_err(|instr_err|
@@ -71,16 +112,16 @@ impl RelayBoard<STR1> for STR1 {
         )?;
         Ok(str1)
     }
-
+    
     /// Attempts to communicate with the board, returning Ok(()) if it responds.
-    fn connected(&mut self) -> Result<()> {
+    pub fn connected(&mut self) -> Result<()> {
         trace!("(STR1 {}) connected", self.0.address());
         self.relay_count()?;
         Ok(())
     }
-
+    
     /// Sets a relay to On or Off.
-    fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
+    pub fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
         trace!(
             "(STR1 {}) setting relay {relay_num}: {new_state}",
             self.0.address()
@@ -89,7 +130,7 @@ impl RelayBoard<STR1> for STR1 {
             BinaryState::Off => 0,
             BinaryState::On => 1,
         };
-
+    
         self.write_to_device(Bytestring::from(vec![
             0x08,
             0x17,
@@ -98,26 +139,24 @@ impl RelayBoard<STR1> for STR1 {
             0x01,
             new_state_num,
         ]))?;
-
+    
         Ok(())
     }
-
+    
     /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
-    fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+    pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
         trace!("(STR1 {}) getting relay {relay_num}", self.0.address());
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;
-
+    
         let result = hex::encode(output_buf);
-
+    
         match result.chars().nth(7) {
             Some('1') => return Ok(BinaryState::On),
             _ => return Ok(BinaryState::Off),
         }
     }
-}
 
-impl STR1 {
     /// Writes a command to the device. This is useful if you want to use a command
     /// that we haven't implemented with this struct. See the [software manual](https://www.smarthardware.eu/manual/str1xxxxxx_com.pdf)
     /// for a full list of commands.
@@ -127,7 +166,7 @@ impl STR1 {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use brewdrivers::controllers::{STR1, RelayBoard};
+    /// use brewdrivers::controllers::STR1;
     /// use brewdrivers::drivers::serial::Bytestring;
     ///
     /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");

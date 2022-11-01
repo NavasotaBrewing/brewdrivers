@@ -10,16 +10,20 @@
 //! println!("{:?}", ws.get_all_relays().unwrap());
 //! ```
 
+use async_trait::async_trait;
 // ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
+use log::trace;
 use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::controllers::RelayBoard;
-use crate::state::BinaryState;
+use crate::model::Device;
+use crate::state::{BinaryState, DeviceState, StateError};
 use crate::drivers::serial::SerialInstrument;
 use crate::drivers::{InstrumentError, Result};
+
+use crate::model::SCADADevice;
 
 
 // This is the checksum algorithm that the board uses
@@ -39,8 +43,45 @@ pub struct WaveshareState(pub BinaryState);
 #[derive(Debug)]
 pub struct Waveshare(SerialInstrument);
 
-impl RelayBoard<Waveshare> for Waveshare {
-    /// Connect to a board at the given address and port. This will fail if the port can't be opened,
+#[async_trait]
+impl SCADADevice for Waveshare {
+    async fn update(device: &mut Device) -> Result<()> {
+        trace!("Updating Waveshare device `{}`", device.id);
+
+        let mut board = Waveshare::connect(device.controller_addr, &device.port)?;
+
+        if device.state.is_none() {
+            device.state = Some(DeviceState::default())
+        }
+
+        if let Some(state) = device.state.as_mut() {
+            state.relay_state = Some(board.get_relay(device.addr)?);
+        }
+
+        Ok(())
+    }
+    
+    async fn enact(device: &mut Device) -> Result<()> {
+        trace!("Enacting Waveshare device `{}`", device.id);
+        let mut board = Waveshare::connect(device.controller_addr, &device.port)?;
+
+        if let Some(new_state) = &device.state {
+            let new_rs = new_state.relay_state.ok_or(InstrumentError::StateError(
+                StateError::BadValue(new_state.clone())
+            ))?;
+            board.set_relay(device.addr, new_rs)?;
+        } else {
+            return Err(
+                InstrumentError::StateError(StateError::NullState)
+            )
+        }
+
+        Ok(())
+    }
+}
+
+impl Waveshare {
+/// Connect to a board at the given address and port. This will fail if the port can't be opened,
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
     ///
@@ -51,7 +92,7 @@ impl RelayBoard<Waveshare> for Waveshare {
     /// ws.get_relay(0).unwrap();
     /// // ...
     /// ```
-    fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
+    pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
         let mut ws = Waveshare(SerialInstrument::new(
             address,
             port_path,
@@ -66,7 +107,7 @@ impl RelayBoard<Waveshare> for Waveshare {
         Ok(ws)
     }
 
-    fn connected(&mut self) -> Result<()> {
+    pub fn connected(&mut self) -> Result<()> {
         self.software_revision()?;
         Ok(())
     }
@@ -81,7 +122,7 @@ impl RelayBoard<Waveshare> for Waveshare {
     /// assert_eq!(ws.get_relay(0).unwrap(),BinaryState::On);
     /// ws.set_relay(0, BinaryState::Off);
     /// ```
-    fn set_relay(&mut self, relay_num: u8, state: BinaryState) -> Result<()> {
+    pub fn set_relay(&mut self, relay_num: u8, state: BinaryState) -> Result<()> {
         // Example: 01 05 00 00 FF 00 8C 3A
         // 01       Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
         // 05       05 Command	        Command for controlling Relay
@@ -116,7 +157,7 @@ impl RelayBoard<Waveshare> for Waveshare {
     }
 
     /// Gets a relay state. See [`BinaryState`](crate::controllers::BinaryState).
-    fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+    pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
         let statuses: Vec<BinaryState> = self.get_all_relays()?;
 
         if let Some(&state) = statuses.get(relay_num as usize) {
@@ -134,9 +175,7 @@ impl RelayBoard<Waveshare> for Waveshare {
             );
         }
     }
-}
 
-impl Waveshare {
     // Calculates the CRC checksum for the data bytes to send to the board
     fn append_checksum(bytes: &mut Vec<u8>) -> Result<()> {
         let checksum = CRC_MODBUS.checksum(&bytes).to_le_bytes();

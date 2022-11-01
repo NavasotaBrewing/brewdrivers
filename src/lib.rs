@@ -42,6 +42,7 @@ mod tests {
     }
     
     /// Same as test_device_from_type but filters by ID
+    #[allow(dead_code)]
     pub fn test_device_from_id(id: &str) -> model::Device {
         let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
         rtu.devices.iter().find(|dev| dev.id == id ).unwrap().clone()

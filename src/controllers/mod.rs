@@ -1,29 +1,15 @@
 //! A controller is a specific implementation of driver, made for one
 //! specific instrument. This module also includes pieces of data like state enums 
 //! that are used by the controller and above layer but not the driver layer.
-use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
 pub mod cn7500;
 pub mod str1;
 pub mod waveshare;
-pub mod device_types;
 
 pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
-pub use device_types::{PID, RelayBoard};
-
-use crate::{state::DeviceState, drivers::InstrumentError, model::Device};
-
-/// An abstraction of a field device that can be polled and set
-/// 
-/// it is passed a `Device`, which contains connection details
-#[async_trait]
-pub trait SCADADevice {
-    async fn update(device: &Device) -> Result<DeviceState, InstrumentError>;
-    async fn enact(device: &Device) -> Result<(), InstrumentError>;
-}
 
 /// These are the types of controllers that the BCS supports. This enum should reflect every
 /// controller in `brewdrivers::controllers`.

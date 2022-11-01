@@ -1,4 +1,4 @@
-use brewdrivers::controllers::{CN7500, PID};
+use brewdrivers::controllers::CN7500;
 
 #[tokio::main]
 async fn main() {

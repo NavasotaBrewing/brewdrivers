@@ -9,14 +9,11 @@
 use async_trait::async_trait;
 use log::trace;
 use serde::{Deserialize, Serialize};
-
-use crate::controllers::device_types::PID;
 use crate::drivers::modbus::ModbusInstrument;
 use crate::drivers::{InstrumentError, Result};
-use crate::controllers::SCADADevice;
-
+use crate::model::SCADADevice;
 use crate::model::Device;
-use crate::state::{BinaryState, DeviceState};
+use crate::state::{BinaryState, DeviceState, StateError};
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -39,7 +36,7 @@ pub struct CN7500State {
 /// A CN7500 PID Controller.
 ///
 /// ```rust,no_run
-/// use brewdrivers::controllers::{CN7500, PID};
+/// use brewdrivers::controllers::CN7500;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -60,31 +57,66 @@ pub struct CN7500(ModbusInstrument);
 
 #[async_trait]
 impl SCADADevice for CN7500 {
-    async fn update(device: Device) -> Result<DeviceState, InstrumentError> {
-        let mut dev_state = DeviceState::default();
-        let cn = Self::connect(device.controller_addr, &device.port).await?;
+    async fn update(device: &mut Device) -> Result<()> {
+        trace!("Updating Waveshare device `{}`", device.id);
 
-        
-        Ok(dev_state)
+        let mut cn = CN7500::connect(device.controller_addr, &device.port).await?;
+
+        if device.state.is_none() {
+            device.state = Some(DeviceState::default())
+        }
+
+        // this is guaranteed
+        if let Some(state) = device.state.as_mut() {
+            state.relay_state = Some(cn.is_running().await?.into());
+            state.pv = Some(cn.get_pv().await?);
+            state.sv = Some(cn.get_sv().await?);
+        }
+
+        Ok(())
     }
-    async fn enact(&mut self) -> Result<(), InstrumentError> {
+    
+    async fn enact(device: &mut Device) -> Result<()> {
+        trace!("Enacting STR1 device `{}`", device.id);
+        let mut cn = CN7500::connect(device.controller_addr, &device.port).await?;
+        
 
+        if device.state.is_none() {
+            return Err(
+                InstrumentError::StateError(
+                    StateError::NullState
+                )
+            )
+        }
+
+        let new_state = device.state.as_ref().unwrap();
+
+        match new_state.relay_state {
+            Some(BinaryState::On) => cn.run().await?,
+            Some(BinaryState::Off) => cn.stop().await?,
+            None => {}
+        }
+
+        if let Some(new_sv) = new_state.sv {
+            cn.set_sv(new_sv).await?;
+        }
+
+        Ok(())
     }
 }
 
-#[async_trait]
-impl PID<CN7500> for CN7500 {
+impl CN7500 {
     /// Connects to a CN7500 board
     ///
     /// ```rust,no_run
-    /// use brewdrivers::controllers::{CN7500, PID};
+    /// use brewdrivers::controllers::CN7500;
     ///
     /// #[tokio::main]
     /// async fn main() {
     ///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.unwrap();
     /// }
     /// ```
-    async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
+    pub async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
         trace!("(CN7500 {}) connected", slave_addr);
         let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, 19200).await?);
         cn.connected().await.map_err(|instr_err|
@@ -97,7 +129,7 @@ impl PID<CN7500> for CN7500 {
     }
 
     /// Returns `Ok(())` if the instrument is connected, `Err(InstrumentError)` otherwise.
-    async fn connected(&mut self) -> Result<()> {
+    pub async fn connected(&mut self) -> Result<()> {
         // Try to read a coil, this could really be anything
         // Note: 'running' means the relay is on, not that the CN7500 is on
         self.software_revision().await?;
@@ -105,13 +137,13 @@ impl PID<CN7500> for CN7500 {
     }
 
     /// Sets the setpoint value (target) of the CN7500. Should be a decimal between 1.0-999.0.
-    async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
+    pub async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
         trace!("(CN7500 {}) Setting sv: {new_sv}", self.0.slave_addr);
         self.0.write_register(0x1001, (new_sv * 10.0) as u16).await
     }
 
     /// Gets the setpoint value
-    async fn get_sv(&mut self) -> Result<f64> {
+    pub async fn get_sv(&mut self) -> Result<f64> {
         trace!("(CN7500 {}) getting sv", self.0.slave_addr);
         self.0
             .read_registers(0x1001, 1)
@@ -120,7 +152,7 @@ impl PID<CN7500> for CN7500 {
     }
 
     /// Gets the process value
-    async fn get_pv(&mut self) -> Result<f64> {
+    pub async fn get_pv(&mut self) -> Result<f64> {
         trace!("(CN7500 {}) getting pv", self.0.slave_addr);
         self.0
             .read_registers(0x1000, 1)
@@ -131,25 +163,23 @@ impl PID<CN7500> for CN7500 {
     /// Returns `Ok(true)` if the relay is activated. The relay may or may not be on if it's activated,
     /// because the PID will control when to feather the relay on or off to control temperature. The relay
     /// will never be on if it's not active (ie. this method returns `Ok(false)`)
-    async fn is_running(&mut self) -> Result<bool> {
+    pub async fn is_running(&mut self) -> Result<bool> {
         trace!("(CN7500 {}) polled is running", self.0.slave_addr);
         self.0.read_coils(0x0814, 1).await.map(|vals| vals[0])
     }
 
     /// Activates the relay
-    async fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         trace!("(CN7500 {}) set to run", self.0.slave_addr);
         self.0.write_coil(0x0814, true).await
     }
 
     /// Deactivates the relay
-    async fn stop(&mut self) -> Result<()> {
+    pub async fn stop(&mut self) -> Result<()> {
         trace!("(CN7500 {}) set to stop", self.0.slave_addr);
         self.0.write_coil(0x0814, false).await
     }
-}
 
-impl CN7500 {
     /// Sets the degree mode of the board to either Fahrenheit or Celsius
     pub async fn set_degrees(&mut self, degree_mode: Degree) -> Result<()> {
         trace!(
