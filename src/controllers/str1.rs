@@ -15,17 +15,19 @@
 
 pub const STR1_BAUD: usize = 9600;
 
+// external uses
 use async_trait::async_trait;
 use log::trace;
 use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::model::Device;
 use crate::state::{BinaryState, DeviceState, StateError};
-use crate::drivers::serial::{Bytestring, SerialInstrument};
-use crate::drivers::{InstrumentError, Result};
-
-use crate::model::SCADADevice;
+use crate::drivers::{
+    serial::{Bytestring, SerialInstrument},
+    InstrumentError,
+    Result
+};
+use crate::model::{Device, SCADADevice};
 
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]

@@ -20,8 +20,11 @@ use serde::{Deserialize, Serialize};
 // internal uses
 use crate::model::Device;
 use crate::state::{BinaryState, DeviceState, StateError};
-use crate::drivers::serial::SerialInstrument;
-use crate::drivers::{InstrumentError, Result};
+use crate::drivers::{
+    serial::SerialInstrument,
+    InstrumentError,
+    Result
+};
 
 use crate::model::SCADADevice;
 
