@@ -38,7 +38,7 @@ mod tests {
     /// then this will panic on the unwrap().
     pub fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
         let rtu = crate::model::RTU::generate(Some(crate::TEST_CONFIG_FILE)).expect("Couldn't read config file into RTU model");
-        rtu.devices.iter().find(|dev| dev.controller == con_type ).unwrap().clone()
+        rtu.devices.iter().find(|dev| dev.conn.controller == con_type ).unwrap().clone()
     }
     
     /// Same as test_device_from_type but filters by ID

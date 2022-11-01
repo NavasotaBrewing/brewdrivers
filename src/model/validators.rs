@@ -7,7 +7,7 @@
 //! `serde` takes care of making sure the proper values are present; only values in an `Option<>` can be missing.
 
 use log::{error, info, warn};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 use super::{ModelError, RTU};
 
@@ -61,16 +61,16 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
     for dev in &rtu.devices {
         // If they somehow pass an empty string
         // maybe with port: "" in the config file
-        if dev.port.len() == 0 {
-            let err = ModelError::validation_error(("port", &dev.port), "serial port cannot be empty");
+        if dev.conn.port().len() == 0 {
+            let err = ModelError::validation_error(("port", &dev.conn.port()), "serial port cannot be empty");
             error!("{}", err);
             return Err(err);
         }
 
-        let path = Path::new(&dev.port);
+        let path = &dev.conn.port;
 
         if !path.starts_with("/dev") {
-            let err = ModelError::validation_error(("port", &dev.port), "port path must be in /dev/*");
+            let err = ModelError::validation_error(("port", &dev.conn.port()), "port path must be in /dev/*");
             error!("{}", err);
             return Err(err);
         }
@@ -95,9 +95,9 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
 mod test_validators {
     use super::*;
 
-    use std::{net::Ipv4Addr, str::FromStr};
+    use std::{net::Ipv4Addr, str::FromStr, path::PathBuf};
 
-    use crate::{controllers::*, state::{DeviceState, BinaryState}};
+    use crate::{controllers::*, state::{DeviceState, BinaryState}, model::device::Connection};
     use tokio_test::{assert_err, assert_ok};
 
     use crate::model::{Device, RTU};
@@ -125,11 +125,13 @@ mod test_validators {
         Device {
             id: String::from(id),
             name: String::from(name),
-            port: String::from(port),
-            addr,
-            controller,
-            controller_addr,
-            state: Some(state)
+            conn: Connection {
+                port: PathBuf::from(port),
+                addr,
+                controller,
+                controller_addr,
+            },
+            state,
         }
     }
 

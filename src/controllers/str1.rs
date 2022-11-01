@@ -21,7 +21,7 @@ use log::trace;
 use serde::{Deserialize, Serialize};
 
 // internal uses
-use crate::state::{BinaryState, DeviceState, StateError};
+use crate::state::{BinaryState, StateError};
 use crate::drivers::{
     serial::{Bytestring, SerialInstrument},
     InstrumentError,
@@ -57,34 +57,23 @@ pub struct STR1(SerialInstrument);
 impl SCADADevice for STR1 {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating STR1 device `{}`", device.id);
-
-        let mut board = STR1::connect(device.controller_addr, &device.port)?;
-
-        if device.state.is_none() {
-            device.state = Some(DeviceState::default())
-        }
-
-        if let Some(state) = device.state.as_mut() {
-            state.relay_state = Some(board.get_relay(device.addr)?);
-        }
-
+        let mut board = STR1::connect(device.conn.controller_addr(), &device.conn.port())?;
+        device.state.relay_state = Some(board.get_relay(device.conn.addr())?);
         Ok(())
     }
+
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting STR1 device `{}`", device.id);
-        let mut board = STR1::connect(device.controller_addr, &device.port)?;
+        let mut board = STR1::connect(device.conn.controller_addr(), &device.conn.port())?;
 
-        if let Some(new_state) = &device.state {
-            let new_rs = new_state.relay_state.ok_or(InstrumentError::StateError(
-                StateError::BadValue(new_state.clone())
-            ))?;
-            board.set_relay(device.addr, new_rs)?;
-        } else {
-            return Err(
-                InstrumentError::StateError(StateError::NullState)
+        match device.state.relay_state {
+            Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
+            None => return Err(
+                InstrumentError::StateError(
+                    StateError::BadValue(device.state.clone())
+                )
             )
         }
-
         Ok(())
     }
 }
@@ -249,7 +238,7 @@ mod tests {
 
     fn test_board() -> STR1 {
         let device = crate::tests::test_device_from_type(Controller::STR1);
-        STR1::connect(device.controller_addr, &device.port).unwrap()
+        STR1::connect(device.conn.controller_addr(), &device.conn.port()).unwrap()
     }
 
     #[test]

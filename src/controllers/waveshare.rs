@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 // internal uses
 use crate::model::Device;
-use crate::state::{BinaryState, DeviceState, StateError};
+use crate::state::{BinaryState, StateError};
 use crate::drivers::{
     serial::SerialInstrument,
     InstrumentError,
@@ -51,31 +51,22 @@ impl SCADADevice for Waveshare {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating Waveshare device `{}`", device.id);
 
-        let mut board = Waveshare::connect(device.controller_addr, &device.port)?;
-
-        if device.state.is_none() {
-            device.state = Some(DeviceState::default())
-        }
-
-        if let Some(state) = device.state.as_mut() {
-            state.relay_state = Some(board.get_relay(device.addr)?);
-        }
+        let mut board = Waveshare::connect(device.conn.controller_addr, &format!("{:?}", device.conn.port.as_os_str()))?;
+        device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
         Ok(())
     }
     
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting Waveshare device `{}`", device.id);
-        let mut board = Waveshare::connect(device.controller_addr, &device.port)?;
+        let mut board = Waveshare::connect(device.conn.controller_addr(), &device.conn.port())?;
 
-        if let Some(new_state) = &device.state {
-            let new_rs = new_state.relay_state.ok_or(InstrumentError::StateError(
-                StateError::BadValue(new_state.clone())
-            ))?;
-            board.set_relay(device.addr, new_rs)?;
-        } else {
-            return Err(
-                InstrumentError::StateError(StateError::NullState)
+        match device.state.relay_state {
+            Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
+            None => return Err(
+                InstrumentError::StateError(
+                    StateError::BadValue(device.state.clone())
+                )
             )
         }
 
@@ -349,7 +340,7 @@ mod tests {
     // Helper function
     fn ws() -> Waveshare {
         let device = crate::tests::test_device_from_type(Controller::Waveshare);
-        Waveshare::connect(device.controller_addr, &device.port).unwrap()
+        Waveshare::connect(device.conn.controller_addr(), &device.conn.port()).unwrap()
     }
 
     #[test]

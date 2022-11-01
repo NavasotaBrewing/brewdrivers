@@ -14,7 +14,7 @@ use crate::drivers::{
     Result
 };
 use crate::model::{SCADADevice, Device};
-use crate::state::{BinaryState, DeviceState, StateError};
+use crate::state::BinaryState;
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -50,18 +50,11 @@ impl SCADADevice for CN7500 {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating Waveshare device `{}`", device.id);
 
-        let mut cn = CN7500::connect(device.controller_addr, &device.port).await?;
+        let mut cn = CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await?;
 
-        if device.state.is_none() {
-            device.state = Some(DeviceState::default())
-        }
-
-        // this is guaranteed
-        if let Some(state) = device.state.as_mut() {
-            state.relay_state = Some(cn.is_running().await?.into());
-            state.pv = Some(cn.get_pv().await?);
-            state.sv = Some(cn.get_sv().await?);
-        }
+        device.state.relay_state = Some(cn.is_running().await?.into());
+        device.state.pv = Some(cn.get_pv().await?);
+        device.state.sv = Some(cn.get_sv().await?);
 
         Ok(())
     }
@@ -69,29 +62,18 @@ impl SCADADevice for CN7500 {
     /// Writes the given device state to this controller
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting STR1 device `{}`", device.id);
-        let mut cn = CN7500::connect(device.controller_addr, &device.port).await?;
-        
-
-        if device.state.is_none() {
-            return Err(
-                InstrumentError::StateError(
-                    StateError::NullState
-                )
-            )
-        }
-
-        let new_state = device.state.as_ref().unwrap();
-
-        match new_state.relay_state {
+        let mut cn = CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await?;
+    
+        match device.state.relay_state {
             Some(BinaryState::On) => cn.run().await?,
             Some(BinaryState::Off) => cn.stop().await?,
             None => {}
         }
 
-        if let Some(new_sv) = new_state.sv {
+        if let Some(new_sv) = device.state.sv {
             cn.set_sv(new_sv).await?;
         }
-
+    
         Ok(())
     }
 }
@@ -204,7 +186,7 @@ mod tests {
 
     async fn instr() -> CN7500 {
         let device = crate::tests::test_device_from_type(Controller::CN7500);
-        CN7500::connect(device.controller_addr, &device.port).await.unwrap()
+        CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await.unwrap()
     }
 
     #[test]
