@@ -6,10 +6,13 @@ use serde::{Serialize, Deserialize};
 pub mod cn7500;
 pub mod str1;
 pub mod waveshare;
+pub mod wavesharev2;
 
 pub use cn7500::CN7500;
 pub use str1::STR1;
 pub use waveshare::Waveshare;
+pub use wavesharev2::WaveshareV2;
+pub use crate::state::BinaryState;
 
 /// These are the types of controllers that the BCS supports. This enum should reflect every
 /// controller in `brewdrivers::controllers`.
@@ -20,8 +23,10 @@ pub enum Controller {
     STR1,
     /// An OMEGA Engineering PID. We use the CN7500, and haven't yet tested on others.
     CN7500,
-    // The Waveshare relay board, similar in usage to the STR1
-    Waveshare
+    /// The Waveshare relay board, similar in usage to the STR1
+    Waveshare,
+    /// Same as `Waveshare`, but software version 2.00
+    WaveshareV2
 }
 
 impl std::fmt::Display for Controller {
@@ -29,7 +34,8 @@ impl std::fmt::Display for Controller {
         match self {
             Self::CN7500 => write!(f, "CN7500"),
             Self::STR1 => write!(f, "STR1"),
-            Self::Waveshare => write!(f, "Waveshare")
+            Self::Waveshare => write!(f, "Waveshare"),
+            Self::WaveshareV2 => write!(f, "WaveshareV2")
         }
     }
 }
@@ -40,6 +46,7 @@ impl<T: AsRef<str>> From<T> for Controller {
             "STR1" => Self::STR1,
             "CN7500" => Self::CN7500,
             "Waveshare" => Self::Waveshare,
+            "WaveshareV2" => Self::WaveshareV2,
             _ => panic!("`{}` is not a valid controller name", value.as_ref())
         }
     }
