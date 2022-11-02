@@ -13,6 +13,7 @@ pub use str1::STR1;
 pub use waveshare::Waveshare;
 pub use wavesharev2::WaveshareV2;
 pub use crate::state::BinaryState;
+pub use crate::drivers::InstrumentError;
 
 /// These are the types of controllers that the BCS supports. This enum should reflect every
 /// controller in `brewdrivers::controllers`.

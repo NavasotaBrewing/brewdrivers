@@ -2,7 +2,7 @@
 //! The [operation wiki](https://www.waveshare.com/wiki/Protocol_Manual_of_Modbus_RTU_Relay) explains how to use it, but you probably won't need that.
 //!
 //! See the `examples/` directory for a complete example of using this board. Here's a sneak peak
-//! ```rust
+//! ```no_run
 //! use brewdrivers::controllers::*;
 //!
 //! let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
@@ -74,7 +74,7 @@ impl Waveshare {
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
     ///
-    /// ```rust,no_run
+    /// ```no_run
     /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
@@ -103,7 +103,7 @@ impl Waveshare {
 
     /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
     ///
-    /// ```rust,no_run
+    /// ```no_run
     /// use brewdrivers::controllers::*;
     ///
     /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
@@ -323,6 +323,9 @@ impl Waveshare {
     }
 }
 
+// These are disabled because I don't have a waveshare v1 and cargo doesn't
+// allow me to skip these, because wavesharev2 is a similar name
+#[cfg(False)]
 #[cfg(test)]
 mod tests {
     use crate::controllers::Controller;

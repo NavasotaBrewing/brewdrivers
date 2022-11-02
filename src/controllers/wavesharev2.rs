@@ -1,13 +1,15 @@
-//! This is version 2.00 of the Waveshare Modbus RTU relay board. The commands change between version 1 and 2, so be
-//! sure you use the right implementation. Usage of this is the same as [`Waveshare`](crate::controllers::Waveshare)
+//! This is version 2.00 of the Waveshare Modbus RTU relay board. The responses from the board changed
+//! between version 1 and 2, so be sure you use the right implementation.
+//! Usage of this is the same as [`Waveshare`](crate::controllers::Waveshare)
 //!
 //! See the `examples/` directory for a complete example of using this board. Here's a sneak peak
 //! ```rust
 //! use brewdrivers::controllers::*;
 //!
-//! let mut ws = WaveshareV2::connect(0x01, "/dev/ttyUSB0").unwrap();
-//! ws.set_relay(3, BinaryState::On).unwrap(); // Turn on the 4th relay (indexed from 0)
-//! println!("{:?}", ws.get_all_relays().unwrap());
+//! let mut ws = WaveshareV2::connect(0x01, "/dev/ttyUSB0")?;   // This will fail if the board doesn't respond
+//! ws.set_relay(3, BinaryState::On)?;                          // Turn on the 4th relay (indexed from 0)
+//! println!("{:?}", ws.get_all_relays()?);                     // List all the relays
+//! # Ok::<(), InstrumentError>(())
 //! ```
 
 use async_trait::async_trait;
@@ -384,12 +386,11 @@ mod tests {
     #[test]
     fn test_write_all_relays() {
         let mut ws = ws();
+        let expected = [BinaryState::On; 8];
 
         ws.set_all_relays(BinaryState::On).unwrap();
-        for i in 0..8 {
-            assert_eq!(ws.get_relay(i).unwrap(), BinaryState::On);
-        }
-        sleep(Duration::from_millis(200));
+        assert_eq!(expected.to_vec(), ws.get_all_relays().unwrap());
+        sleep(Duration::from_millis(50));
         ws.set_all_relays(BinaryState::Off).unwrap();
     }
 
