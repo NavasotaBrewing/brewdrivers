@@ -50,7 +50,7 @@ pub const WAVESHAREV2_TIMEOUT: Duration = Duration::from_millis(50);
 pub const RELAY_MAX: u8 = 7;
 // Luckily, the bit identifying each baudrate is just 0x00-0x07, so we can use that
 // to index this. Makes the commands easier.
-pub const BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
+pub const WAVESHAREV2_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
 
 /// A Waveshare board.
 #[derive(Debug)]
@@ -101,7 +101,7 @@ impl WaveshareV2 {
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
     pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
-        if !BAUDRATES.contains(&baudrate) {
+        if !WAVESHAREV2_BAUDRATES.contains(&baudrate) {
             return Err(InstrumentError::SerialError { msg: format!("Invalid baudrate `{baudrate}`"), addr: Some(address) })
         }
 
@@ -355,16 +355,16 @@ impl WaveshareV2 {
     }
 
     pub fn set_baudrate(&mut self, new_baud: usize) -> Result<()> {
-        if !BAUDRATES.contains(&new_baud) {
+        if !WAVESHAREV2_BAUDRATES.contains(&new_baud) {
             error!("Invalid baud rate: `{}`", new_baud);
-            error!("Valid baudrates are: {:?}", BAUDRATES);
+            error!("Valid baudrates are: {:?}", WAVESHAREV2_BAUDRATES);
             return Err(InstrumentError::SerialError {
                 msg: format!("`{new_baud}` is not a valid baudrate for the WaveshareV2"),
                 addr: Some(self.0.address()),
             });
         }
 
-        let baud_code = BAUDRATES
+        let baud_code = WAVESHAREV2_BAUDRATES
             .iter()
             .position(|&x| x == new_baud)
             .unwrap() as u8;

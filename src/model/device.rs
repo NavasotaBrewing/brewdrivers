@@ -19,6 +19,7 @@ pub struct Connection {
     ///
     /// This will probably be `/dev/ttyUSB0`
     pub port: PathBuf,
+    pub baudrate: usize,
     /// The devices specific address (ie. relay number, etc.)
     ///
     /// If the device has no specific address within the controller, set to 0
@@ -55,6 +56,11 @@ impl Connection {
     /// Gets the controller type
     pub fn controller(&self) -> &Controller {
         &self.controller
+    }
+
+    /// Gets the baudrate
+    pub fn baudrate(&self) -> &usize {
+        &self.baudrate
     }
 }
 
@@ -110,6 +116,7 @@ mod tests {
     fn test_connection_port() {
         let conn = Connection {
             port: PathBuf::from("/dev/ttyUSB0"),
+            baudrate: 19200,
             controller: Controller::CN7500,
             addr: 0,
             controller_addr: 22
