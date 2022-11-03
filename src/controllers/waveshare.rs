@@ -46,7 +46,7 @@ impl SCADADevice for Waveshare {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating Waveshare device `{}`", device.id);
 
-        let mut board = Waveshare::connect(device.conn.controller_addr, &format!("{:?}", device.conn.port.as_os_str()))?;
+        let mut board = Self::connect(device.conn.controller_addr, &device.conn.port())?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
         Ok(())
@@ -54,7 +54,7 @@ impl SCADADevice for Waveshare {
     
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting Waveshare device `{}`", device.id);
-        let mut board = Waveshare::connect(device.conn.controller_addr(), &device.conn.port())?;
+        let mut board = Self::connect(device.conn.controller_addr(), &device.conn.port())?;
 
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
