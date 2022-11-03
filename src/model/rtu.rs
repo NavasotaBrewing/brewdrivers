@@ -56,7 +56,7 @@ impl RTU {
     /// them don't succeed.
     pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
         let file_path = conf_path.or(Some(crate::CONFIG_FILE));
-
+        log::info!("Using config file: {:?}", file_path);
         // TODO: Get IPv4 here programatically instead of writing it in the file
 
         // Get the contents of the config file

@@ -116,5 +116,6 @@ mod tests {
         };
 
         assert_eq!("/dev/ttyUSB0", conn.port());
+        assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
     }
 }
