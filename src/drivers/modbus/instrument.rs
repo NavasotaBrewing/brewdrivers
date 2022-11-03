@@ -74,7 +74,8 @@ impl ModbusInstrument {
             port_path: String::from(port_path),
             slave_addr,
             baudrate,
-            timeout: 100,
+            // timeout: 100
+            timeout: 20,
             ctx,
         })
     }

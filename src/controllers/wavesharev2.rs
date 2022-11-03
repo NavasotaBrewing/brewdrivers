@@ -8,7 +8,9 @@
 //!
 //! let mut ws = WaveshareV2::connect(0x01, "/dev/ttyUSB0")?;   // This will fail if the board doesn't respond
 //! ws.set_relay(3, BinaryState::On)?;                          // Turn on the 4th relay (indexed from 0)
+//!                                                             // See note in Waveshare::set_relay()
 //! println!("{:?}", ws.get_all_relays()?);                     // List all the relays
+//! ws.set_relay(3, BinaryState::Off)?;
 //! # Ok::<(), InstrumentError>(())
 //! ```
 
@@ -30,15 +32,32 @@ use crate::drivers::{
 
 use crate::model::SCADADevice;
 
+// Consts ---
+
+/// Function codes
+/// 
+/// These are the bytes that the Waveshare board expects to be sent
+pub mod func_codes {
+    /// Read relay function code byte
+    pub const READ_RELAY: u8 = 0x01;
+    /// Read address and version number function code byte
+    pub const READ_ADDR_AND_VERSION: u8 = 0x03;
+    /// Write relay function code byte
+    pub const WRITE_RELAY: u8 = 0x05;
+    /// Set baudrate function code byte
+    pub const SET_BAUD: u8 = 0x06;
+    /// Set all relays function code byte
+    pub const WRITE_ALL_RELAYS: u8 = 0x0F;
+}
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 // Hardcode the baud, we *probably* won't need to change it
 pub const WAVESHARE_BAUD: usize = 9600;
-
-#[allow(dead_code)]
 /// The max index of a relay on the Waveshare board
+#[allow(dead_code)]
 pub const RELAY_MAX: u8 = 7;
+
 
 
 /// A Waveshare board.
@@ -107,6 +126,9 @@ impl WaveshareV2 {
 
     /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
     ///
+    /// *Note:* on the physical Waveshare board, the relay numbers are printed 1-8. In the software, we
+    /// index them from 0-7 for consistency with the other relay boards. Just keep in mind that calling
+    /// this function on relay 3 will flip the relay labeled 4.
     /// ```rust,no_run
     /// use brewdrivers::controllers::*;
     ///
@@ -128,7 +150,7 @@ impl WaveshareV2 {
             // Address
             self.0.address(),
             // Command to control a relay
-            0x05,
+            func_codes::WRITE_RELAY,
             // Relay number (ours only has 8)
             0x00, relay_num,
         ];
@@ -178,7 +200,12 @@ impl WaveshareV2 {
 
     /// Returns a `Vec<BinaryState>` of all 8 relays.
     pub fn get_all_relays(&mut self) -> Result<Vec<BinaryState>> {
-        let mut bytes: Vec<u8> = vec![self.0.address(), 0x01, 0x00, 0x00, 0x00, 0x08];
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            func_codes::READ_RELAY,
+            0x00, 0x00, // Initial addr
+            0x00, 0x08  // Final addr
+        ];
         Self::append_checksum(&mut bytes)?;
         let resp = self.0.write_to_device(bytes)?;
         
@@ -224,7 +251,12 @@ impl WaveshareV2 {
     /// assert_eq!(ws.software_revision().unwrap(), "v1.00");
     /// ```
     pub fn software_revision(&mut self) -> Result<String> {
-        let mut bytes: Vec<u8> = vec![self.0.address(), 0x03, 0x80, 0x00, 0x00, 0x01];
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            func_codes::READ_ADDR_AND_VERSION,
+            0x80, 0x00, // 0x8000 reads the software revision
+            0x00, 0x01  // Fixed
+        ];
         
         Self::append_checksum(&mut bytes)?;
         
@@ -261,7 +293,12 @@ impl WaveshareV2 {
     /// assert_eq!(ws.get_address().unwrap(), 0x01);
     /// ```
     pub fn get_address(&mut self) -> Result<u8> {
-        let mut bytes: Vec<u8> = vec![0x00, 0x03, 0x40, 0x00, 0x0, 0x01];
+        let mut bytes: Vec<u8> = vec![
+            0x00, // Broadcast address
+            func_codes::READ_ADDR_AND_VERSION,
+            0x40, 0x00, // Fixed, read device address
+            0x00, 0x01  // Fixed
+        ];
 
         Self::append_checksum(&mut bytes)?;
 
@@ -295,7 +332,12 @@ impl WaveshareV2 {
     /// assert_eq!(unknown_board.get_address().unwrap(), 0x07);
     /// ```
     pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
-        let mut bytes: Vec<u8> = vec![self.0.address(), 0x06, 0x40, 0x00, 0x00, new_addr];
+        let mut bytes: Vec<u8> = vec![
+            self.0.address(),
+            func_codes::SET_BAUD,
+            0x40, 0x00,    // Fixed, sets cn rather than baud
+            0x00, new_addr // new address
+        ];
 
         Self::append_checksum(&mut bytes)?;
 
@@ -309,9 +351,9 @@ impl WaveshareV2 {
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             // These are all constant, reading all relays status
-            0x05,
-            0x00,
-            0xFF,
+            func_codes::WRITE_RELAY,
+            0x00, // Fixed
+            0xFF, // Fixed
         ];
 
         match state {

@@ -17,8 +17,8 @@ hex = "0.3.2"
 serialport = "4.0"
 crc = "2.0.0"
 
-futures = "0.3"
-tokio-modbus = { version = "0.5.3", default-features = false, features = ["rtu"] }
+futures = "0.3.25"
+tokio-modbus = { version = "0.5", default-features = false, features = ["rtu", "server"] }
 tokio = { version = "1", features = ["full"] }
 tokio-serial = "5.4.3"
 async-trait = "0.1.57"
