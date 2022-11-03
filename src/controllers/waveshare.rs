@@ -10,6 +10,8 @@
 //! println!("{:?}", ws.get_all_relays().unwrap());
 //! ```
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 // ext uses
 // Used for checksums
@@ -32,7 +34,8 @@ use crate::model::SCADADevice;
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 // Hardcode the baud, we *probably* won't need to change it
 pub const WAVESHARE_BAUD: usize = 9600;
-
+// hardcoded timeout
+pub const WAVESHARE_TIMEOUT: Duration = Duration::from_millis(45);
 #[allow(dead_code)]
 /// The max index of a relay on the Waveshare board
 pub const RELAY_MAX: u8 = 7;
@@ -86,6 +89,7 @@ impl Waveshare {
             address,
             port_path,
             WAVESHARE_BAUD,
+            WAVESHARE_TIMEOUT
         )?);
         ws.connected().map_err(|instr_err|
             InstrumentError::serialError(

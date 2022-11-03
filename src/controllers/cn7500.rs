@@ -17,6 +17,7 @@ use crate::model::{SCADADevice, Device};
 use crate::state::BinaryState;
 
 pub const CN7500_BAUD: u32 = 19200;
+pub const CN7500_TIMEOUT: u64 = 50;
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -83,7 +84,8 @@ impl SCADADevice for CN7500 {
 impl CN7500 {
     /// Connects to a CN7500 board
     ///
-    /// ```rust,no_run
+    /// Note that this uses the default baudrate and timeout for the CN7500
+    /// ```rust
     /// use brewdrivers::controllers::CN7500;
     ///
     /// #[tokio::main]
@@ -93,7 +95,7 @@ impl CN7500 {
     /// ```
     pub async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
         trace!("(CN7500 {}) connected", slave_addr);
-        let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, CN7500_BAUD).await?);
+        let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, CN7500_BAUD, CN7500_TIMEOUT).await?);
         cn.connected().await.map_err(|instr_err|
             InstrumentError::modbusError(
                 format!("CN7500 connection failed, likely busy. Error: {}", instr_err),

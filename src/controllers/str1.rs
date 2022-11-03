@@ -13,12 +13,11 @@
 //! See the [`STR1` struct](crate::controllers::STR1) or the `str1` example in the
 //! [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples).
 
-pub const STR1_BAUD: usize = 9600;
+use std::time::Duration;
 
 // external uses
 use async_trait::async_trait;
 use log::trace;
-use serde::{Deserialize, Serialize};
 
 // internal uses
 use crate::state::{BinaryState, StateError};
@@ -29,9 +28,10 @@ use crate::drivers::{
 };
 use crate::model::{Device, SCADADevice};
 
-
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
-pub struct STR1State(pub BinaryState);
+// hardcoded baudrate
+pub const STR1_BAUD: usize = 9600;
+// hardcoded timeout
+pub const STR1_TIMEOUT: Duration = Duration::from_millis(25);
 
 
 /// An `STR1XX` board.
@@ -94,7 +94,7 @@ impl STR1 {
     /// ```
     pub fn connect(address: u8, port_path: &str) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
-        let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD)?);
+        let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD, STR1_TIMEOUT)?);
         str1.connected().map_err(|instr_err|
             InstrumentError::serialError(
                 format!("STR1 board connection failed, likely busy. Error: {}", instr_err),

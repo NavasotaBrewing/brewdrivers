@@ -24,14 +24,16 @@ use crate::drivers::{Result, InstrumentError};
 ///
 /// ```no_run
 /// use brewdrivers::drivers::SerialInstrument;
+/// use std::time::Duration;
 /// 
-/// let mut board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+/// let mut board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(45)).unwrap();
 /// ```
 #[derive(Debug)]
 pub struct SerialInstrument {
     address: u8,
     port: TTYPort,
-    baudrate: usize
+    baudrate: usize,
+    timeout: Duration
 }
 
 impl SerialInstrument {
@@ -50,6 +52,11 @@ impl SerialInstrument {
         &self.port
     }
 
+    /// Returns the timeout
+    pub fn timout(&self) -> &Duration {
+        &self.timeout
+    }
+
     #[allow(unused)]
     /// Yields the TTYPort, consuming the Board struct
     pub fn owned_port(self) -> TTYPort {
@@ -65,26 +72,28 @@ impl SerialInstrument {
     /// Tries to connect to a Board at the given port and address
     /// ```rust,no_run
     /// use brewdrivers::drivers::SerialInstrument;
+    /// use std::time::Duration;
     /// 
-    /// let mut si = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600).unwrap();
+    /// let mut si = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(45)).unwrap();
     /// ```
-    pub fn new(address: u8, port_path: &str, baudrate: usize) -> Result<Self> {
-        let port = SerialInstrument::open_port(port_path, baudrate).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
+    pub fn new(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
+        let port = SerialInstrument::open_port(port_path, baudrate, timeout).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
         Ok(SerialInstrument {
             address,
             port,
-            baudrate
+            baudrate,
+            timeout,
         })
     }
 
     /// Opens a TTYPort. This is used in [`SerialInstrument::new()`](crate::drivers::SerialInstrument::new)
-    fn open_port(port_path: &str, baudrate: usize) -> std::result::Result<TTYPort, serialport::Error> {
+    fn open_port(port_path: &str, baudrate: usize, timeout: Duration) -> std::result::Result<TTYPort, serialport::Error> {
         serialport::new(port_path, baudrate as u32)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
             .stop_bits(StopBits::One)
             .flow_control(FlowControl::None)
-            .timeout(Duration::from_millis(45))
+            .timeout(timeout)
             .open_native()
     }
 
@@ -127,14 +136,14 @@ mod tests {
     #[test]
     fn test_open_port() {
         // The STR1 board, default address 0xFE (254)
-        let board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600);
+        let board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600, Duration::from_millis(100));
         assert!(board.is_ok());
     }
 
     #[test]
     fn test_write_bytes() {
         // The STR1 board, default address 0xFE (254)
-        let mut board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600).unwrap();
+        let mut board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600, Duration::from_millis(100)).unwrap();
 
         // This is the waveshare cmd for getting all relays status
         let cmd = Bytestring::from(vec![0x07, 0x14, 0xFE, 0x00, 0x01]);

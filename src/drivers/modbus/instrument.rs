@@ -16,7 +16,7 @@ use tokio_modbus::{
     prelude::Slave,
 };
 
-use crate::drivers::{Result, InstrumentError};
+use crate::drivers::{InstrumentError, Result};
 
 /// A generic async Modbus instrument.
 ///
@@ -25,9 +25,10 @@ use crate::drivers::{Result, InstrumentError};
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct ModbusInstrument {
-    pub port_path: String,
     pub slave_addr: u8,
+    pub port_path: String,
     pub baudrate: u32,
+    // TODO: change this to a Duration
     pub timeout: u64,
     #[derivative(Debug = "ignore")]
     pub ctx: Context,
@@ -44,37 +45,40 @@ impl ModbusInstrument {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
+    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
     /// }
     /// ```
-    pub async fn new(slave_addr: u8, port_path: &str, baudrate: u32) -> Result<ModbusInstrument> {
-        // TODO: I don't think the baudrate is actually used here. Maybe remove it?
-        trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {} }}", slave_addr, slave_addr, port_path, baudrate);
-        let builder = tokio_serial::new(port_path, 19200);
+    pub async fn new(
+        slave_addr: u8,
+        port_path: &str,
+        baudrate: u32,
+        timeout: u64,
+    ) -> Result<ModbusInstrument> {
+        trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {}, timeout: {} }}", slave_addr, slave_addr, port_path, baudrate, timeout);
         
+        // Open a serial port with tokio_serial
+        let builder = tokio_serial::new(port_path, baudrate);
         let port = match tokio_serial::SerialStream::open(&builder) {
             Ok(port) => port,
             Err(serial_err) => {
                 error!("Error when connecting to Modbus Instrument. There is likely no port location at `{}`", port_path);
                 error!("Serial Error: {}", serial_err);
-                return Err(
-                    InstrumentError::serialError(
-                        format!("serial error: {}", serial_err),
-                        Some(slave_addr)
-                    )
-                )
+                return Err(InstrumentError::serialError(
+                    format!("serial error: {}", serial_err),
+                    Some(slave_addr),
+                ));
             }
         };
-        
-        let slave = Slave(slave_addr);
 
-        let ctx = rtu::connect_slave(port, slave).await?;
+        // Pass that serial port to tokio_modbus
+        let ctx = rtu::connect_slave(port, Slave(slave_addr)).await?;
 
+        // Make a new modbus instrument with the tokio_modbus content
         Ok(ModbusInstrument {
             port_path: String::from(port_path),
             slave_addr,
             baudrate,
-            timeout: 100,
+            timeout,
             ctx,
         })
     }
@@ -86,7 +90,7 @@ impl ModbusInstrument {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
     ///     // This is just an example of interaction with an OMEGA CN7500 PID.
     ///     let rsp = instr.read_registers(0x1000, 1).await;
     ///     assert!(rsp.is_ok());
@@ -102,7 +106,11 @@ impl ModbusInstrument {
         match timeout.await {
             Ok(res) => return res.map_err(|err| InstrumentError::IOError(err)),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, register));
+                return Err(InstrumentError::modbusTimeoutError(
+                    &self.port_path,
+                    self.slave_addr,
+                    register,
+                ));
             }
         }
     }
@@ -110,12 +118,12 @@ impl ModbusInstrument {
     /// Writes to a register with the given `u16`. Returns `Ok(())` on success.
     ///
     /// ## Examples
-    /// ```rust,no_run
+    /// ```rust
     /// use brewdrivers::drivers::ModbusInstrument;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200).await.unwrap();
+    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
     ///     // This is just an example of interaction with an OMEGA CN7500 PID.
     ///     // This would set the CN7500 setpoint to 140.0
     ///     let rsp = instr.write_register(0x1001, 1400).await;
@@ -134,7 +142,11 @@ impl ModbusInstrument {
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, register));
+                return Err(InstrumentError::modbusTimeoutError(
+                    &self.port_path,
+                    self.slave_addr,
+                    register,
+                ));
             }
         }
     }
@@ -148,7 +160,11 @@ impl ModbusInstrument {
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, coil));
+                return Err(InstrumentError::modbusTimeoutError(
+                    &self.port_path,
+                    self.slave_addr,
+                    coil,
+                ));
             }
         }
     }
@@ -162,7 +178,11 @@ impl ModbusInstrument {
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(&self.port_path, self.slave_addr, coil));
+                return Err(InstrumentError::modbusTimeoutError(
+                    &self.port_path,
+                    self.slave_addr,
+                    coil,
+                ));
             }
         }
     }
@@ -171,17 +191,18 @@ impl ModbusInstrument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use tokio::test;
 
     async fn instr() -> ModbusInstrument {
-        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200)
+        // We use a high timeout here because performance in tests doesn't matter too much
+        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 100)
             .await
             .unwrap()
     }
 
     #[test]
-    
+
     async fn test_read_write_coil() {
         let mut instr = instr().await;
         let rsp1 = instr.write_coil(0x0814, true).await;
@@ -198,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    
+
     async fn test_read_write_register() {
         let mut instr = instr().await;
         // Set SV in register 0x1001 to 1400
