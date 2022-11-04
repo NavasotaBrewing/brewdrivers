@@ -6,7 +6,7 @@ use brewdrivers::controllers::Waveshare;
 use brewdrivers::state::BinaryState;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0")?;
+    let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(100))?;
 
     // getting the software revision is a smoke test
     println!("Board software revision: {:?}", ws.software_revision());
