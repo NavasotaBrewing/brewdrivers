@@ -297,6 +297,21 @@ impl Waveshare {
     }
 }
 
+
+/// Creates a controller connection from a Device
+impl TryFrom<&Device> for Waveshare {
+    type Error = InstrumentError;
+    fn try_from(device: &Device) -> std::result::Result<Self, Self::Error> {
+        Self::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
+        )
+    }
+}
+
+
 // These are disabled because I don't have a waveshare v1 and cargo doesn't
 // allow me to skip these, because wavesharev2 is a similar name
 #[cfg(False)]

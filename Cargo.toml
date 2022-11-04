@@ -22,7 +22,6 @@ tokio-modbus = { version = "0.5", default-features = false, features = ["rtu", "
 tokio = { version = "1", features = ["full"] }
 tokio-serial = "5.4.3"
 async-trait = "0.1.57"
-
 # This is used to get the Debug derivation to ignore a field
 derivative = "2.2.0"
 

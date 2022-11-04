@@ -226,6 +226,19 @@ impl STR1 {
     }
 }
 
+/// Creates a controller connection from a Device
+impl TryFrom<&Device> for STR1 {
+    type Error = InstrumentError;
+    fn try_from(device: &Device) -> std::result::Result<Self, Self::Error> {
+        Self::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

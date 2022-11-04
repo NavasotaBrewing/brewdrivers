@@ -166,6 +166,7 @@ impl CN7500 {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use crate::controllers::Controller;
