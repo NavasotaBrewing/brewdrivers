@@ -9,9 +9,9 @@
 //! 
 //! Note that technically the devices that don't provide register and coil addresses are still using Modbus RTU. I don't care.
 
-pub(crate) mod modbus;
-pub(crate) mod serial;
-pub(crate) mod instrument_error;
+pub mod modbus;
+pub mod serial;
+pub mod instrument_error;
 
 pub use instrument_error::InstrumentError;
 pub use modbus::ModbusInstrument;
