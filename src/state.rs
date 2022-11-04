@@ -1,23 +1,41 @@
+//! Generalize states for controllers
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub type PV = f64;
+pub type SV = f64;
+
 /// A generalized state that is attached to all `Device`s
 /// 
-/// Note that each controller uses a different set of these values.
+/// Note that each controller uses a different set of these values. For example, 
+/// a relay board uses `relay_state` but won't ever touch `pv` or `sv`.
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct DeviceState {
     pub relay_state: Option<BinaryState>,
-    pub pv: Option<f64>,
-    pub sv: Option<f64>,
+    pub pv: Option<PV>,
+    pub sv: Option<SV>,
 }
 
 impl Default for DeviceState {
+    /// Creates a default state. This is used when deserializing an RTU model from the 
+    /// configuration file. If the user doesn't provide state values in the config file (why would they?),
+    /// then this will fill in the defaults.
+    ///
+    /// ```text
+    /// DeviceState {
+    ///     relay_state: Some(BinaryState::Off),
+    ///     pv: Some(0.0),
+    ///     sv: Some(0.0)
+    /// }
+    /// ```
     fn default() -> Self {
         Self { relay_state: Default::default(), pv: Default::default(), sv: Default::default() }
     }
 }
 
+/// A general state error. This is mostly used when a bad state value is passed,
+/// or the wrong type of state is given to a device.
 #[derive(Debug, Error)]
 pub enum StateError {
     #[error("Couldn't deserialize `{0}` into state variant")]
@@ -37,6 +55,24 @@ pub enum BinaryState {
 
 impl FromStr for BinaryState {
     type Err = StateError;
+    /// Converts from a string to a BinaryState
+    /// 
+    /// ```rust
+    /// use brewdrivers::state::BinaryState;
+    /// use std::str::FromStr;
+    /// 
+    /// assert_eq!(BinaryState::from_str("on").unwrap(), BinaryState::On);
+    /// assert_eq!(BinaryState::from_str("ON").unwrap(), BinaryState::On);
+    /// assert_eq!(BinaryState::from_str("On").unwrap(), BinaryState::On);
+    /// assert_eq!(BinaryState::from_str("off").unwrap(), BinaryState::Off);
+    /// assert_eq!(BinaryState::from_str("OFF").unwrap(), BinaryState::Off);
+    /// assert_eq!(BinaryState::from_str("Off").unwrap(), BinaryState::Off);
+    /// 
+    /// // This doesn't work
+    /// // we have to differentiate between stepped states and binary states
+    /// assert!(BinaryState::from_str("1").is_err());
+    /// assert!(BinaryState::from_str("0").is_err());
+    /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "On" | "ON" | "on" => Ok(BinaryState::On),
@@ -47,6 +83,11 @@ impl FromStr for BinaryState {
 }
 
 impl std::fmt::Display for BinaryState {
+    /// ```rust
+    /// # use brewdrivers::state::BinaryState;
+    /// assert_eq!("On", format!("{}", BinaryState::On));
+    /// assert_eq!("Off", format!("{}", BinaryState::Off));
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             BinaryState::On => write!(f, "On"),
@@ -56,6 +97,13 @@ impl std::fmt::Display for BinaryState {
 }
 
 impl From<bool> for BinaryState {
+    /// Converts from `bool` to `BinaryState`
+    /// 
+    /// ```rust
+    /// # use brewdrivers::state::BinaryState;
+    /// assert_eq!(BinaryState::from(true), BinaryState::On);
+    /// assert_eq!(BinaryState::from(false), BinaryState::Off);
+    /// ```
     fn from(value: bool) -> Self {
         match value {
             true => BinaryState::On,
@@ -65,6 +113,7 @@ impl From<bool> for BinaryState {
 }
 
 impl Default for BinaryState {
+    /// Defaults to `BinaryState::Off`
     fn default() -> Self { BinaryState::Off }
 }
 

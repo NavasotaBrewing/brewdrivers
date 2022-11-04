@@ -1,23 +1,34 @@
-//! Low level drivers for the Navasota Brewing Company's brewing control system.
+//! A 3 tiered driver library for interacting with Modbus devices on a SCADA-like network.
 //!
 //! This library is one of a set of repositories in the 
 //! [Brewery Control System project](https://github.com/NavasotaBrewing)
 //! of the [Navasota Brewing Company](https://navasotabrewing.com). It contains low 
 //! level drivers for devices we use in the brewing process.
 //! 
-//! the [`drivers`](crate::drivers) module contains the low level code for implementing Modbus or serial devices.
+//! # Layers
 //! 
-//! The [`controllers`](crate::controllers) module contains implementations built on those drivers for a specific hardware
-//! controller, like the CN7500 from Omega Instruments for example.
-//!
-//! New drivers will be added as needed. See the [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples)
-//! to see how to use this library, and see the [organization readme](https://github.com/NavasotaBrewing/readme) for more information about the
+//! This crate operates on 3 layers:
+//! 1. [`drivers`](crate::drivers) -- Low level abtractions of Modbus or other serial devices. These are very general and 
+//! allow communication to nearly any device.
+//! 2. [`controllers`](crate::controllers) -- Implementations of drivers for specific controllers. These are the controllers
+//! we use to control field devices in the brewery system.
+//! 3. [`model`](crate::model) -- A conceptual model of an RTU, containing a list of devices. These devices are serializable and can be
+//! sent over the network. They contain connection details and state, so that they can use a `controller` to read or enact change 
+//! in a field device. You can write a configuration file that models the RTU and its devices, then this crate can read the configuration 
+//! file and update/enact the devices as necessary.
+//! 
+//! New controllers will be added as needed. See the [`examples/` directory](https://github.com/NavasotaBrewing/brewdrivers/tree/master/examples)
+//! to see how to use this library, and see the [organization documentation](https://github.com/NavasotaBrewing/documentation) for more information about the
 //! hardware and project as a whole.
 
 #![allow(non_snake_case)]
 
+/// Default configuration file
+/// 
+/// You are strongly encouraged to use this file instead of any others
 #[allow(unused)]
 pub const CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/rtu_conf.yaml";
+/// Testing configuration file
 #[allow(unused)]
 pub const TEST_CONFIG_FILE: &'static str = "/etc/NavasotaBrewing/test_conf.yaml";
 
