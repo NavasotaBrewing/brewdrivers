@@ -3,7 +3,7 @@ use crate::drivers::InstrumentError;
 
 pub mod device;
 pub mod model_error;
-pub mod validators;
+mod validators;
 pub mod rtu;
 
 pub use device::Device;

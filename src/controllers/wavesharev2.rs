@@ -20,27 +20,17 @@ use crate::state::{BinaryState, StateError};
 
 use crate::model::SCADADevice;
 
-// Consts ---
-
 /// Function codes
-///
-/// These are the bytes that the Waveshare board expects to be sent
 pub mod func_codes {
-    /// Read relay function code byte
     pub const READ_RELAY: u8 = 0x01;
-    /// Read address and version number function code byte
     pub const READ_ADDR_AND_VERSION: u8 = 0x03;
-    /// Write relay function code byte
     pub const WRITE_RELAY: u8 = 0x05;
-    /// Set baudrate function code byte
     pub const SET_BAUD: u8 = 0x06;
-    /// Set all relays function code byte
     pub const WRITE_ALL_RELAYS: u8 = 0x0F;
 }
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
-
 // The baudrates that the WaveshareV2 supports
 pub const WAVESHAREV2_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
 
@@ -341,7 +331,6 @@ impl WaveshareV2 {
                 bytes.push(0x00);
             }
         }
-
         Self::append_checksum(&mut bytes)?;
 
         self.0.write_to_device(bytes)?;
@@ -378,6 +367,20 @@ impl WaveshareV2 {
     }
 }
 
+
+/// Creates a controller connection from a Device
+impl TryFrom<&Device> for WaveshareV2 {
+    type Error = InstrumentError;
+    fn try_from(device: &Device) -> std::result::Result<Self, Self::Error> {
+        Self::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::controllers::Controller;
@@ -390,17 +393,20 @@ mod tests {
     // Helper function
     fn ws() -> WaveshareV2 {
         let device = crate::tests::test_device_from_type(Controller::WaveshareV2);
-        WaveshareV2::connect(
-            device.conn.controller_addr(),
-            &device.conn.port(),
-            9600,
-            Duration::from_millis(50)
-        ).unwrap()
+        WaveshareV2::try_from(&device).unwrap()
     }
 
     #[test]
     fn test_connect_to_wavesharev2() {
-        let ws = WaveshareV2::connect(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(50));
+        // get the connection details
+        let device = crate::tests::test_device_from_type(Controller::WaveshareV2);
+        let c = device.conn;
+        let ws = WaveshareV2::connect(
+            c.controller_addr(),
+            &c.port(),
+            c.baudrate().clone(),
+            c.timeout()
+        );
         assert!(ws.is_ok());
     }
 
@@ -482,16 +488,17 @@ mod tests {
         assert_eq!(addr.unwrap(), 0x01);
     }
 
-    #[ignore = "If this fails then it can leave the controller address set to the wrong value"]
     #[test]
     fn test_set_device_address() {
         let mut ws = ws();
 
-        // TODO: Get this value from the config file
-        assert_eq!(ws.get_address().unwrap(), 0x01);
-        assert!(ws.set_address(0x05).is_ok());
-        assert_eq!(ws.get_address().unwrap(), 0x05);
-        assert!(ws.set_address(0x01).is_ok());
-        assert_eq!(ws.get_address().unwrap(), 0x01);
+        // Get any wavesharev2 device from the configuration file
+        let device = crate::tests::test_device_from_type(Controller::WaveshareV2);
+        let addr = device.conn.controller_addr();
+        assert_eq!(ws.get_address().unwrap(), addr);
+        assert!(ws.set_address(addr + 1).is_ok());
+        assert_eq!(ws.get_address().unwrap(), addr + 1);
+        assert!(ws.set_address(addr).is_ok());
+        assert_eq!(ws.get_address().unwrap(), addr);
     }
 }

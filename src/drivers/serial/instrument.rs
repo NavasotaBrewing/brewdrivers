@@ -127,21 +127,33 @@ impl SerialInstrument {
 
 #[cfg(test)]
 mod tests {
-    use crate::drivers::serial::Bytestring;
+    use crate::{drivers::serial::Bytestring, controllers::Controller};
 
     use super::*;
 
     #[test]
     fn test_open_port() {
-        // The STR1 board, default address 0xFE (254)
-        let board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600, Duration::from_millis(100));
+        let device = crate::tests::test_device_from_type(Controller::STR1);
+        let c = device.conn;
+        let board = SerialInstrument::new(
+            c.controller_addr(),
+            &c.port(),
+            *c.baudrate(),
+            c.timeout()
+        );
         assert!(board.is_ok());
     }
 
     #[test]
     fn test_write_bytes() {
-        // The STR1 board, default address 0xFE (254)
-        let mut board = SerialInstrument::new(0xFE, "/dev/ttyUSB0", 9600, Duration::from_millis(100)).unwrap();
+        let device = crate::tests::test_device_from_type(Controller::WaveshareV2);
+        let c = device.conn;
+        let mut board = SerialInstrument::new(
+            c.controller_addr(),
+            &c.port(),
+            *c.baudrate(),
+            c.timeout()
+        ).unwrap();
 
         // This is the waveshare cmd for getting all relays status
         let cmd = Bytestring::from(vec![0x07, 0x14, 0xFE, 0x00, 0x01]);

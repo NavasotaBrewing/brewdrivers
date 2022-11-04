@@ -1,6 +1,7 @@
 use std::fs;
 use std::net::Ipv4Addr;
 
+use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::drivers::InstrumentError;
@@ -27,6 +28,7 @@ pub struct RTU {
 impl RTU {
     /// This calls [`Device::enact`](crate::model::Device::enact) on each device in the RTU
     pub async fn enact(&mut self) -> Result<(), InstrumentError> {
+        info!("Enacting RTU");
         for dev in self.devices.iter_mut() {
             dev.enact().await?;
         }
@@ -35,6 +37,7 @@ impl RTU {
 
     /// This calls [`Device::update`](crate::model::Device::update) on each device in the RTU
     pub async fn update(&mut self) -> Result<(), InstrumentError> {
+        info!("Updating RTU");
         for dev in self.devices.iter_mut() {
             dev.update().await?;
         }
@@ -56,7 +59,7 @@ impl RTU {
     /// them don't succeed.
     pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
         let file_path = conf_path.or(Some(crate::CONFIG_FILE));
-        log::info!("Using config file: {:?}", file_path);
+        log::info!("Generating RTU. Using config file: {:?}", file_path);
         // TODO: Get IPv4 here programatically instead of writing it in the file
 
         // Get the contents of the config file
@@ -76,10 +79,34 @@ impl RTU {
 
     /// Run all the [`validators`](crate::model::validators). Return an error if any of them don't succeed.
     pub fn validate(&self) -> Result<(), ModelError> {
-        validators::devices_have_unique_ids(&self)?;
-        validators::id_has_no_whitespace(&self)?;
-        validators::serial_port_is_valid(&self)?;
-        validators::controller_baudrate_is_valid(&self)?;
+        use validators::*;
+
+        if let Err(e) = devices_have_unique_ids(&self) {
+            error!("{}", e);
+            return Err(e);
+        }
+
+        if let Err(e) = id_has_no_whitespace(&self) {
+            error!("{}", e);
+            return Err(e);
+        }
+        
+        if let Err(e) = serial_port_is_valid(&self) {
+            error!("{}", e);
+            return Err(e);
+        }
+
+        if let Err(e) = controller_baudrate_is_valid(&self) {
+            error!("{}", e);
+            return Err(e);
+        }
+
+        if let Err(e) = timeout_valid(&self) {
+            error!("{}", e);
+            return Err(e);
+        }
+        
+        info!("RTU passed all validators");
         Ok(())
     }
 }

@@ -35,7 +35,7 @@ pub struct CN7500(ModbusInstrument);
 impl SCADADevice for CN7500 {
     /// Updates the given device state using this controller
     async fn update(device: &mut Device) -> Result<()> {
-        trace!("Updating Waveshare device `{}`", device.id);
+        trace!("Updating CN7500 device `{}`", device.id);
 
         let mut cn = CN7500::connect(
             device.conn.controller_addr(),
@@ -156,6 +156,7 @@ impl CN7500 {
     }
 
     pub async fn software_revision(&mut self) -> Result<Vec<u16>> {
+        trace!("(CN7500 {}) polled software revision", self.0.slave_addr);
         self.0.read_registers(0x102F, 1).await.map_err(|_|
             InstrumentError::SerialError {
                 msg: format!("Software revision couldn't be retrieved, the controller likely isn't connected"),

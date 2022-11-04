@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::controllers::*;
@@ -93,6 +94,7 @@ pub struct Device {
 
 impl Device {
     pub async fn update(&mut self) -> Result<()> {
+        info!("Updating device `{}`", self.id);
         match self.conn.controller {
             Controller::STR1 => STR1::update(self).await,
             Controller::CN7500 => CN7500::update(self).await,
@@ -102,6 +104,7 @@ impl Device {
     }
 
     pub async fn enact(&mut self) -> Result<()> {
+        info!("Enacting device `{}`", self.id);
         match self.conn.controller {
             Controller::STR1 => STR1::enact(self).await,
             Controller::CN7500 => CN7500::enact(self).await,
