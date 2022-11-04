@@ -79,6 +79,7 @@ impl RTU {
         validators::devices_have_unique_ids(&self)?;
         validators::id_has_no_whitespace(&self)?;
         validators::serial_port_is_valid(&self)?;
+        validators::controller_baudrate_is_valid(&self)?;
         Ok(())
     }
 }

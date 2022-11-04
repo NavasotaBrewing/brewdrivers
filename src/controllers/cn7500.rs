@@ -6,6 +6,8 @@
 //!
 //! Note: you can set the temperature units (`F` or `C`) of the board with [`CN7500::set_degrees`](crate::controllers::CN7500::set_degrees).
 //! All units returned from the board or sent to it (when setting the setpoint value) will use the unit that the board is configured to at the time.
+use std::time::Duration;
+
 use async_trait::async_trait;
 use log::trace;
 use crate::drivers::{
@@ -16,8 +18,7 @@ use crate::drivers::{
 use crate::model::{SCADADevice, Device};
 use crate::state::BinaryState;
 
-pub const CN7500_BAUD: u32 = 19200;
-pub const CN7500_TIMEOUT: u64 = 50;
+pub const CN7500_BAUDRATES: [usize; 5] = [2400, 4800, 9600, 19200, 38400];
 
 #[derive(Debug, Clone)]
 pub enum Degree {
@@ -25,24 +26,7 @@ pub enum Degree {
     Celsius,
 }
 
-/// A CN7500 PID Controller.
-///
-/// ```rust,no_run
-/// use brewdrivers::controllers::CN7500;
-///
-/// #[tokio::main]
-/// async fn main() {
-///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.expect("Couldn't get device");
-///
-///     match cn.get_pv().await {
-///         Ok(pv) => println!("CN7500 PV: {}", pv),
-///         Err(e) => eprintln!("Error! {}", e)
-///     }
-///
-///     cn.set_sv(145.6).await.expect("Couldn't set sv");
-///     assert_eq!(145.6, cn.get_sv().await.unwrap());
-/// }
-/// ```
+/// A CN7500 PID Controller
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
 
@@ -53,7 +37,12 @@ impl SCADADevice for CN7500 {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating Waveshare device `{}`", device.id);
 
-        let mut cn = CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await?;
+        let mut cn = CN7500::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate() as u64,
+            device.conn.timeout()
+        ).await?;
 
         device.state.relay_state = Some(cn.is_running().await?.into());
         device.state.pv = Some(cn.get_pv().await?);
@@ -64,8 +53,14 @@ impl SCADADevice for CN7500 {
     
     /// Writes the given device state to this controller
     async fn enact(device: &mut Device) -> Result<()> {
-        trace!("Enacting STR1 device `{}`", device.id);
-        let mut cn = CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await?;
+        trace!("Enacting CN7500 device `{}`", device.id);
+
+        let mut cn = CN7500::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate() as u64,
+            device.conn.timeout()
+        ).await?;
     
         match device.state.relay_state {
             Some(BinaryState::On) => cn.run().await?,
@@ -83,19 +78,9 @@ impl SCADADevice for CN7500 {
 
 impl CN7500 {
     /// Connects to a CN7500 board
-    ///
-    /// Note that this uses the default baudrate and timeout for the CN7500
-    /// ```rust
-    /// use brewdrivers::controllers::CN7500;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let mut cn = CN7500::connect(0x16, "/dev/ttyUSB0").await.unwrap();
-    /// }
-    /// ```
-    pub async fn connect(slave_addr: u8, port_path: &str) -> Result<Self> {
+    pub async fn connect(slave_addr: u8, port_path: &str, baudrate: u64, timeout: Duration) -> Result<Self> {
         trace!("(CN7500 {}) connected", slave_addr);
-        let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, CN7500_BAUD, CN7500_TIMEOUT).await?);
+        let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, baudrate, timeout).await?);
         cn.connected().await.map_err(|instr_err|
             InstrumentError::modbusError(
                 format!("CN7500 connection failed, likely busy. Error: {}", instr_err),
@@ -190,7 +175,12 @@ mod tests {
 
     async fn instr() -> CN7500 {
         let device = crate::tests::test_device_from_type(Controller::CN7500);
-        CN7500::connect(device.conn.controller_addr(), &device.conn.port()).await.unwrap()
+        CN7500::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate() as u64,
+            device.conn.timeout()
+        ).await.unwrap()
     }
 
     #[test]
@@ -228,10 +218,8 @@ mod tests {
     }
 
     #[test]
-    async fn test_cn7500_responds_when_connected() {
-        let cn = CN7500::connect(0x16, "/dev/ttyUSB0").await;
-        assert!(cn.is_ok());
-        let cn2 = CN7500::connect(0x18, "/dev/ttyUSB0").await;
+    async fn test_cn7500_doesnt_respond_when_bad_conn() {
+        let cn2 = CN7500::connect(0x18, "/dev/ttyUSB0", 9600, Duration::from_millis(100)).await;
         assert!(cn2.is_err());
     }
 }

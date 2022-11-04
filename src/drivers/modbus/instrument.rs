@@ -27,9 +27,9 @@ use crate::drivers::{InstrumentError, Result};
 pub struct ModbusInstrument {
     pub slave_addr: u8,
     pub port_path: String,
-    pub baudrate: u32,
+    pub baudrate: u64,
     // TODO: change this to a Duration
-    pub timeout: u64,
+    pub timeout: Duration,
     #[derivative(Debug = "ignore")]
     pub ctx: Context,
 }
@@ -38,26 +38,16 @@ impl ModbusInstrument {
     /// Creates a new `ModbusInstrument`. Opens a serial port on the given port path.
     ///
     /// This will *not* fail if the device is unresponsive, only if the port file (`/dev/ttyUSB0` or similar) doesn't exist.
-    ///
-    /// ## Examples
-    /// ```rust,no_run
-    /// use brewdrivers::drivers::ModbusInstrument;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
-    /// }
-    /// ```
     pub async fn new(
         slave_addr: u8,
         port_path: &str,
-        baudrate: u32,
-        timeout: u64,
+        baudrate: u64,
+        timeout: Duration,
     ) -> Result<ModbusInstrument> {
-        trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {}, timeout: {} }}", slave_addr, slave_addr, port_path, baudrate, timeout);
+        trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {}, timeout: {:?} }}", slave_addr, slave_addr, port_path, baudrate, timeout);
         
         // Open a serial port with tokio_serial
-        let builder = tokio_serial::new(port_path, baudrate);
+        let builder = tokio_serial::new(port_path, baudrate as u32);
         let port = match tokio_serial::SerialStream::open(&builder) {
             Ok(port) => port,
             Err(serial_err) => {
@@ -84,24 +74,10 @@ impl ModbusInstrument {
     }
 
     /// Asyncronously reads a number of registers.
-    ///
-    /// ```rust,no_run
-    /// use brewdrivers::drivers::ModbusInstrument;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
-    ///     // This is just an example of interaction with an OMEGA CN7500 PID.
-    ///     let rsp = instr.read_registers(0x1000, 1).await;
-    ///     assert!(rsp.is_ok());
-    ///     assert!(rsp.unwrap().len() == 1);
-    /// }
-    /// ```
     pub async fn read_registers(&mut self, register: u16, count: u16) -> Result<Vec<u16>> {
         let task = self.ctx.read_holding_registers(register, count);
 
-        // TODO: This code is used a lot, maybe abtract it?
-        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+        let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
             Ok(res) => return res.map_err(|err| InstrumentError::IOError(err)),
@@ -116,28 +92,10 @@ impl ModbusInstrument {
     }
 
     /// Writes to a register with the given `u16`. Returns `Ok(())` on success.
-    ///
-    /// ## Examples
-    /// ```rust
-    /// use brewdrivers::drivers::ModbusInstrument;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let mut instr = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
-    ///     // This is just an example of interaction with an OMEGA CN7500 PID.
-    ///     // This would set the CN7500 setpoint to 140.0
-    ///     let rsp = instr.write_register(0x1001, 1400).await;
-    ///     if rsp.is_ok() {
-    ///         println!("Register written successfully!");
-    ///     } else {
-    ///         println!("Register couldn't be written to. Error: {}", rsp.unwrap_err());
-    ///     }
-    /// }
-    /// ```
     pub async fn write_register(&mut self, register: u16, value: u16) -> Result<()> {
         let task = self.ctx.write_single_register(register, value);
 
-        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+        let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
@@ -155,7 +113,7 @@ impl ModbusInstrument {
     pub async fn read_coils(&mut self, coil: u16, count: u16) -> Result<Vec<bool>> {
         let task = self.ctx.read_coils(coil, count);
 
-        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+        let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
@@ -173,7 +131,7 @@ impl ModbusInstrument {
     pub async fn write_coil(&mut self, coil: u16, value: bool) -> Result<()> {
         let task = self.ctx.write_single_coil(coil, value);
 
-        let timeout = time::timeout(Duration::from_millis(self.timeout), task);
+        let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
             Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
@@ -196,7 +154,7 @@ mod tests {
 
     async fn instr() -> ModbusInstrument {
         // We use a high timeout here because performance in tests doesn't matter too much
-        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 100)
+        ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, Duration::from_millis(100))
             .await
             .unwrap()
     }

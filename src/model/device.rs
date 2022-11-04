@@ -2,6 +2,7 @@
 //! sent through the network between web servers. It contains an implementation to talk with the hardware
 //! through the drivers also provided by this crate.
 use std::path::PathBuf;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +21,7 @@ pub struct Connection {
     /// This will probably be `/dev/ttyUSB0`
     pub port: PathBuf,
     pub baudrate: usize,
+    pub timeout: u64,
     /// The devices specific address (ie. relay number, etc.)
     ///
     /// If the device has no specific address within the controller, set to 0
@@ -61,6 +63,10 @@ impl Connection {
     /// Gets the baudrate
     pub fn baudrate(&self) -> &usize {
         &self.baudrate
+    }
+
+    pub fn timeout(&self) -> Duration {
+        Duration::from_millis(self.timeout)
     }
 }
 
@@ -117,6 +123,7 @@ mod tests {
         let conn = Connection {
             port: PathBuf::from("/dev/ttyUSB0"),
             baudrate: 19200,
+            timeout: 200,
             controller: Controller::CN7500,
             addr: 0,
             controller_addr: 22

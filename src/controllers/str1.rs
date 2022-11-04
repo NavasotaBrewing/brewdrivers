@@ -20,36 +20,20 @@ use async_trait::async_trait;
 use log::trace;
 
 // internal uses
-use crate::state::{BinaryState, StateError};
 use crate::drivers::{
     serial::{Bytestring, SerialInstrument},
-    InstrumentError,
-    Result
+    InstrumentError, Result,
 };
 use crate::model::{Device, SCADADevice};
+use crate::state::{BinaryState, StateError};
 
-// hardcoded baudrate
-pub const STR1_BAUD: usize = 9600;
-// hardcoded timeout
-pub const STR1_TIMEOUT: Duration = Duration::from_millis(25);
-
+pub const STR1_BAUDRATES: [usize; 10] = [
+    300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200,
+];
 
 /// An `STR1XX` board.
 ///
 /// This struct contains connection details for an STR108 or STR116 relay board.
-///
-/// ## Examples
-/// ```rust,no_run
-/// use brewdrivers::controllers::STR1;
-/// use brewdrivers::state::BinaryState;
-///
-/// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
-/// board.get_relay(0); // -> BinaryState::Off;
-/// board.set_relay(0,BinaryState::On);
-/// board.get_relay(0); // -> BinaryState::On;
-///
-/// board.relay_count(); // -> Some(8)
-/// ```
 #[derive(Debug)]
 pub struct STR1(SerialInstrument);
 
@@ -57,22 +41,32 @@ pub struct STR1(SerialInstrument);
 impl SCADADevice for STR1 {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating STR1 device `{}`", device.id);
-        let mut board = STR1::connect(device.conn.controller_addr(), &device.conn.port())?;
+        let mut board = STR1::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate(),
+            device.conn.timeout()
+        )?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr())?);
         Ok(())
     }
 
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting STR1 device `{}`", device.id);
-        let mut board = STR1::connect(device.conn.controller_addr(), &device.conn.port())?;
+        let mut board = STR1::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate(),
+            device.conn.timeout()
+        )?;
 
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
-            None => return Err(
-                InstrumentError::StateError(
-                    StateError::BadValue(device.state.clone())
-                )
-            )
+            None => {
+                return Err(InstrumentError::StateError(StateError::BadValue(
+                    device.state.clone(),
+                )))
+            }
         }
         Ok(())
     }
@@ -80,37 +74,33 @@ impl SCADADevice for STR1 {
 
 impl STR1 {
     /// Attempts to connect to an STR1 board.
-    ///
-    /// The `address` is the controller number the board is programmed to (default `0xFE`).
-    ///
-    /// ## Examples
-    /// ```rust,no_run
-    /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::state::BinaryState;
-    ///
-    /// let mut board = STR1::connect(0xFE, "/dev/ttyUSB0").expect("Couldn't connect to device");
-    /// board.get_relay(0);
-    /// // ...
-    /// ```
-    pub fn connect(address: u8, port_path: &str) -> Result<Self> {
+    pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
-        let mut str1 = STR1(SerialInstrument::new(address, port_path, STR1_BAUD, STR1_TIMEOUT)?);
-        str1.connected().map_err(|instr_err|
+        let mut str1 = STR1(SerialInstrument::new(
+            address,
+            port_path,
+            baudrate,
+            timeout,
+        )?);
+        str1.connected().map_err(|instr_err| {
             InstrumentError::serialError(
-                format!("STR1 board connection failed, likely busy. Error: {}", instr_err),
-                Some(address)
+                format!(
+                    "STR1 board connection failed, likely busy. Error: {}",
+                    instr_err
+                ),
+                Some(address),
             )
-        )?;
+        })?;
         Ok(str1)
     }
-    
+
     /// Attempts to communicate with the board, returning Ok(()) if it responds.
     pub fn connected(&mut self) -> Result<()> {
         trace!("(STR1 {}) connected", self.0.address());
         self.relay_count()?;
         Ok(())
     }
-    
+
     /// Sets a relay to On or Off.
     pub fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
         trace!(
@@ -121,7 +111,7 @@ impl STR1 {
             BinaryState::Off => 0,
             BinaryState::On => 1,
         };
-    
+
         self.write_to_device(Bytestring::from(vec![
             0x08,
             0x17,
@@ -130,18 +120,18 @@ impl STR1 {
             0x01,
             new_state_num,
         ]))?;
-    
+
         Ok(())
     }
-    
+
     /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
         trace!("(STR1 {}) getting relay {relay_num}", self.0.address());
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;
-    
+
         let result = hex::encode(output_buf);
-    
+
         match result.chars().nth(7) {
             Some('1') => return Ok(BinaryState::On),
             _ => return Ok(BinaryState::Off),
@@ -154,20 +144,6 @@ impl STR1 {
     ///
     /// This method uses a [`Bytestring`](crate::drivers::serial::Bytestring) to serialize the bytes you pass in,
     /// meaning you don't have to add the `MA0`, `MA1`, `CS` (checksum), and `MA0` bytes that the board requires.
-    ///
-    /// ## Example
-    /// ```rust,no_run
-    /// use brewdrivers::controllers::STR1;
-    /// use brewdrivers::drivers::serial::Bytestring;
-    ///
-    /// let mut board = STR1::connect(0x01, "/dev/ttyUSB0").expect("Couldn't connect to device");
-    ///
-    /// // These bytes are to read a relay status
-    /// let output_buf: Vec<u8> = board.write_to_device(
-    ///     Bytestring::from(vec![0x07, 0x14, 0x01, 0x00, 0x01])
-    /// ).unwrap();
-    /// assert!(output_buf.len() > 1);
-    /// ```
     pub fn write_to_device(&mut self, bytestring: Bytestring) -> Result<Vec<u8>> {
         trace!("(STR1 {}) writing to device", self.0.address());
         self.0.write_to_device(bytestring.to_bytes())
@@ -209,6 +185,25 @@ impl STR1 {
         Ok(())
     }
 
+    /// Sets the baudrate of the board. See [`STR1_BAUDRATES`](crate::controllers::str1::STR1_BAUDRATES)
+    pub fn set_baudrate(&mut self, new_baudrate: usize) -> Result<()> {
+        trace!("Setting STR1 (addr {}) baudrate to {}", self.0.address(), new_baudrate);
+        match STR1_BAUDRATES.iter().position(|&rate| rate == new_baudrate ) {
+            Some(baud_code) => {
+                let bs = Bytestring::from(vec![0x08, 0x33, self.0.address(), 0xAA, 0x55, baud_code as u8]);
+                self.write_to_device(bs)?;
+                self.0.set_baudrate(new_baudrate);
+                return Ok(())
+            },
+            None => {
+                return Err(InstrumentError::SerialError {
+                    msg: format!("Bad baudrate for STR1 `{}`", new_baudrate),
+                    addr: Some(self.0.address()),
+                });
+            }
+        }
+    }
+
     /// Gets the amount of relays on this board, if any
     pub fn relay_count(&mut self) -> Result<u8> {
         trace!("(STR1 {}) getting relay count", self.0.address());
@@ -238,15 +233,20 @@ mod tests {
 
     fn test_board() -> STR1 {
         let device = crate::tests::test_device_from_type(Controller::STR1);
-        STR1::connect(device.conn.controller_addr(), &device.conn.port()).unwrap()
+        STR1::connect(
+            device.conn.controller_addr(),
+            &device.conn.port(),
+            *device.conn.baudrate(),
+            device.conn.timeout()
+        ).unwrap()
     }
 
     #[test]
     fn test_error_if_details_are_wrong() {
-        let dev = STR1::connect(0xDD, "/dev/ttyUSB0");
+        let dev = STR1::connect(0xDD, "/dev/ttyUSB0", 9600, Duration::from_millis(50));
         assert!(dev.is_err());
 
-        let dev2 = STR1::connect(0xFE, "/dev/doesntexist");
+        let dev2 = STR1::connect(0xFE, "/dev/doesntexist", 9600, Duration::from_millis(50));
         assert!(dev2.is_err());
     }
 

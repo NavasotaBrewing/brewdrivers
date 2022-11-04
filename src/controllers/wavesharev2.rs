@@ -40,16 +40,8 @@ pub mod func_codes {
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
-// Hardcode the baud, we *probably* won't need to change it
-pub const WAVESHAREV2_BAUD: usize = 57600;
-// hardcoded timeout
-// This could *maybe* be lowered to 30 or so but I was getting occasional errors with that
-pub const WAVESHAREV2_TIMEOUT: Duration = Duration::from_millis(50);
-/// The max index of a relay on the Waveshare board
-#[allow(dead_code)]
-pub const RELAY_MAX: u8 = 7;
-// Luckily, the bit identifying each baudrate is just 0x00-0x07, so we can use that
-// to index this. Makes the commands easier.
+
+// The baudrates that the WaveshareV2 supports
 pub const WAVESHAREV2_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
 
 /// A Waveshare board.
@@ -65,9 +57,10 @@ impl SCADADevice for WaveshareV2 {
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
-            9600,
-            Duration::from_millis(50)
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
         )?;
+
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
         Ok(())
@@ -75,12 +68,13 @@ impl SCADADevice for WaveshareV2 {
 
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting WaveshareV2 device `{}`", device.id);
+
         let mut board = Self::connect(
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
-            9600,
-            Duration::from_millis(50)
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
         )?;
 
         match device.state.relay_state {
@@ -499,10 +493,5 @@ mod tests {
         assert_eq!(ws.get_address().unwrap(), 0x05);
         assert!(ws.set_address(0x01).is_ok());
         assert_eq!(ws.get_address().unwrap(), 0x01);
-    }
-
-    #[test]
-    fn test_set_baudrate() {
-        let ws = ws();
     }
 }

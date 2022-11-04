@@ -9,6 +9,8 @@
 use log::{error, info, warn};
 use std::collections::HashMap;
 
+use crate::controllers::Controller;
+
 use super::{ModelError, RTU};
 
 /// Returns `Ok(())` if each device in the RTU has a unique ID
@@ -40,8 +42,10 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
 
     for dev in &rtu.devices {
         if dev.id.contains(char::is_whitespace) {
-            let err =
-                ModelError::validation_error(("id", &dev.id), "device ID cannot contain whitespace");
+            let err = ModelError::validation_error(
+                ("id", &dev.id),
+                "device ID cannot contain whitespace",
+            );
             error!("{}", err);
             return Err(err);
         }
@@ -62,7 +66,10 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
         // If they somehow pass an empty string
         // maybe with port: "" in the config file
         if dev.conn.port().len() == 0 {
-            let err = ModelError::validation_error(("port", &dev.conn.port()), "serial port cannot be empty");
+            let err = ModelError::validation_error(
+                ("port", &dev.conn.port()),
+                "serial port cannot be empty",
+            );
             error!("{}", err);
             return Err(err);
         }
@@ -70,7 +77,10 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
         let path = &dev.conn.port;
 
         if !path.starts_with("/dev") {
-            let err = ModelError::validation_error(("port", &dev.conn.port()), "port path must be in /dev/*");
+            let err = ModelError::validation_error(
+                ("port", &dev.conn.port()),
+                "port path must be in /dev/*",
+            );
             error!("{}", err);
             return Err(err);
         }
@@ -86,8 +96,57 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
             }
         }
     }
-    
+
     info!("RTU passed serial_port_is_valid() validator");
+    Ok(())
+}
+
+pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
+    use crate::controllers::{
+        cn7500::CN7500_BAUDRATES, str1::STR1_BAUDRATES, wavesharev2::WAVESHAREV2_BAUDRATES,
+    };
+    for dev in &rtu.devices {
+        match dev.conn.controller() {
+            Controller::STR1 => {
+                if !STR1_BAUDRATES.contains(dev.conn.baudrate()) {
+                    error!("Invalid baudrate `{}`, expected one of: {:?}", dev.conn.baudrate(), STR1_BAUDRATES);
+                    return Err(ModelError::validation_error(
+                        ("baudrate", &format!("{}", dev.conn.baudrate())),
+                        "Invalid baudrate for STR1 controller",
+                    ));
+                }
+            }
+            Controller::CN7500 => {
+                if !CN7500_BAUDRATES.contains(dev.conn.baudrate()) {
+                    error!("Invalid baudrate `{}`, expected one of: {:?}", dev.conn.baudrate(), CN7500_BAUDRATES);
+                    return Err(ModelError::validation_error(
+                        ("baudrate", &format!("{}", dev.conn.baudrate())),
+                        "Invalid baudrate for CN7500 controller",
+                    ));
+                }
+            },
+            Controller::Waveshare => {
+                // This uses the same baudrates as Version 2
+                if !WAVESHAREV2_BAUDRATES.contains(dev.conn.baudrate()) {
+                    error!("Invalid baudrate `{}`, expected one of: {:?}", dev.conn.baudrate(), WAVESHAREV2_BAUDRATES);
+                    return Err(ModelError::validation_error(
+                        ("baudrate", &format!("{}", dev.conn.baudrate())),
+                        "Invalid baudrate for WaveshareV2 controller",
+                    ));
+                }
+            },
+            Controller::WaveshareV2 => {
+                if !WAVESHAREV2_BAUDRATES.contains(dev.conn.baudrate()) {
+                    error!("Invalid baudrate `{}`, expected one of: {:?}", dev.conn.baudrate(), WAVESHAREV2_BAUDRATES);
+                    return Err(ModelError::validation_error(
+                        ("baudrate", &format!("{}", dev.conn.baudrate())),
+                        "Invalid baudrate for WaveshareV2 controller",
+                    ));
+                }
+            },
+        }
+    }
+
     Ok(())
 }
 
@@ -95,9 +154,13 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
 mod test_validators {
     use super::*;
 
-    use std::{net::Ipv4Addr, str::FromStr, path::PathBuf};
+    use std::{net::Ipv4Addr, path::PathBuf, str::FromStr};
 
-    use crate::{controllers::*, state::{DeviceState, BinaryState}, model::device::Connection};
+    use crate::{
+        controllers::*,
+        model::device::Connection,
+        state::{BinaryState, DeviceState},
+    };
     use tokio_test::{assert_err, assert_ok};
 
     use crate::model::{Device, RTU};
@@ -118,6 +181,7 @@ mod test_validators {
         name: &str,
         port: &str,
         baudrate: usize,
+        timeout: u64,
         addr: u8,
         controller: Controller,
         controller_addr: u8,
@@ -129,6 +193,7 @@ mod test_validators {
             conn: Connection {
                 port: PathBuf::from(port),
                 baudrate,
+                timeout,
                 addr,
                 controller,
                 controller_addr,
@@ -145,42 +210,45 @@ mod test_validators {
                 "Pump",
                 "/dev/ttyUSB0",
                 9600,
+                100,
                 0,
                 Controller::STR1,
                 254,
                 DeviceState {
                     relay_state: Some(BinaryState::On),
                     pv: None,
-                    sv: None
-                }
+                    sv: None,
+                },
             ),
             device(
                 "pump",
                 "Other pump with same ID",
                 "/dev/ttyUSB0",
                 9600,
+                100,
                 1,
                 Controller::STR1,
                 254,
                 DeviceState {
                     relay_state: Some(BinaryState::On),
                     pv: None,
-                    sv: None
-                }
+                    sv: None,
+                },
             ),
             device(
                 "pump2",
                 "Other pump with different ID",
                 "/dev/ttyUSB0",
                 9600,
+                100,
                 2,
                 Controller::STR1,
                 254,
                 DeviceState {
                     relay_state: Some(BinaryState::On),
                     pv: None,
-                    sv: None
-                }
+                    sv: None,
+                },
             ),
         ];
 
@@ -198,14 +266,15 @@ mod test_validators {
             "Pump",
             "/dev/ttyUSB0",
             9600,
+            100,
             0,
             Controller::STR1,
             254,
             DeviceState {
                 relay_state: Some(BinaryState::On),
                 pv: None,
-                sv: None
-            }
+                sv: None,
+            },
         )];
 
         let mut rtu = rtu("Testing RTU", "testing id with whitespace", devices);
@@ -220,25 +289,24 @@ mod test_validators {
 
     #[test]
     fn test_serial_port_is_valid() {
-        let devices = vec![
-            device(
-                "pump",
-                "Pump",
-                "/dev/ttyUSB0", // Valid, may not exist but still valid
-                9600,
-                0,
-                Controller::STR1,
-                254,
-                DeviceState {
-                    relay_state: Some(BinaryState::On),
-                    pv: None,
-                    sv: None
-                }
-            )
-        ];
-        
+        let devices = vec![device(
+            "pump",
+            "Pump",
+            "/dev/ttyUSB0", // Valid, may not exist but still valid
+            9600,
+            100,
+            0,
+            Controller::STR1,
+            254,
+            DeviceState {
+                relay_state: Some(BinaryState::On),
+                pv: None,
+                sv: None,
+            },
+        )];
+
         let mut rtu = rtu("testing RTU", "test-id", devices);
-        
+
         assert_ok!(serial_port_is_valid(&rtu));
 
         rtu.devices.push(device(
@@ -246,14 +314,15 @@ mod test_validators {
             "another-pump",
             "/dev/peepee_poopoo", // Still valid, definitely doesn't exist
             9600,
+            100,
             1,
             Controller::STR1,
             254,
             DeviceState {
                 relay_state: Some(BinaryState::On),
                 pv: None,
-                sv: None
-            }
+                sv: None,
+            },
         ));
 
         assert_ok!(serial_port_is_valid(&rtu));
@@ -263,14 +332,15 @@ mod test_validators {
             "another-pump",
             "/etc/different", // not valid
             9600,
+            100,
             1,
             Controller::STR1,
             254,
             DeviceState {
                 relay_state: Some(BinaryState::On),
                 pv: None,
-                sv: None
-            }
+                sv: None,
+            },
         ));
 
         assert_err!(serial_port_is_valid(&rtu));

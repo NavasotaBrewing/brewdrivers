@@ -69,13 +69,11 @@ impl SerialInstrument {
         self.baudrate
     }
 
+    pub fn set_baudrate(&mut self, new_baudrate: usize) {
+        self.baudrate = new_baudrate
+    }
+
     /// Tries to connect to a Board at the given port and address
-    /// ```rust,no_run
-    /// use brewdrivers::drivers::SerialInstrument;
-    /// use std::time::Duration;
-    /// 
-    /// let mut si = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(45)).unwrap();
-    /// ```
     pub fn new(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
         let port = SerialInstrument::open_port(port_path, baudrate, timeout).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
         Ok(SerialInstrument {

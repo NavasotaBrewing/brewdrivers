@@ -1,15 +1,7 @@
 //! These boards are relatively cheap and (so far) reliable. They can be [found here](https://www.waveshare.com/modbus-rtu-relay.htm).
 //! The [operation wiki](https://www.waveshare.com/wiki/Protocol_Manual_of_Modbus_RTU_Relay) explains how to use it, but you probably won't need that.
 //!
-//! See the `examples/` directory for a complete example of using this board. Here's a sneak peak
-//! ```no_run
-//! use brewdrivers::controllers::*;
-//!
-//! let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-//! ws.set_relay(3, BinaryState::On).unwrap(); // Turn on the 4th relay (indexed from 0)
-//! println!("{:?}", ws.get_all_relays().unwrap());
-//! ```
-
+//! See the `examples/` directory for a complete example of using this board.
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -30,15 +22,14 @@ use crate::drivers::{
 use crate::model::SCADADevice;
 
 
+
+// The baudrates that the Waveshare supports
+// Same as version 2
+pub const WAVESHARE_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
+
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
-// Hardcode the baud, we *probably* won't need to change it
-pub const WAVESHARE_BAUD: usize = 9600;
-// hardcoded timeout
-pub const WAVESHARE_TIMEOUT: Duration = Duration::from_millis(45);
-#[allow(dead_code)]
-/// The max index of a relay on the Waveshare board
-pub const RELAY_MAX: u8 = 7;
+
 
 /// A Waveshare board.
 #[derive(Debug)]
@@ -49,7 +40,13 @@ impl SCADADevice for Waveshare {
     async fn update(device: &mut Device) -> Result<()> {
         trace!("Updating Waveshare device `{}`", device.id);
 
-        let mut board = Self::connect(device.conn.controller_addr, &device.conn.port())?;
+        let mut board = Self::connect(
+            device.conn.controller_addr,
+            &device.conn.port(),
+            // TODO: read these from the device once it's implemented
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
+        )?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
         Ok(())
@@ -57,7 +54,14 @@ impl SCADADevice for Waveshare {
     
     async fn enact(device: &mut Device) -> Result<()> {
         trace!("Enacting Waveshare device `{}`", device.id);
-        let mut board = Self::connect(device.conn.controller_addr(), &device.conn.port())?;
+
+        let mut board = Self::connect(
+            device.conn.controller_addr,
+            &device.conn.port(),
+            // TODO: read these from the device once it's implemented
+            device.conn.baudrate().clone(),
+            device.conn.timeout()
+        )?;
 
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
@@ -76,27 +80,27 @@ impl Waveshare {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
-    ///
-    /// ```no_run
-    /// use brewdrivers::controllers::*;
-    ///
-    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-    /// ws.get_relay(0).unwrap();
-    /// // ...
-    /// ```
-    pub fn connect(address: u8, port_path: &str) -> Result<Waveshare> {
-        let mut ws = Waveshare(SerialInstrument::new(
+    pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
+        if !WAVESHARE_BAUDRATES.contains(&baudrate) {
+            return Err(InstrumentError::SerialError { msg: format!("Invalid baudrate `{baudrate}`"), addr: Some(address) })
+        }
+
+        let mut ws = Self(SerialInstrument::new(
             address,
             port_path,
-            WAVESHARE_BAUD,
-            WAVESHARE_TIMEOUT
+            baudrate,
+            timeout,
         )?);
-        ws.connected().map_err(|instr_err|
+
+        ws.connected().map_err(|instr_err| {
             InstrumentError::serialError(
-                format!("Waveshare board connection failed, likely busy. Error: {}", instr_err),
-                Some(address)
+                format!(
+                    "Waveshare board connection failed, likely busy. Error: {}",
+                    instr_err
+                ),
+                Some(address),
             )
-        )?;
+        })?;
         Ok(ws)
     }
 
@@ -106,15 +110,6 @@ impl Waveshare {
     }
 
     /// Sets a relay to the given state. See the [`BinaryState`](crate::controllers::BinaryState) enum.
-    ///
-    /// ```no_run
-    /// use brewdrivers::controllers::*;
-    ///
-    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-    /// ws.set_relay(0, BinaryState::On).unwrap();
-    /// assert_eq!(ws.get_relay(0).unwrap(),BinaryState::On);
-    /// ws.set_relay(0, BinaryState::Off);
-    /// ```
     pub fn set_relay(&mut self, relay_num: u8, state: BinaryState) -> Result<()> {
         // Example: 01 05 00 00 FF 00 8C 3A
         // 01       Device address	    0x00 is broadcast address；0x01-0xFF are device addresses
@@ -214,13 +209,6 @@ impl Waveshare {
     }
 
     /// Returns the software revision as a String like "v1.00"
-    ///
-    /// ```no_run
-    /// use brewdrivers::controllers::*;
-    ///
-    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-    /// assert_eq!(ws.software_revision().unwrap(), "v1.00");
-    /// ```
     pub fn software_revision(&mut self) -> Result<String> {
         let mut bytes: Vec<u8> = vec![self.0.address(), 0x03, 0x80, 0x00, 0x00, 0x01];
         
@@ -250,14 +238,6 @@ impl Waveshare {
     /// on the broadcast address (0x00) gets the address of one board on the circuit (returns it's address). This
     /// works for one board, but I'm not sure what will happen if there's multiple boards. I'm too poor to afford more than
     /// one at the moment. Call UTA about reducing my tuition if you want better documentation.
-    ///
-    /// ```no_run
-    /// use brewdrivers::controllers::*;
-    ///
-    /// // address 0x00, the broadcast address
-    /// let mut ws = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();
-    /// assert_eq!(ws.get_address().unwrap(), 0x01);
-    /// ```
     pub fn get_address(&mut self) -> Result<u8> {
         let mut bytes: Vec<u8> = vec![0x00, 0x03, 0x40, 0x00, 0x0, 0x01];
 
@@ -279,16 +259,6 @@ impl Waveshare {
     /// after changing it. It's a good idea to remember the controller number in
     /// case it becomes inaccessible. Almost all communication requires the controller
     /// number. The documentation for this board is spotty.
-    ///
-    /// ```no_run
-    /// use brewdrivers::controllers::*;
-    ///
-    /// let mut ws = Waveshare::connect(0x01, "/dev/ttyUSB0").unwrap();
-    /// let mut unknown_board = Waveshare::connect(0x00, "/dev/ttyUSB0").unwrap();
-    ///
-    /// ws.set_address(0x07).unwrap();
-    /// assert_eq!(unknown_board.get_address().unwrap(), 0x07);
-    /// ```
     pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
         let mut bytes: Vec<u8> = vec![self.0.address(), 0x06, 0x40, 0x00, 0x00, new_addr];
 

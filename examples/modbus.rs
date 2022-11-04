@@ -1,9 +1,11 @@
+use std::time::Duration;
+
 use brewdrivers::drivers::modbus::ModbusInstrument;
 
 #[tokio::main]
 async fn main() {
     // Testing on my OMEGA CN7500 PID
-    let mut inst = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, 25).await.unwrap();
+    let mut inst = ModbusInstrument::new(0x16, "/dev/ttyUSB0", 19200, Duration::from_millis(100)).await.unwrap();
 
     // Read SV
     let pv1 = inst.read_registers(0x1001, 1).await.unwrap();
