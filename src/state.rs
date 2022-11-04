@@ -8,6 +8,8 @@ pub type PV = f64;
 /// A setpoint value, alias to `f64`
 pub type SV = f64;
 
+// TODO: maybe add an `extras` field here? It could be an Option<HashMap>
+
 /// A generalized state that is attached to all `Device`s
 /// 
 /// Note that each controller uses a different set of these values. For example, 
