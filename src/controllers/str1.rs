@@ -20,10 +20,7 @@ use async_trait::async_trait;
 use log::trace;
 
 // internal uses
-use crate::drivers::{
-    serial::{Bytestring, SerialInstrument},
-    InstrumentError, Result,
-};
+use crate::drivers::{SerialInstrument, serial::Bytestring, InstrumentError, Result};
 use crate::model::{Device, SCADADevice};
 use crate::state::{BinaryState, StateError};
 

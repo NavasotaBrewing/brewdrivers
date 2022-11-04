@@ -3,8 +3,8 @@
 //! specifically the bytestring layout.
 //! 
 //! See [this document for more information](https://modbus.org/docs/Modbus_over_serial_line_V1_02.pdf)
-pub mod bytestring;
-pub mod instrument;
+pub(crate) mod bytestring;
+pub(crate) mod instrument;
 
-pub use bytestring::Bytestring;
-pub use instrument::SerialInstrument;
+pub(crate) use bytestring::Bytestring;
+pub(crate) use instrument::SerialInstrument;

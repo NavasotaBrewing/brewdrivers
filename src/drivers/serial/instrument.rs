@@ -11,23 +11,9 @@ use std::io::{Read, Write};
 // ext uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
 
-// use crate::drivers::serial::BoardError;
 use crate::drivers::{Result, InstrumentError};
 
-/// A generic relay board.
-///
-/// This is mostly used as a base for other implementations. It can connect to a board
-/// through a TTYPort (`serial` crate), and write a message and get a response.
-///
-/// Addresses are 0-255 (`u8`), Baudrates are standard baudrates for modbus/rs-485 communication, we use
-/// 9600 because it's the default for our board. 
-///
-/// ```no_run
-/// use brewdrivers::drivers::SerialInstrument;
-/// use std::time::Duration;
-/// 
-/// let mut board = SerialInstrument::new(0x01, "/dev/ttyUSB0", 9600, Duration::from_millis(45)).unwrap();
-/// ```
+/// A generic serial instrument.
 #[derive(Debug)]
 pub struct SerialInstrument {
     address: u8,
@@ -58,7 +44,7 @@ impl SerialInstrument {
     }
 
     #[allow(unused)]
-    /// Yields the TTYPort, consuming the Board struct
+    /// Yields the TTYPort, consuming the `SerialInstrument` struct
     pub fn owned_port(self) -> TTYPort {
         self.port
     }
@@ -69,19 +55,26 @@ impl SerialInstrument {
         self.baudrate
     }
 
+    /// Sets the baudrate field on the struct. Does not set the baudrate on the controller.
     pub fn set_baudrate(&mut self, new_baudrate: usize) {
         self.baudrate = new_baudrate
     }
 
-    /// Tries to connect to a Board at the given port and address
+    /// Tries to connect to an instrument at the given port and address
     pub fn new(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
-        let port = SerialInstrument::open_port(port_path, baudrate, timeout).map_err(|err| InstrumentError::serialError(format!("{}", err), Some(address)))?;
-        Ok(SerialInstrument {
-            address,
-            port,
-            baudrate,
-            timeout,
-        })
+        match SerialInstrument::open_port(port_path, baudrate, timeout) {
+            Ok(port) => {
+                return Ok(SerialInstrument {
+                    address,
+                    port,
+                    baudrate,
+                    timeout,
+                });
+            },
+            Err(e) => {
+                return Err(InstrumentError::serialError(format!("{}", e), Some(address)));
+            }
+        }
     }
 
     /// Opens a TTYPort. This is used in [`SerialInstrument::new()`](crate::drivers::SerialInstrument::new)
@@ -127,7 +120,7 @@ impl SerialInstrument {
 
 #[cfg(test)]
 mod tests {
-    use crate::{drivers::serial::Bytestring, controllers::Controller};
+    use crate::{drivers::serial::bytestring::Bytestring, controllers::Controller};
 
     use super::*;
 

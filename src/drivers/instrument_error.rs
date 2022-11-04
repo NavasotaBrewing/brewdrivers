@@ -1,11 +1,15 @@
 use std::io;
 use thiserror::Error;
 
-use crate::state::StateError;
+use crate::{state::StateError, model::Device};
 
 /// A general purpose error that may be returned from Instrument interactions
 #[derive(Error, Debug)]
 pub enum InstrumentError {
+    /// A connection error when using a [`Device`](crate::model::Device) to connect to a controller
+    #[error("Connection error, couldn't connect to controller from device {:?}", 0)]
+    ConnectionError(Device),
+    /// The device timed out. This could be returned erroneously if you set the device timeout too low. Give the devices time to respond.
     #[error("Timeout error: Modbus device on port {port}, slave addr {addr} timed out after request to register 0x{register:X}")]
     ModbusTimeoutError {
         port: String,
@@ -21,7 +25,7 @@ pub enum InstrumentError {
     /// General serial board error
     #[error("addr {addr:?}: {msg}")]
     SerialError { msg: String, addr: Option<u8> },
-    /// State error, when provided the wrong type of state
+    /// Wrapper around [`StateError`](crate::state::StateError), when provided the wrong type of state
     #[error("State Error: {0:?}")]
     StateError(StateError)
 }

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use brewdrivers::drivers::modbus::ModbusInstrument;
+use brewdrivers::drivers::ModbusInstrument;
 
 #[tokio::main]
 async fn main() {

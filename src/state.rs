@@ -3,7 +3,9 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+/// A process value, alias to `f64`
 pub type PV = f64;
+/// A setpoint value, alias to `f64`
 pub type SV = f64;
 
 /// A generalized state that is attached to all `Device`s
