@@ -8,7 +8,7 @@ use async_trait::async_trait;
 // ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
-use log::trace;
+use log::{trace, error};
 
 // internal uses
 use crate::model::Device;
@@ -295,6 +295,7 @@ impl Waveshare {
         self.0.write_to_device(bytes)?;
         Ok(())
     }
+
 }
 
 
