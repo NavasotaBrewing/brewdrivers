@@ -90,6 +90,19 @@ impl CN7500 {
         Ok(cn)
     }
 
+    /// Tries to connect to the CN7500 using the connection details from a `Device`
+    /// 
+    /// Usually I would use `TryFrom` but I can't get the async version to work.
+    pub async fn from_device(device: Device) -> Result<Self> {
+        let c = device.conn;
+        Self::connect(
+            c.controller_addr(),
+            &c.port(),
+            *c.baudrate() as u64,
+            c.timeout()
+        ).await
+    }
+
     /// Returns `Ok(())` if the instrument is connected, `Err(InstrumentError)` otherwise.
     pub async fn connected(&mut self) -> Result<()> {
         // Try to read a coil, this could really be anything
