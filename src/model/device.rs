@@ -38,12 +38,7 @@ impl Connection {
     /// Gets the port as a `&str`
     pub fn port(&self) -> String {
         // TODO: This is bad
-        self
-            .port
-            .as_path()
-            .to_str()
-            .unwrap()
-            .to_string()
+        self.port.as_path().to_str().unwrap().to_string()
     }
 
     /// Gets the device address
@@ -99,7 +94,7 @@ impl Device {
             Controller::STR1 => STR1::update(self).await,
             Controller::CN7500 => CN7500::update(self).await,
             Controller::Waveshare => Waveshare::update(self).await,
-            Controller::WaveshareV2 => WaveshareV2::update(self).await
+            Controller::WaveshareV2 => WaveshareV2::update(self).await,
         }
     }
 
@@ -109,12 +104,10 @@ impl Device {
             Controller::STR1 => STR1::enact(self).await,
             Controller::CN7500 => CN7500::enact(self).await,
             Controller::Waveshare => Waveshare::enact(self).await,
-            Controller::WaveshareV2 => WaveshareV2::enact(self).await
+            Controller::WaveshareV2 => WaveshareV2::enact(self).await,
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -129,10 +122,11 @@ mod tests {
             timeout: 200,
             controller: Controller::CN7500,
             addr: 0,
-            controller_addr: 22
+            controller_addr: 22,
         };
 
         assert_eq!("/dev/ttyUSB0", conn.port());
         assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
     }
 }
+
