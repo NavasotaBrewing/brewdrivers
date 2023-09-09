@@ -66,9 +66,9 @@ impl Connection {
     }
 }
 
-/// A digital represenation of a device
+/// A digital representation of a device
 ///
-/// Devices are not controllers. They operate on controllers, and sometimes there is 1 device for 1 controllers.
+/// Devices are not controllers. They belong to controllers, and sometimes there is 1 device for 1 controller.
 /// And example is that each relay on a relay board is it's own device, so 1 controller -> 8 devices (or similar).
 /// Or we could have 1 PID controller that controls 1 Thermometer device.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -129,4 +129,3 @@ mod tests {
         assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
     }
 }
-

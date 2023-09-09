@@ -45,7 +45,7 @@ impl ModbusInstrument {
         timeout: Duration,
     ) -> Result<ModbusInstrument> {
         trace!("Setting up Modbus Instrument with details {{ slave_addr: 0x{:X} (dec {}), port_path: '{}', baudrate: {}, timeout: {:?} }}", slave_addr, slave_addr, port_path, baudrate, timeout);
-        
+
         // Open a serial port with tokio_serial
         let builder = tokio_serial::new(port_path, baudrate as u32);
         let port = match tokio_serial::SerialStream::open(&builder) {

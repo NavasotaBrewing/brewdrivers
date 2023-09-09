@@ -1,6 +1,6 @@
 //! Generalize states for controllers
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use thiserror::Error;
 
 /// A process value, alias to `f64`
@@ -11,8 +11,8 @@ pub type SV = f64;
 // TODO: maybe add an `extras` field here? It could be an Option<HashMap>
 
 /// A generalized state that is attached to all `Device`s
-/// 
-/// Note that each controller uses a different set of these values. For example, 
+///
+/// Note that each controller uses a different set of these values. For example,
 /// a relay board uses `relay_state` but won't ever touch `pv` or `sv`.
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct DeviceState {
@@ -22,7 +22,7 @@ pub struct DeviceState {
 }
 
 impl Default for DeviceState {
-    /// Creates a default state. This is used when deserializing an RTU model from the 
+    /// Creates a default state. This is used when deserializing an RTU model from the
     /// configuration file. If the user doesn't provide state values in the config file (why would they?),
     /// then this will fill in the defaults.
     ///
@@ -34,7 +34,11 @@ impl Default for DeviceState {
     /// }
     /// ```
     fn default() -> Self {
-        Self { relay_state: Default::default(), pv: Default::default(), sv: Default::default() }
+        Self {
+            relay_state: Default::default(),
+            pv: Default::default(),
+            sv: Default::default(),
+        }
     }
 }
 
@@ -47,31 +51,31 @@ pub enum StateError {
     #[error("Bad state values: {0:?}")]
     BadValue(DeviceState),
     #[error("State found to be null")]
-    NullState
+    NullState,
 }
 
 /// A binary state, as used in a relay or similar. This can be 'On' or 'Off'.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BinaryState {
     On,
-    Off
+    Off,
 }
 
 impl FromStr for BinaryState {
     type Err = StateError;
     /// Converts from a string to a BinaryState
-    /// 
+    ///
     /// ```rust
     /// use brewdrivers::state::BinaryState;
     /// use std::str::FromStr;
-    /// 
+    ///
     /// assert_eq!(BinaryState::from_str("on").unwrap(), BinaryState::On);
     /// assert_eq!(BinaryState::from_str("ON").unwrap(), BinaryState::On);
     /// assert_eq!(BinaryState::from_str("On").unwrap(), BinaryState::On);
     /// assert_eq!(BinaryState::from_str("off").unwrap(), BinaryState::Off);
     /// assert_eq!(BinaryState::from_str("OFF").unwrap(), BinaryState::Off);
     /// assert_eq!(BinaryState::from_str("Off").unwrap(), BinaryState::Off);
-    /// 
+    ///
     /// // This doesn't work
     /// // we have to differentiate between stepped states and binary states
     /// assert!(BinaryState::from_str("1").is_err());
@@ -81,7 +85,7 @@ impl FromStr for BinaryState {
         match s {
             "On" | "ON" | "on" => Ok(BinaryState::On),
             "Off" | "OFF" | "off" => Ok(BinaryState::Off),
-            _ => Err(StateError::Deserialize(s.to_string()))
+            _ => Err(StateError::Deserialize(s.to_string())),
         }
     }
 }
@@ -102,7 +106,7 @@ impl std::fmt::Display for BinaryState {
 
 impl From<bool> for BinaryState {
     /// Converts from `bool` to `BinaryState`
-    /// 
+    ///
     /// ```rust
     /// # use brewdrivers::state::BinaryState;
     /// assert_eq!(BinaryState::from(true), BinaryState::On);
@@ -111,14 +115,16 @@ impl From<bool> for BinaryState {
     fn from(value: bool) -> Self {
         match value {
             true => BinaryState::On,
-            false => BinaryState::Off
+            false => BinaryState::Off,
         }
     }
 }
 
 impl Default for BinaryState {
     /// Defaults to `BinaryState::Off`
-    fn default() -> Self { BinaryState::Off }
+    fn default() -> Self {
+        BinaryState::Off
+    }
 }
 
 #[cfg(test)]
@@ -133,11 +139,24 @@ mod tests {
         assert!("145".parse::<BinaryState>().is_err());
 
         // From yaml string
-        assert_eq!(serde_yaml::from_str::<BinaryState>("On").unwrap(), BinaryState::On);
-        assert_eq!(serde_yaml::from_str::<BinaryState>("Off").unwrap(), BinaryState::Off);
+        assert_eq!(
+            serde_yaml::from_str::<BinaryState>("On").unwrap(),
+            BinaryState::On
+        );
+        assert_eq!(
+            serde_yaml::from_str::<BinaryState>("Off").unwrap(),
+            BinaryState::Off
+        );
 
         // To yaml string
-        assert_eq!(serde_yaml::to_string(&BinaryState::On).unwrap().trim(), "On");
-        assert_eq!(serde_yaml::to_string(&BinaryState::Off).unwrap().trim(), "Off");
+        assert_eq!(
+            serde_yaml::to_string(&BinaryState::On).unwrap().trim(),
+            "On"
+        );
+        assert_eq!(
+            serde_yaml::to_string(&BinaryState::Off).unwrap().trim(),
+            "Off"
+        );
     }
 }
+

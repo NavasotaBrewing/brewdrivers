@@ -8,7 +8,7 @@ use crate::drivers::InstrumentError;
 
 use super::{validators, Device, ModelError};
 
-/// A digital representation of an RTU
+/// A digital representation of an RTU.
 ///
 /// This is meant to be serialized from a configuration file. This is
 /// also the data structure that is sent between the iris server and the front-end
@@ -26,7 +26,10 @@ pub struct RTU {
 }
 
 impl RTU {
-    /// This calls [`Device::enact`](crate::model::Device::enact) on each device in the RTU
+    /// This calls [`Device::enact`](crate::model::Device::enact) on each device in the RTU.
+    /// Returns the first Err() encountered.
+    //
+    // TODO: Maybe collect errors and return a list of errors, if any?
     pub async fn enact(&mut self) -> Result<(), InstrumentError> {
         info!("Enacting RTU");
         for dev in self.devices.iter_mut() {
@@ -36,6 +39,8 @@ impl RTU {
     }
 
     /// This calls [`Device::update`](crate::model::Device::update) on each device in the RTU
+    //
+    // TODO: Same as above, return a list off all errors, if any
     pub async fn update(&mut self) -> Result<(), InstrumentError> {
         info!("Updating RTU");
         for dev in self.devices.iter_mut() {
@@ -51,14 +56,15 @@ impl RTU {
 
     /// Reads the configuration file and builds an RTU from that. Note that while this method
     /// does take an optional file path, that's just used for testing purposes. You should pass
-    /// `None` to this method and use the defualt configuration file at [`crate::CONFIG_FILE`](crate::CONFIG_FILE).
+    /// `None` to this method and use the defualt configuration file at
+    /// [crate::defaults](crate::defaults).
     ///
     /// This will fail if the RTU cannot be deserialized from the configuration file.
     ///
     /// This method calls [`RTU::validate()`](crate::model::RTU::validate) and returns an error if any of
     /// them don't succeed.
     pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
-        let file_path = conf_path.or(Some(crate::CONFIG_FILE));
+        let file_path = conf_path.or(Some(crate::defaults::config_file()));
         log::info!("Generating RTU. Using config file: {:?}", file_path);
         // TODO: Get IPv4 here programatically instead of writing it in the file
 
@@ -90,7 +96,7 @@ impl RTU {
             error!("{}", e);
             return Err(e);
         }
-        
+
         if let Err(e) = serial_port_is_valid(&self) {
             error!("{}", e);
             return Err(e);
@@ -105,7 +111,7 @@ impl RTU {
             error!("{}", e);
             return Err(e);
         }
-        
+
         info!("RTU passed all validators");
         Ok(())
     }
@@ -119,7 +125,7 @@ mod tests {
 
     #[test]
     async fn test_generate_rtu() {
-        let rtu = RTU::generate(Some(crate::TEST_CONFIG_FILE));
+        let rtu = RTU::generate(Some(crate::defaults::test_config_file()));
         assert!(rtu.is_ok());
         assert!(rtu.unwrap().devices.len() > 0);
     }
