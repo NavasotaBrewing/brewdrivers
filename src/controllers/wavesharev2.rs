@@ -4,9 +4,9 @@
 //!
 //! See the `examples/` directory for a complete example of using this board
 
-use std::time::Duration;
-use log::*;
 use async_trait::async_trait;
+use log::*;
+use std::time::Duration;
 
 // ext uses
 // Used for checksums
@@ -32,7 +32,8 @@ pub mod func_codes {
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 // The baudrates that the WaveshareV2 supports
-pub const WAVESHAREV2_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
+pub const WAVESHAREV2_BAUDRATES: [usize; 8] =
+    [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
 
 /// A Waveshare board.
 #[derive(Debug)]
@@ -41,14 +42,12 @@ pub struct WaveshareV2(SerialInstrument);
 #[async_trait]
 impl SCADADevice for WaveshareV2 {
     async fn update(device: &mut Device) -> Result<()> {
-        trace!("Updating WaveshareV2 device `{}`", device.id);
-
         let mut board = Self::connect(
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
 
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
@@ -64,7 +63,7 @@ impl SCADADevice for WaveshareV2 {
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
 
         match device.state.relay_state {
@@ -84,16 +83,21 @@ impl WaveshareV2 {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
-    pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
+    pub fn connect(
+        address: u8,
+        port_path: &str,
+        baudrate: usize,
+        timeout: Duration,
+    ) -> Result<Self> {
         if !WAVESHAREV2_BAUDRATES.contains(&baudrate) {
-            return Err(InstrumentError::SerialError { msg: format!("Invalid baudrate `{baudrate}`"), addr: Some(address) })
+            return Err(InstrumentError::SerialError {
+                msg: format!("Invalid baudrate `{baudrate}`"),
+                addr: Some(address),
+            });
         }
 
         let mut ws = Self(SerialInstrument::new(
-            address,
-            port_path,
-            baudrate,
-            timeout,
+            address, port_path, baudrate, timeout,
         )?);
 
         ws.connected().map_err(|instr_err| {
@@ -355,18 +359,22 @@ impl WaveshareV2 {
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             func_codes::SET_BAUD,
-            0x20, 0x00, // fixed
-            0x00,       // parity check
-            baud_code
+            0x20,
+            0x00, // fixed
+            0x00, // parity check
+            baud_code,
         ];
 
         Self::append_checksum(&mut bytes)?;
         self.0.write_to_device(bytes)?;
-        warn!("New baudrate set to {} for WaveshareV2 (addr {}), you need to reconnect to the board", new_baud, self.0.address());
+        warn!(
+            "New baudrate set to {} for WaveshareV2 (addr {}), you need to reconnect to the board",
+            new_baud,
+            self.0.address()
+        );
         Ok(())
     }
 }
-
 
 /// Creates a controller connection from a Device
 impl TryFrom<&Device> for WaveshareV2 {
@@ -376,7 +384,7 @@ impl TryFrom<&Device> for WaveshareV2 {
             device.conn.controller_addr(),
             &device.conn.port(),
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )
     }
 }
@@ -405,7 +413,7 @@ mod tests {
             c.controller_addr(),
             &c.port(),
             c.baudrate().clone(),
-            c.timeout()
+            c.timeout(),
         );
         assert!(ws.is_ok());
     }

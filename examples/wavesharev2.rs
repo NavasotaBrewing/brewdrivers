@@ -1,6 +1,6 @@
 use std::error::Error;
-use std::time::Duration;
 use std::thread::sleep;
+use std::time::Duration;
 
 use brewdrivers::controllers::WaveshareV2;
 use brewdrivers::state::BinaryState;
@@ -25,8 +25,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     sleep(Duration::from_millis(100));
     // Make sure they're all off at the end
     ws.set_all_relays(BinaryState::Off)?;
-
-
 
     // // Now let's set the controller number to something else (don't forget it. 0x01 is the default)
     // println!("{:X?}", ws.get_address());

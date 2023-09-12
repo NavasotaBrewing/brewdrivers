@@ -20,7 +20,7 @@ use async_trait::async_trait;
 use log::trace;
 
 // internal uses
-use crate::drivers::{SerialInstrument, serial::Bytestring, InstrumentError, Result};
+use crate::drivers::{serial::Bytestring, InstrumentError, Result, SerialInstrument};
 use crate::model::{Device, SCADADevice};
 use crate::state::{BinaryState, StateError};
 
@@ -37,24 +37,22 @@ pub struct STR1(SerialInstrument);
 #[async_trait]
 impl SCADADevice for STR1 {
     async fn update(device: &mut Device) -> Result<()> {
-        trace!("Updating STR1 device `{}`", device.id);
         let mut board = STR1::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr())?);
         Ok(())
     }
 
     async fn enact(device: &mut Device) -> Result<()> {
-        trace!("Enacting STR1 device `{}`", device.id);
         let mut board = STR1::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
 
         match device.state.relay_state {
@@ -71,13 +69,15 @@ impl SCADADevice for STR1 {
 
 impl STR1 {
     /// Attempts to connect to an STR1 board.
-    pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
+    pub fn connect(
+        address: u8,
+        port_path: &str,
+        baudrate: usize,
+        timeout: Duration,
+    ) -> Result<Self> {
         trace!("(STR1 {}) connected", address);
         let mut str1 = STR1(SerialInstrument::new(
-            address,
-            port_path,
-            baudrate,
-            timeout,
+            address, port_path, baudrate, timeout,
         )?);
         str1.connected().map_err(|instr_err| {
             InstrumentError::serialError(
@@ -184,14 +184,25 @@ impl STR1 {
 
     /// Sets the baudrate of the board. See [`STR1_BAUDRATES`](crate::controllers::str1::STR1_BAUDRATES)
     pub fn set_baudrate(&mut self, new_baudrate: usize) -> Result<()> {
-        trace!("Setting STR1 (addr {}) baudrate to {}", self.0.address(), new_baudrate);
-        match STR1_BAUDRATES.iter().position(|&rate| rate == new_baudrate ) {
+        trace!(
+            "Setting STR1 (addr {}) baudrate to {}",
+            self.0.address(),
+            new_baudrate
+        );
+        match STR1_BAUDRATES.iter().position(|&rate| rate == new_baudrate) {
             Some(baud_code) => {
-                let bs = Bytestring::from(vec![0x08, 0x33, self.0.address(), 0xAA, 0x55, baud_code as u8]);
+                let bs = Bytestring::from(vec![
+                    0x08,
+                    0x33,
+                    self.0.address(),
+                    0xAA,
+                    0x55,
+                    baud_code as u8,
+                ]);
                 self.write_to_device(bs)?;
                 self.0.set_baudrate(new_baudrate);
-                return Ok(())
-            },
+                return Ok(());
+            }
             None => {
                 return Err(InstrumentError::SerialError {
                     msg: format!("Bad baudrate for STR1 `{}`", new_baudrate),
@@ -231,7 +242,7 @@ impl TryFrom<&Device> for STR1 {
             device.conn.controller_addr(),
             &device.conn.port(),
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )
     }
 }
@@ -247,8 +258,9 @@ mod tests {
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate(),
-            device.conn.timeout()
-        ).unwrap()
+            device.conn.timeout(),
+        )
+        .unwrap()
     }
 
     #[test]

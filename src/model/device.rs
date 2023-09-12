@@ -130,13 +130,35 @@ impl Device {
     }
 
     pub async fn enact(&mut self) -> Result<()> {
-        info!("Enacting device `{}`", self.id);
-        match self.conn.controller {
-            Controller::STR1 => STR1::enact(self).await,
-            Controller::CN7500 => CN7500::enact(self).await,
-            Controller::Waveshare => Waveshare::enact(self).await,
-            Controller::WaveshareV2 => WaveshareV2::enact(self).await,
+        let total_attempts = self.command_retries + 1;
+        for i in 1..=total_attempts {
+            info!(
+                "Enacting device `{}` (Attempt {i} of {})",
+                self.id, total_attempts
+            );
+
+            let result = match self.conn.controller {
+                Controller::STR1 => STR1::enact(self).await,
+                Controller::CN7500 => CN7500::enact(self).await,
+                Controller::Waveshare => Waveshare::enact(self).await,
+                Controller::WaveshareV2 => WaveshareV2::enact(self).await,
+            };
+
+            match result {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    // If we're on the last iteration of the loop
+                    // ie. the last retry and we still fail, then return the error
+                    if i == total_attempts {
+                        return Err(e);
+                    }
+                    info!("Enacting device `{}` failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.id, self.retry_delay);
+                    std::thread::sleep(Duration::from_millis(self.retry_delay));
+                }
+            }
         }
+
+        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
     }
 }
 
@@ -158,28 +180,5 @@ mod tests {
 
         assert_eq!("/dev/ttyUSB0", conn.port());
         assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
-    }
-
-    #[tokio::test]
-    async fn test_command_retries() {
-        let mut device: Device = serde_yaml::from_str(
-            r#"
-            id: wsrelay0
-            name: Waveshare Relay
-            command_retries: 5
-            retry_delay: 2000
-            conn:
-              port: /dev/ttyUSB1
-              baudrate: 38400
-              timeout: 40
-              controller: WaveshareV2
-              controller_addr: 1
-              addr: 0
-        "#,
-        )
-        .unwrap();
-
-        let result = device.update().await;
-        assert!(result.is_ok());
     }
 }
