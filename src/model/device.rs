@@ -4,12 +4,12 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::drivers::InstrumentError;
+use crate::logging_utils::device_info;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
 
@@ -100,9 +100,9 @@ impl Device {
     pub async fn update(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
         for i in 1..=total_attempts {
-            info!(
-                "Updating device `{}` (Attempt {i} of {})",
-                self.id, total_attempts
+            device_info!(
+                &self,
+                &format!("updating. Attempt {i} of {}...", total_attempts)
             );
 
             let result = match self.conn.controller {
@@ -120,7 +120,7 @@ impl Device {
                     if i == total_attempts {
                         return Err(e);
                     }
-                    info!("Updating device `{}` failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.id, self.retry_delay);
+                    device_info!(&self, &format!("updating failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
                     std::thread::sleep(Duration::from_millis(self.retry_delay));
                 }
             }
@@ -132,9 +132,9 @@ impl Device {
     pub async fn enact(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
         for i in 1..=total_attempts {
-            info!(
-                "Enacting device `{}` (Attempt {i} of {})",
-                self.id, total_attempts
+            device_info!(
+                &self,
+                &format!("enacting. Attempt {i} of {}...", total_attempts)
             );
 
             let result = match self.conn.controller {
@@ -152,7 +152,7 @@ impl Device {
                     if i == total_attempts {
                         return Err(e);
                     }
-                    info!("Enacting device `{}` failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.id, self.retry_delay);
+                    device_info!(&self, &format!("enacting failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
                     std::thread::sleep(Duration::from_millis(self.retry_delay));
                 }
             }

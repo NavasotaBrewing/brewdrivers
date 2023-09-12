@@ -31,10 +31,11 @@ impl RTU {
     //
     // TODO: Maybe collect errors and return a list of errors, if any?
     pub async fn enact(&mut self) -> Result<(), InstrumentError> {
-        info!("Enacting RTU");
+        info!("[RTU `{}`] enacting...", self.id);
         for dev in self.devices.iter_mut() {
             dev.enact().await?;
         }
+        info!("[RTU `{}`] enacted.", self.id);
         Ok(())
     }
 
@@ -42,10 +43,11 @@ impl RTU {
     //
     // TODO: Same as above, return a list off all errors, if any
     pub async fn update(&mut self) -> Result<(), InstrumentError> {
-        info!("Updating RTU");
+        info!("[RTU `{}`] updating...", self.id);
         for dev in self.devices.iter_mut() {
             dev.update().await?;
         }
+        info!("[RTU `{}`] updated.", self.id);
         Ok(())
     }
 
@@ -65,7 +67,7 @@ impl RTU {
     /// them don't succeed.
     pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
         let file_path = conf_path.or(Some(crate::defaults::config_file()));
-        log::info!("Generating RTU. Using config file: {:?}", file_path);
+        info!("Generating RTU. Using config file: {:?}", file_path);
         // TODO: Get IPv4 here programatically instead of writing it in the file
 
         // Get the contents of the config file
@@ -79,6 +81,7 @@ impl RTU {
         let rtu = serde_yaml::from_str::<RTU>(&file_contents)
             .map_err(|err| ModelError::SerdeParseError(err))?;
 
+        info!("[RTU `{}`] generated.", rtu.id);
         rtu.validate()?;
         Ok(rtu)
     }
