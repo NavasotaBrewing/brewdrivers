@@ -102,7 +102,7 @@ impl Device {
         for i in 1..=total_attempts {
             device_info!(
                 &self,
-                &format!("updating. Attempt {i} of {}...", total_attempts)
+                &format!("updating (attempt {i} of {})", total_attempts)
             );
 
             let result = match self.conn.controller {
@@ -134,7 +134,7 @@ impl Device {
         for i in 1..=total_attempts {
             device_info!(
                 &self,
-                &format!("enacting. Attempt {i} of {}...", total_attempts)
+                &format!("enacting (attempt {i} of {})", total_attempts)
             );
 
             let result = match self.conn.controller {
