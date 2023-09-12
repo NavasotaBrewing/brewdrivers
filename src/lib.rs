@@ -57,4 +57,3 @@ mod tests {
         rtu.devices.iter().find(|dev| dev.id == id).unwrap().clone()
     }
 }
-

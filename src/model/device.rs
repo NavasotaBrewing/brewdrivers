@@ -79,7 +79,7 @@ pub struct Device {
     /// A pretty name, for display purposes
     pub name: String,
     /// Amount of times to retry an update/enact if it fails.
-    /// This should in the range [0, 6]
+    /// This should in the range [0, 5]
     #[serde(default = "default_command_retries")]
     pub command_retries: u8,
     /// Delay (ms) between retries if there's a failure.
