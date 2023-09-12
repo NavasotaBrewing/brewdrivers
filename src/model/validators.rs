@@ -23,6 +23,7 @@ pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
     controller_baudrate_is_valid(&rtu)?;
     timeout_valid(&rtu)?;
     command_retries_valid(&rtu)?;
+    retry_delay_valid(&rtu)?;
     Ok(())
 }
 
@@ -199,6 +200,20 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
     }
 
     info!("RTU passed command_retries_valid() validator");
+    Ok(())
+}
+
+pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
+    for device in &rtu.devices {
+        if device.retry_delay < device.conn.timeout as usize || device.retry_delay > 2000 {
+            return Err(ModelError::validation_error(
+                ("retry_delay", &format!("{}", device.retry_delay)),
+                "Retry delay must be in the range [device_timeout, 2000] (units in ms)",
+            ));
+        }
+    }
+
+    info!("RTU passed retry_delay_valid() validator");
     Ok(())
 }
 
@@ -489,5 +504,44 @@ mod test_validators {
 
         let rtu3 = rtu("Invalid RTU", "testing-id", vec![undeserializable_device]);
         assert_err!(command_retries_valid(&rtu3));
+    }
+
+    #[test]
+    fn test_retry_delay_valid() {
+        let valid_device = device(
+            r#"
+            id: pump
+            name: pump
+            retry_delay: 400
+            conn:
+                port: /dev/ttyUSB0
+                baudrate: 9600
+                timeout: 15
+                controller: STR1
+                controller_addr: 254
+                addr: 2
+            "#,
+        );
+
+        let invalid_device = device(
+            r#"
+            id: pump
+            name: pump
+            retry_delay: 5000
+            conn:
+                port: /dev/ttyUSB0
+                baudrate: 9600
+                timeout: 15
+                controller: STR1
+                controller_addr: 254
+                addr: 2
+            "#,
+        );
+
+        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device]);
+        assert_ok!(retry_delay_valid(&rtu1));
+
+        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device]);
+        assert_err!(retry_delay_valid(&rtu2));
     }
 }
