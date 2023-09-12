@@ -8,15 +8,12 @@
 //! All units returned from the board or sent to it (when setting the setpoint value) will use the unit that the board is configured to at the time.
 use std::time::Duration;
 
+use crate::drivers::{modbus::ModbusInstrument, InstrumentError, Result};
+use crate::logging_utils::device_trace;
+use crate::model::{Device, SCADADevice};
+use crate::state::BinaryState;
 use async_trait::async_trait;
 use log::trace;
-use crate::drivers::{
-    modbus::ModbusInstrument,
-    InstrumentError,
-    Result
-};
-use crate::model::{SCADADevice, Device};
-use crate::state::BinaryState;
 
 pub const CN7500_BAUDRATES: [usize; 5] = [2400, 4800, 9600, 19200, 38400];
 
@@ -30,38 +27,40 @@ pub enum Degree {
 #[derive(Debug)]
 pub struct CN7500(ModbusInstrument);
 
-
 #[async_trait]
 impl SCADADevice for CN7500 {
     /// Updates the given device state using this controller
     async fn update(device: &mut Device) -> Result<()> {
-        trace!("Updating CN7500 device `{}`", device.id);
+        device_trace!(device, "updating CN7500 device...");
 
         let mut cn = CN7500::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate() as u64,
-            device.conn.timeout()
-        ).await?;
+            device.conn.timeout(),
+        )
+        .await?;
 
         device.state.relay_state = Some(cn.is_running().await?.into());
         device.state.pv = Some(cn.get_pv().await?);
         device.state.sv = Some(cn.get_sv().await?);
 
+        device_trace!(device, "updated");
         Ok(())
     }
-    
+
     /// Writes the given device state to this controller
     async fn enact(device: &mut Device) -> Result<()> {
-        trace!("Enacting CN7500 device `{}`", device.id);
+        device_trace!(device, "enacting CN7500 device...");
 
         let mut cn = CN7500::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate() as u64,
-            device.conn.timeout()
-        ).await?;
-    
+            device.conn.timeout(),
+        )
+        .await?;
+
         match device.state.relay_state {
             Some(BinaryState::On) => cn.run().await?,
             Some(BinaryState::Off) => cn.stop().await?,
@@ -71,27 +70,36 @@ impl SCADADevice for CN7500 {
         if let Some(new_sv) = device.state.sv {
             cn.set_sv(new_sv).await?;
         }
-    
+
+        device_trace!(device, "enacted");
         Ok(())
     }
 }
 
 impl CN7500 {
     /// Connects to a CN7500 board
-    pub async fn connect(slave_addr: u8, port_path: &str, baudrate: u64, timeout: Duration) -> Result<Self> {
-        trace!("(CN7500 {}) connected", slave_addr);
+    pub async fn connect(
+        slave_addr: u8,
+        port_path: &str,
+        baudrate: u64,
+        timeout: Duration,
+    ) -> Result<Self> {
+        trace!("[CN7500 addr: {}] connected", slave_addr);
         let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, baudrate, timeout).await?);
-        cn.connected().await.map_err(|instr_err|
+        cn.connected().await.map_err(|instr_err| {
             InstrumentError::modbusError(
-                format!("CN7500 connection failed, likely busy. Error: {}", instr_err),
-                Some(slave_addr)
+                format!(
+                    "CN7500 connection failed, likely busy. Error: {}",
+                    instr_err
+                ),
+                Some(slave_addr),
             )
-        )?;
+        })?;
         Ok(cn)
     }
 
     /// Tries to connect to the CN7500 using the connection details from a `Device`
-    /// 
+    ///
     /// Usually I would use `TryFrom` but I can't get the async version to work.
     pub async fn from_device(device: Device) -> Result<Self> {
         let c = device.conn;
@@ -99,8 +107,9 @@ impl CN7500 {
             c.controller_addr(),
             &c.port(),
             *c.baudrate() as u64,
-            c.timeout()
-        ).await
+            c.timeout(),
+        )
+        .await
     }
 
     /// Returns `Ok(())` if the instrument is connected, `Err(InstrumentError)` otherwise.
@@ -113,13 +122,13 @@ impl CN7500 {
 
     /// Sets the setpoint value (target) of the CN7500. Should be a decimal between 1.0-999.0.
     pub async fn set_sv(&mut self, new_sv: f64) -> Result<()> {
-        trace!("(CN7500 {}) Setting sv: {new_sv}", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] Setting sv: {new_sv}", self.0.slave_addr);
         self.0.write_register(0x1001, (new_sv * 10.0) as u16).await
     }
 
     /// Gets the setpoint value
     pub async fn get_sv(&mut self) -> Result<f64> {
-        trace!("(CN7500 {}) getting sv", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] getting sv", self.0.slave_addr);
         self.0
             .read_registers(0x1001, 1)
             .await
@@ -128,7 +137,7 @@ impl CN7500 {
 
     /// Gets the process value
     pub async fn get_pv(&mut self) -> Result<f64> {
-        trace!("(CN7500 {}) getting pv", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] getting pv", self.0.slave_addr);
         self.0
             .read_registers(0x1000, 1)
             .await
@@ -139,26 +148,26 @@ impl CN7500 {
     /// because the PID will control when to feather the relay on or off to control temperature. The relay
     /// will never be on if it's not active (ie. this method returns `Ok(false)`)
     pub async fn is_running(&mut self) -> Result<bool> {
-        trace!("(CN7500 {}) polled is running", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] polled is running", self.0.slave_addr);
         self.0.read_coils(0x0814, 1).await.map(|vals| vals[0])
     }
 
     /// Activates the relay
     pub async fn run(&mut self) -> Result<()> {
-        trace!("(CN7500 {}) set to run", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] set to run", self.0.slave_addr);
         self.0.write_coil(0x0814, true).await
     }
 
     /// Deactivates the relay
     pub async fn stop(&mut self) -> Result<()> {
-        trace!("(CN7500 {}) set to stop", self.0.slave_addr);
+        trace!("[CN7500 addr: {}] set to stop", self.0.slave_addr);
         self.0.write_coil(0x0814, false).await
     }
 
     /// Sets the degree mode of the board to either Fahrenheit or Celsius
     pub async fn set_degrees(&mut self, degree_mode: Degree) -> Result<()> {
         trace!(
-            "(CN7500 {}) setting degree mode to {:?}",
+            "[CN7500 addr: {}] setting degree mode to {:?}",
             self.0.slave_addr,
             degree_mode
         );
@@ -169,7 +178,10 @@ impl CN7500 {
     }
 
     pub async fn software_revision(&mut self) -> Result<Vec<u16>> {
-        trace!("(CN7500 {}) polled software revision", self.0.slave_addr);
+        trace!(
+            "[CN7500 addr: {}] polled software revision",
+            self.0.slave_addr
+        );
         self.0.read_registers(0x102F, 1).await.map_err(|_|
             InstrumentError::SerialError {
                 msg: format!("Software revision couldn't be retrieved, the controller likely isn't connected"),
@@ -178,7 +190,6 @@ impl CN7500 {
         )
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -194,8 +205,10 @@ mod tests {
             device.conn.controller_addr(),
             &device.conn.port(),
             *device.conn.baudrate() as u64,
-            device.conn.timeout()
-        ).await.unwrap()
+            device.conn.timeout(),
+        )
+        .await
+        .unwrap()
     }
 
     #[test]

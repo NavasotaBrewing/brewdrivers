@@ -8,28 +8,23 @@ use async_trait::async_trait;
 // ext uses
 // Used for checksums
 use crc::{Crc, CRC_16_MODBUS};
-use log::*;
+use log::trace;
 
 // internal uses
+use crate::drivers::{serial::SerialInstrument, InstrumentError, Result};
+use crate::logging_utils::device_trace;
 use crate::model::Device;
 use crate::state::{BinaryState, StateError};
-use crate::drivers::{
-    serial::SerialInstrument,
-    InstrumentError,
-    Result
-};
 
 use crate::model::SCADADevice;
 
-
-
 // The baudrates that the Waveshare supports
 // Same as version 2
-pub const WAVESHARE_BAUDRATES: [usize; 8] = [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
+pub const WAVESHARE_BAUDRATES: [usize; 8] =
+    [4800, 9600, 19200, 38400, 57600, 115200, 128000, 256000];
 
 // This is the checksum algorithm that the board uses
 const CRC_MODBUS: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
-
 
 /// A Waveshare board.
 #[derive(Debug)]
@@ -38,40 +33,42 @@ pub struct Waveshare(SerialInstrument);
 #[async_trait]
 impl SCADADevice for Waveshare {
     async fn update(device: &mut Device) -> Result<()> {
-        trace!("Updating Waveshare device `{}`", device.id);
+        device_trace!(device, "updating Waveshare device...");
 
         let mut board = Self::connect(
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
+        device_trace!(device, "updated");
         Ok(())
     }
-    
+
     async fn enact(device: &mut Device) -> Result<()> {
-        trace!("Enacting Waveshare device `{}`", device.id);
+        device_trace!(device, "enacting Waveshare device...");
 
         let mut board = Self::connect(
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )?;
 
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
-            None => return Err(
-                InstrumentError::StateError(
-                    StateError::BadValue(device.state.clone())
-                )
-            )
+            None => {
+                return Err(InstrumentError::StateError(StateError::BadValue(
+                    device.state.clone(),
+                )))
+            }
         }
 
+        device_trace!(device, "enacted");
         Ok(())
     }
 }
@@ -80,16 +77,21 @@ impl Waveshare {
     /// Connect to a board at the given address and port. This will fail if the port can't be opened,
     /// or if the board can't be communicated with. This method will poll the board for it's software
     /// version number and fail if it doesn't return one, returning an [`InstrumentError`](crate::drivers::InstrumentError).
-    pub fn connect(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
+    pub fn connect(
+        address: u8,
+        port_path: &str,
+        baudrate: usize,
+        timeout: Duration,
+    ) -> Result<Self> {
         if !WAVESHARE_BAUDRATES.contains(&baudrate) {
-            return Err(InstrumentError::SerialError { msg: format!("Invalid baudrate `{baudrate}`"), addr: Some(address) })
+            return Err(InstrumentError::SerialError {
+                msg: format!("Invalid baudrate `{baudrate}`"),
+                addr: Some(address),
+            });
         }
 
         let mut ws = Self(SerialInstrument::new(
-            address,
-            port_path,
-            baudrate,
-            timeout,
+            address, port_path, baudrate, timeout,
         )?);
 
         ws.connected().map_err(|instr_err| {
@@ -101,6 +103,7 @@ impl Waveshare {
                 Some(address),
             )
         })?;
+        trace!("[Waveshare addr: {}] connected", address);
         Ok(ws)
     }
 
@@ -119,6 +122,12 @@ impl Waveshare {
         //                              0x0000：Close Relay;
         //                              0x5500：Flip Relay
         // 8C 3A	CRC16	            The CRC checksum of first six bytes.
+        trace!(
+            "[Waveshare addr: {}] setting relay {} to {}",
+            self.0.address(),
+            relay_num,
+            state
+        );
         let mut bytes: Vec<u8> = vec![
             // Address
             self.0.address(),
@@ -146,6 +155,11 @@ impl Waveshare {
 
     /// Gets a relay state. See [`BinaryState`](crate::controllers::BinaryState).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+        trace!(
+            "[Waveshare addr: {}] getting relay {}",
+            self.0.address(),
+            relay_num
+        );
         let statuses: Vec<BinaryState> = self.get_all_relays()?;
 
         if let Some(&state) = statuses.get(relay_num as usize) {
@@ -174,6 +188,7 @@ impl Waveshare {
 
     /// Returns a `Vec<BinaryState>` of all 8 relays.
     pub fn get_all_relays(&mut self) -> Result<Vec<BinaryState>> {
+        trace!("[Waveshare addr: {}] getting all relays", self.0.address());
         let mut bytes: Vec<u8> = vec![self.0.address(), 0x01, 0x00, 0xFF, 0x00, 0x01];
         Waveshare::append_checksum(&mut bytes)?;
 
@@ -190,9 +205,9 @@ impl Waveshare {
                     match ch {
                         '1' => BinaryState::On,
                         '0' => BinaryState::Off,
-                        _ => BinaryState::default()
+                        _ => BinaryState::default(),
                     }
-                } )
+                })
                 .rev()
                 .collect();
 
@@ -211,11 +226,11 @@ impl Waveshare {
     /// Returns the software revision as a String like "v1.00"
     pub fn software_revision(&mut self) -> Result<String> {
         let mut bytes: Vec<u8> = vec![self.0.address(), 0x03, 0x80, 0x00, 0x00, 0x01];
-        
+
         Waveshare::append_checksum(&mut bytes)?;
-        
+
         let resp = self.0.write_to_device(bytes)?;
-        
+
         if let Some(&version_num) = resp.get(4) {
             Ok(format!("v{:.2}", (version_num as f64 / 100.0)))
         } else {
@@ -239,6 +254,7 @@ impl Waveshare {
     /// works for one board, but I'm not sure what will happen if there's multiple boards. I'm too poor to afford more than
     /// one at the moment. Call UTA about reducing my tuition if you want better documentation.
     pub fn get_address(&mut self) -> Result<u8> {
+        trace!("[Waveshare addr: {}] getting address", self.0.address());
         let mut bytes: Vec<u8> = vec![0x00, 0x03, 0x40, 0x00, 0x0, 0x01];
 
         Waveshare::append_checksum(&mut bytes)?;
@@ -260,6 +276,11 @@ impl Waveshare {
     /// case it becomes inaccessible. Almost all communication requires the controller
     /// number. The documentation for this board is spotty.
     pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
+        trace!(
+            "[Waveshare addr: {}] setting address to {}",
+            self.0.address(),
+            new_addr
+        );
         let mut bytes: Vec<u8> = vec![self.0.address(), 0x06, 0x40, 0x00, 0x00, new_addr];
 
         Waveshare::append_checksum(&mut bytes)?;
@@ -271,6 +292,11 @@ impl Waveshare {
 
     /// Sets all relays at once to the given state.
     pub fn set_all_relays(&mut self, state: BinaryState) -> Result<()> {
+        trace!(
+            "[Waveshare addr: {}] setting all relays to {}",
+            self.0.address(),
+            state
+        );
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             // These are all constant, reading all relays status
@@ -295,9 +321,7 @@ impl Waveshare {
         self.0.write_to_device(bytes)?;
         Ok(())
     }
-
 }
-
 
 /// Creates a controller connection from a Device
 impl TryFrom<&Device> for Waveshare {
@@ -307,11 +331,10 @@ impl TryFrom<&Device> for Waveshare {
             device.conn.controller_addr(),
             &device.conn.port(),
             device.conn.baudrate().clone(),
-            device.conn.timeout()
+            device.conn.timeout(),
         )
     }
 }
-
 
 // These are disabled because I don't have a waveshare v1 and cargo doesn't
 // allow me to skip these, because wavesharev2 is a similar name
@@ -319,9 +342,9 @@ impl TryFrom<&Device> for Waveshare {
 #[cfg(test)]
 mod tests {
     use crate::controllers::Controller;
-    
+
     use super::*;
-    
+
     use std::thread::sleep;
     use std::time::Duration;
 
@@ -332,14 +355,14 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_connect_to_waveshare() {
         let ws = Waveshare::connect(0x01, "/dev/ttyUSB0");
         assert!(ws.is_ok());
     }
 
     #[test]
-    
+
     fn test_crc_16_checksum() {
         let checksum = CRC_MODBUS.checksum(&[0x01, 0x05, 0x00, 0x00, 0xFF, 0x00]);
         assert_eq!(checksum, 0x3A8C);
@@ -350,7 +373,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_write_relay_state() {
         let mut ws = ws();
 
@@ -360,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_get_relay_status() {
         let mut ws = ws();
 
@@ -372,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_write_all_relays() {
         let mut ws = ws();
 
@@ -385,7 +408,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_get_all_relays_status() {
         let mut ws = ws();
 
@@ -409,14 +432,14 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_software_revision() {
         let mut ws = ws();
         assert_eq!(ws.software_revision().unwrap(), "v2.00");
     }
 
     #[test]
-    
+
     fn test_get_device_address() {
         let mut ws = ws();
         let addr = ws.get_address();
@@ -424,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    
+
     fn test_set_device_address() {
         let mut ws = ws();
 

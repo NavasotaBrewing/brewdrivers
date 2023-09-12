@@ -15,6 +15,7 @@ use log::trace;
 
 // internal uses
 use crate::drivers::{serial::SerialInstrument, InstrumentError, Result};
+use crate::logging_utils::device_trace;
 use crate::model::Device;
 use crate::state::{BinaryState, StateError};
 
@@ -42,6 +43,7 @@ pub struct WaveshareV2(SerialInstrument);
 #[async_trait]
 impl SCADADevice for WaveshareV2 {
     async fn update(device: &mut Device) -> Result<()> {
+        device_trace!(device, "updating WaveshareV2 device...");
         let mut board = Self::connect(
             device.conn.controller_addr,
             &device.conn.port(),
@@ -52,11 +54,12 @@ impl SCADADevice for WaveshareV2 {
 
         device.state.relay_state = Some(board.get_relay(device.conn.addr)?);
 
+        device_trace!(device, "updated");
         Ok(())
     }
 
     async fn enact(device: &mut Device) -> Result<()> {
-        trace!("Enacting WaveshareV2 device `{}`", device.id);
+        device_trace!(device, "enacting WaveshareV2 device...");
 
         let mut board = Self::connect(
             device.conn.controller_addr,
@@ -75,6 +78,7 @@ impl SCADADevice for WaveshareV2 {
             }
         }
 
+        device_trace!(device, "enacted");
         Ok(())
     }
 }
@@ -109,6 +113,7 @@ impl WaveshareV2 {
                 Some(address),
             )
         })?;
+        trace!("[WaveshareV2 addr: {}] connected", address);
         Ok(ws)
     }
 
@@ -131,6 +136,12 @@ impl WaveshareV2 {
         //                              0x0000：Close Relay;
         //                              0x5500：Flip Relay
         // 8C 3A	CRC16	            The CRC checksum of first six bytes.
+        trace!(
+            "[WaveshareV2 addr: {}] setting relay {} to {}",
+            self.0.address(),
+            relay_num,
+            state
+        );
         let mut bytes: Vec<u8> = vec![
             // Address
             self.0.address(),
@@ -158,6 +169,11 @@ impl WaveshareV2 {
 
     /// Gets a relay state. See [`BinaryState`](crate::controllers::BinaryState).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
+        trace!(
+            "[WaveshareV2 addr: {}] getting relay {}",
+            self.0.address(),
+            relay_num
+        );
         let statuses: Vec<BinaryState> = self.get_all_relays()?;
 
         if let Some(&state) = statuses.get(relay_num as usize) {
@@ -186,6 +202,10 @@ impl WaveshareV2 {
 
     /// Returns a `Vec<BinaryState>` of all 8 relays.
     pub fn get_all_relays(&mut self) -> Result<Vec<BinaryState>> {
+        trace!(
+            "[WaveshareV2 addr: {}] getting all relays",
+            self.0.address()
+        );
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             func_codes::READ_RELAY,
@@ -268,6 +288,7 @@ impl WaveshareV2 {
     /// works for one board, but I'm not sure what will happen if there's multiple boards. I'm too poor to afford more than
     /// one at the moment. Call UTA about reducing my tuition if you want better documentation.
     pub fn get_address(&mut self) -> Result<u8> {
+        trace!("[WaveshareV2 addr: {}] getting address", self.0.address());
         let mut bytes: Vec<u8> = vec![
             0x00, // Broadcast address
             func_codes::READ_ADDR_AND_VERSION,
@@ -299,6 +320,11 @@ impl WaveshareV2 {
     /// case it becomes inaccessible. Almost all communication requires the controller
     /// number. The documentation for this board is spotty.
     pub fn set_address(&mut self, new_addr: u8) -> Result<()> {
+        trace!(
+            "[WaveshareV2 addr: {}] setting address to {}",
+            self.0.address(),
+            new_addr
+        );
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             func_codes::SET_BAUD,
@@ -317,6 +343,11 @@ impl WaveshareV2 {
 
     /// Sets all relays at once to the given state.
     pub fn set_all_relays(&mut self, state: BinaryState) -> Result<()> {
+        trace!(
+            "[WaveshareV2 addr: {}] setting all relays to {}",
+            self.0.address(),
+            state
+        );
         let mut bytes: Vec<u8> = vec![
             self.0.address(),
             // These are all constant, reading all relays status

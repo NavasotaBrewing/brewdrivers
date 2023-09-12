@@ -21,6 +21,7 @@ use log::trace;
 
 // internal uses
 use crate::drivers::{serial::Bytestring, InstrumentError, Result, SerialInstrument};
+use crate::logging_utils::device_trace;
 use crate::model::{Device, SCADADevice};
 use crate::state::{BinaryState, StateError};
 
@@ -37,6 +38,7 @@ pub struct STR1(SerialInstrument);
 #[async_trait]
 impl SCADADevice for STR1 {
     async fn update(device: &mut Device) -> Result<()> {
+        device_trace!(device, "updating STR1 device...");
         let mut board = STR1::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
@@ -44,10 +46,12 @@ impl SCADADevice for STR1 {
             device.conn.timeout(),
         )?;
         device.state.relay_state = Some(board.get_relay(device.conn.addr())?);
+        device_trace!(device, "updated");
         Ok(())
     }
 
     async fn enact(device: &mut Device) -> Result<()> {
+        device_trace!(device, "enacting STR1 device...");
         let mut board = STR1::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
@@ -63,6 +67,7 @@ impl SCADADevice for STR1 {
                 )))
             }
         }
+        device_trace!(device, "enacted");
         Ok(())
     }
 }
@@ -75,7 +80,7 @@ impl STR1 {
         baudrate: usize,
         timeout: Duration,
     ) -> Result<Self> {
-        trace!("(STR1 {}) connected", address);
+        trace!("[STR1 addr: {}] connected", address);
         let mut str1 = STR1(SerialInstrument::new(
             address, port_path, baudrate, timeout,
         )?);
@@ -93,7 +98,7 @@ impl STR1 {
 
     /// Attempts to communicate with the board, returning Ok(()) if it responds.
     pub fn connected(&mut self) -> Result<()> {
-        trace!("(STR1 {}) connected", self.0.address());
+        trace!("[STR1 addr: {}] connected", self.0.address());
         self.relay_count()?;
         Ok(())
     }
@@ -101,7 +106,7 @@ impl STR1 {
     /// Sets a relay to On or Off.
     pub fn set_relay(&mut self, relay_num: u8, new_state: BinaryState) -> Result<()> {
         trace!(
-            "(STR1 {}) setting relay {relay_num}: {new_state}",
+            "[STR1 addr: {}] setting relay {relay_num}: {new_state}",
             self.0.address()
         );
         let new_state_num = match new_state {
@@ -123,7 +128,10 @@ impl STR1 {
 
     /// Gets the status of a relay, as a [`State`](crate::controllers::BinaryState).
     pub fn get_relay(&mut self, relay_num: u8) -> Result<BinaryState> {
-        trace!("(STR1 {}) getting relay {relay_num}", self.0.address());
+        trace!(
+            "[STR1 addr: {}] getting relay {relay_num}",
+            self.0.address()
+        );
         let bytes = Bytestring::from(vec![0x07, 0x14, self.0.address(), relay_num, 0x01]);
         let output_buf: Vec<u8> = self.write_to_device(bytes)?;
 
@@ -142,14 +150,14 @@ impl STR1 {
     /// This method uses a [`Bytestring`](crate::drivers::serial::Bytestring) to serialize the bytes you pass in,
     /// meaning you don't have to add the `MA0`, `MA1`, `CS` (checksum), and `MA0` bytes that the board requires.
     pub fn write_to_device(&mut self, bytestring: Bytestring) -> Result<Vec<u8>> {
-        trace!("(STR1 {}) writing to device", self.0.address());
+        trace!("[STR1 addr: {}] writing to device", self.0.address());
         self.0.write_to_device(bytestring.to_bytes())
     }
 
     /// Lists all relays status. This prints to `stdout`, so it should really only
     /// be used in scripts and with the CLI.
     pub fn list_all_relays(&mut self) -> Result<()> {
-        trace!("(STR1 {}) listing all relays", self.0.address());
+        trace!("[STR1 addr: {}] listing all relays", self.0.address());
         // Leave that space there >:(
         println!(
             " Controller {} (0x{:X})",
@@ -171,7 +179,7 @@ impl STR1 {
     /// The new controller number should be `0x00`-`0xFF`.
     pub fn set_controller_num(&mut self, new_cn: u8) -> Result<()> {
         trace!(
-            "(STR1 {}) setting controller number to {new_cn}",
+            "[STR1 addr: {}] setting controller number to {new_cn}",
             self.0.address()
         );
         let bs = Bytestring::from(vec![0x06, 0x01, self.0.address(), new_cn]);
@@ -214,7 +222,7 @@ impl STR1 {
 
     /// Gets the amount of relays on this board, if any
     pub fn relay_count(&mut self) -> Result<u8> {
-        trace!("(STR1 {}) getting relay count", self.0.address());
+        trace!("[STR1 addr: {}] getting relay count", self.0.address());
         let out = self.write_to_device(Bytestring::from(vec![0x05, 0x02, self.0.address()]))?;
         // return:
         // SL0, SL1, 0x09, number of outputs,
