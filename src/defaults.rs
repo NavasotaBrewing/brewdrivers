@@ -11,3 +11,11 @@ pub fn config_file() -> &'static str {
 pub fn test_config_file() -> &'static str {
     "/etc/NavasotaBrewing/test_conf.yaml"
 }
+
+pub fn default_command_retries() -> u8 {
+    1
+}
+
+pub fn default_retry_delay() -> usize {
+    150
+}

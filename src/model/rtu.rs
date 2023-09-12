@@ -87,28 +87,8 @@ impl RTU {
     pub fn validate(&self) -> Result<(), ModelError> {
         use validators::*;
 
-        if let Err(e) = devices_have_unique_ids(&self) {
-            error!("{}", e);
-            return Err(e);
-        }
-
-        if let Err(e) = id_has_no_whitespace(&self) {
-            error!("{}", e);
-            return Err(e);
-        }
-
-        if let Err(e) = serial_port_is_valid(&self) {
-            error!("{}", e);
-            return Err(e);
-        }
-
-        if let Err(e) = controller_baudrate_is_valid(&self) {
-            error!("{}", e);
-            return Err(e);
-        }
-
-        if let Err(e) = timeout_valid(&self) {
-            error!("{}", e);
+        if let Err(e) = all_validators(&self) {
+            error!("{e}");
             return Err(e);
         }
 

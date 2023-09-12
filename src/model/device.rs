@@ -8,6 +8,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::controllers::*;
+use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::drivers::InstrumentError;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
@@ -77,6 +78,14 @@ pub struct Device {
     pub id: String,
     /// A pretty name, for display purposes
     pub name: String,
+    /// Amount of times to retry an update/enact if it fails.
+    /// This should in the range [0, 6]
+    #[serde(default = "default_command_retries")]
+    pub command_retries: u8,
+    /// Delay (ms) between retries if there's a failure.
+    /// Should be less than 2000, and >= the devices timeout
+    #[serde(default = "default_retry_delay")]
+    pub retry_delay: usize,
     /// Connection details for the device
     pub conn: Connection,
     /// The state of the device. Different devices use different types of state.

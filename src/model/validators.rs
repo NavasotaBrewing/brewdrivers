@@ -4,7 +4,7 @@
 //! the RTU doesn't pass the test. It's another layer of validation on top of `serde_yaml`. This ensures
 //! the values in the RTU are actually correct, not just that it's valid YAML syntax.
 //!
-//! `serde` takes care of making sure the proper values are present; only values in an `Option<>` can be missing.
+//! `serde` takes care of making sure the proper values are present; only values in an `Option<>` or that provide a default can be missing.
 
 use log::{error, info, warn};
 use std::collections::HashMap;
@@ -15,6 +15,16 @@ use super::{ModelError, RTU};
 
 // Note that when an RTU generates, if it recieves an error from one of these methods,
 // it will call log::error!() on it, then bubble up the error.
+
+pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
+    devices_have_unique_ids(&rtu)?;
+    id_has_no_whitespace(&rtu)?;
+    serial_port_is_valid(&rtu)?;
+    controller_baudrate_is_valid(&rtu)?;
+    timeout_valid(&rtu)?;
+    command_retries_valid(&rtu)?;
+    Ok(())
+}
 
 /// Returns `Ok(())` if each device in the RTU has a unique ID
 pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
@@ -172,6 +182,23 @@ pub fn timeout_valid(rtu: &RTU) -> Result<(), ModelError> {
     }
 
     info!("RTU passed timeout_valid() validator");
+    Ok(())
+}
+
+pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
+    for device in &rtu.devices {
+        match device.command_retries {
+            0..=5 => {}
+            _ => {
+                return Err(ModelError::validation_error(
+                    ("command_retries", &format!("{}", device.command_retries)),
+                    "Command retries must be in range [0, 6]",
+                ))
+            }
+        }
+    }
+
+    info!("RTU passed command_retries_valid() validator");
     Ok(())
 }
 
@@ -405,5 +432,62 @@ mod test_validators {
         ));
 
         assert_err!(timeout_valid(&rtu));
+    }
+
+    #[test]
+    fn test_command_retries_valid() {
+        let valid_device = device(
+            r#"
+            id: pump
+            name: pump
+            command_retries: 0
+            conn:
+                port: /dev/ttyUSB0
+                baudrate: 9600
+                timeout: 15
+                controller: STR1
+                controller_addr: 254
+                addr: 2
+            "#,
+        );
+
+        let invalid_device = device(
+            r#"
+            id: pump
+            name: pump
+            command_retries: 6
+            conn:
+                port: /dev/ttyUSB0
+                baudrate: 9600
+                timeout: 15
+                controller: STR1
+                controller_addr: 254
+                addr: 2
+            "#,
+        );
+
+        let undeserializable_device = device(
+            r#"
+            id: pump
+            name: pump
+            command_retries: 6
+            conn:
+                port: /dev/ttyUSB0
+                baudrate: 9600
+                timeout: 15
+                controller: STR1
+                controller_addr: 254
+                addr: 2
+            "#,
+        );
+
+        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device]);
+        assert_ok!(command_retries_valid(&rtu1));
+
+        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device]);
+        assert_err!(command_retries_valid(&rtu2));
+
+        let rtu3 = rtu("Invalid RTU", "testing-id", vec![undeserializable_device]);
+        assert_err!(command_retries_valid(&rtu3));
     }
 }

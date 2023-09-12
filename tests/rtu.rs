@@ -88,4 +88,3 @@ async fn test_device_enact() -> Result<(), InstrumentError> {
 
     Ok(())
 }
-

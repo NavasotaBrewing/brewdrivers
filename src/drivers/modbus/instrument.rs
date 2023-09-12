@@ -28,7 +28,6 @@ pub struct ModbusInstrument {
     pub slave_addr: u8,
     pub port_path: String,
     pub baudrate: u64,
-    // TODO: change this to a Duration
     pub timeout: Duration,
     #[derivative(Debug = "ignore")]
     pub ctx: Context,
