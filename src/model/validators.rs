@@ -35,7 +35,7 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
             return Err(ModelError::validation_error(
                 &device.id,
                 ("id", device.id.as_str()),
-                "duplicate id",
+                "devices must have unique IDs across all RTUs",
             ));
         }
         seen.insert(&device.id, true);
@@ -49,9 +49,9 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
 pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
     if rtu.id.contains(char::is_whitespace) {
         return Err(ModelError::validation_error(
-            "RTU ID",
+            "RTU",
             ("id", &rtu.id),
-            "rtu ID cannot contain whitespace",
+            "RTU ID cannot contain whitespace",
         ));
     }
 
@@ -124,7 +124,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
                     return Err(ModelError::validation_error(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "Invalid baudrate for STR1 controller",
+                        "invalid baudrate for STR1 controller",
                     ));
                 }
             }
@@ -133,7 +133,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
                     return Err(ModelError::validation_error(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "Invalid baudrate for CN7500 controller",
+                        "invalid baudrate for CN7500 controller",
                     ));
                 }
             }
@@ -143,7 +143,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
                     return Err(ModelError::validation_error(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "Invalid baudrate for WaveshareV2 controller",
+                        "invalid baudrate for WaveshareV2 controller",
                     ));
                 }
             }
@@ -152,7 +152,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
                     return Err(ModelError::validation_error(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "Invalid baudrate for WaveshareV2 controller",
+                        "invalid baudrate for WaveshareV2 controller",
                     ));
                 }
             }
@@ -171,7 +171,7 @@ pub fn timeout_valid(rtu: &RTU) -> Result<(), ModelError> {
                 return Err(ModelError::validation_error(
                     &dev.id,
                     ("timeout", &format!("{}ms", dev.conn.timeout)),
-                    "Timeout cannot be lower than 16",
+                    "Timeout cannot be lower than 16 ms",
                 ));
             }
             // Allowed, but warn the user
@@ -204,7 +204,7 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
                 return Err(ModelError::validation_error(
                     &device.id,
                     ("command_retries", &format!("{}", device.command_retries)),
-                    "Command retries must be in range [0, 6]",
+                    "command retries must be in range [0, 6]",
                 ))
             }
         }
@@ -220,7 +220,10 @@ pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
             return Err(ModelError::validation_error(
                 &device.id,
                 ("retry_delay", &format!("{}", device.retry_delay)),
-                "Retry delay must be in the range [device_timeout, 2000] (units in ms)",
+                &format!(
+                    "retry delay for this device must be in the range [{}, 2000] (units in ms)",
+                    device.conn.timeout
+                ),
             ));
         }
     }
