@@ -21,6 +21,7 @@
 //! to see how to use this library, and see the [organization documentation](https://github.com/NavasotaBrewing/documentation) for more information about the
 //! hardware and project as a whole.
 
+#![deny(while_true, unsafe_code, overflowing_literals)]
 #![allow(non_snake_case)]
 
 pub mod controllers;
@@ -37,9 +38,6 @@ mod tests {
     /// This is a special little function that will deserialize the test RTU configuration
     /// and return the device details of a given type of controller.
     /// This is just used in tests
-    ///
-    /// If we don't have a physical control connected to our workstation (when running tests with cargo),
-    /// then this will panic on the unwrap().
     pub fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
         let rtu = crate::model::RTU::generate(Some(crate::defaults::test_config_file()))
             .expect("Couldn't read config file into RTU model");
@@ -48,13 +46,5 @@ mod tests {
             .find(|dev| dev.conn.controller == con_type)
             .unwrap()
             .clone()
-    }
-
-    /// Same as test_device_from_type but filters by ID
-    #[allow(dead_code)]
-    pub fn test_device_from_id(id: &str) -> model::Device {
-        let rtu = crate::model::RTU::generate(Some(crate::defaults::test_config_file()))
-            .expect("Couldn't read config file into RTU model");
-        rtu.devices.iter().find(|dev| dev.id == id).unwrap().clone()
     }
 }

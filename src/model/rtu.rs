@@ -75,7 +75,7 @@ impl RTU {
         )
         .map_err(|err| ModelError::IOError(err))?;
 
-        // Serialize the file. Return an Err if it doesn't succeed
+        // Deserialize the file. Return an Err if it doesn't succeed
         let rtu = serde_yaml::from_str::<RTU>(&file_contents)
             .map_err(|err| ModelError::SerdeParseError(err))?;
 

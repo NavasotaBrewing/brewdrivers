@@ -1,7 +1,7 @@
 use std::io;
 use thiserror::Error;
 
-use crate::{state::StateError, model::Device};
+use crate::{model::Device, state::StateError};
 
 /// A general purpose error that may be returned from Instrument interactions
 #[derive(Error, Debug)]
@@ -27,13 +27,17 @@ pub enum InstrumentError {
     SerialError { msg: String, addr: Option<u8> },
     /// Wrapper around [`StateError`](crate::state::StateError), when provided the wrong type of state
     #[error("State Error: {0:?}")]
-    StateError(StateError)
+    StateError(StateError),
 }
 
 impl InstrumentError {
     /// Creates a modbus timeout error, just a helper function
     pub fn modbusTimeoutError(port: &str, addr: u8, register: u16) -> Self {
-        Self::ModbusTimeoutError { port: port.to_string(), addr, register }
+        Self::ModbusTimeoutError {
+            port: port.to_string(),
+            addr,
+            register,
+        }
     }
 
     /// creates a serial error, just a helper function
@@ -48,6 +52,7 @@ impl InstrumentError {
 }
 
 impl From<io::Error> for InstrumentError {
-    fn from(e: io::Error) -> Self { Self::IOError(e) }
+    fn from(e: io::Error) -> Self {
+        Self::IOError(e)
+    }
 }
-
