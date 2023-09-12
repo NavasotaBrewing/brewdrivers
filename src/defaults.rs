@@ -16,6 +16,6 @@ pub fn default_command_retries() -> u8 {
     1
 }
 
-pub fn default_retry_delay() -> usize {
+pub fn default_retry_delay() -> u64 {
     150
 }

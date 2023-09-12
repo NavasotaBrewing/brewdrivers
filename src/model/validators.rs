@@ -205,7 +205,7 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
 
 pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
     for device in &rtu.devices {
-        if device.retry_delay < device.conn.timeout as usize || device.retry_delay > 2000 {
+        if device.retry_delay < device.conn.timeout || device.retry_delay > 2000 {
             return Err(ModelError::validation_error(
                 ("retry_delay", &format!("{}", device.retry_delay)),
                 "Retry delay must be in the range [device_timeout, 2000] (units in ms)",

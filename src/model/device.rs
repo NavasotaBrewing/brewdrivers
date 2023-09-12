@@ -85,7 +85,7 @@ pub struct Device {
     /// Delay (ms) between retries if there's a failure.
     /// Should be less than 2000, and >= the devices timeout
     #[serde(default = "default_retry_delay")]
-    pub retry_delay: usize,
+    pub retry_delay: u64,
     /// Connection details for the device
     pub conn: Connection,
     /// The state of the device. Different devices use different types of state.
@@ -98,13 +98,35 @@ pub struct Device {
 
 impl Device {
     pub async fn update(&mut self) -> Result<()> {
-        info!("Updating device `{}`", self.id);
-        match self.conn.controller {
-            Controller::STR1 => STR1::update(self).await,
-            Controller::CN7500 => CN7500::update(self).await,
-            Controller::Waveshare => Waveshare::update(self).await,
-            Controller::WaveshareV2 => WaveshareV2::update(self).await,
+        let total_attempts = self.command_retries + 1;
+        for i in 1..=total_attempts {
+            info!(
+                "Updating device `{}` (Attempt {i} of {})",
+                self.id, total_attempts
+            );
+
+            let result = match self.conn.controller {
+                Controller::STR1 => STR1::update(self).await,
+                Controller::CN7500 => CN7500::update(self).await,
+                Controller::Waveshare => Waveshare::update(self).await,
+                Controller::WaveshareV2 => WaveshareV2::update(self).await,
+            };
+
+            match result {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    // If we're on the last iteration of the loop
+                    // ie. the last retry and we still fail, then return the error
+                    if i == total_attempts {
+                        return Err(e);
+                    }
+                    info!("Updating device `{}` failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.id, self.retry_delay);
+                    std::thread::sleep(Duration::from_millis(self.retry_delay));
+                }
+            }
         }
+
+        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
     }
 
     pub async fn enact(&mut self) -> Result<()> {
@@ -136,5 +158,28 @@ mod tests {
 
         assert_eq!("/dev/ttyUSB0", conn.port());
         assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
+    }
+
+    #[tokio::test]
+    async fn test_command_retries() {
+        let mut device: Device = serde_yaml::from_str(
+            r#"
+            id: wsrelay0
+            name: Waveshare Relay
+            command_retries: 5
+            retry_delay: 2000
+            conn:
+              port: /dev/ttyUSB1
+              baudrate: 38400
+              timeout: 40
+              controller: WaveshareV2
+              controller_addr: 1
+              addr: 0
+        "#,
+        )
+        .unwrap();
+
+        let result = device.update().await;
+        assert!(result.is_ok());
     }
 }

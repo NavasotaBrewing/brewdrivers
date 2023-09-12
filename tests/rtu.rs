@@ -1,6 +1,39 @@
 use brewdrivers::{
-    controllers::Controller, drivers::InstrumentError, model::RTU, state::BinaryState,
+    controllers::Controller,
+    drivers::InstrumentError,
+    model::{Device, RTU},
+    state::BinaryState,
 };
+
+// This isn't a conventional test. I want to make sure that the timeout/command retries are
+// happening, which takes several seconds depending on the config. This test will usually not be
+// run in the normal test suite.
+#[allow(unused)]
+// #[tokio::test]
+async fn test_retry_command_delay() -> Result<(), InstrumentError> {
+    // RUST_LOG=trace cargo test test_retry_command_delay -- --nocapture
+    env_logger::init();
+    let mut device: Device = serde_yaml::from_str(
+        r#"
+            id: wsrelay0
+            name: Waveshare Relay
+            command_retries: 5
+            retry_delay: 400
+            conn:
+              port: /dev/ttyUSB1
+              baudrate: 38400
+              timeout: 40
+              controller: WaveshareV2
+              controller_addr: 1
+              addr: 0
+        "#,
+    )
+    .unwrap();
+
+    let result = device.update().await;
+    assert!(result.is_err());
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> {
