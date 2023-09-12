@@ -26,9 +26,9 @@
 pub mod controllers;
 pub mod defaults;
 pub mod drivers;
+pub mod logging_utils;
 pub mod model;
 pub mod state;
-pub mod logging_utils;
 
 #[cfg(test)]
 mod tests {

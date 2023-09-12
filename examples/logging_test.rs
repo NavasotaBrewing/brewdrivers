@@ -2,7 +2,8 @@ use brewdrivers::{logging_utils::*, model::Device};
 
 fn main() {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("trace"));
-    let device: Device = serde_yaml::from_str(r#"
+    let device: Device = serde_yaml::from_str(
+        r#"
         id: pump
         name: Pump
         conn:
@@ -12,11 +13,22 @@ fn main() {
             controller: STR1
             controller_addr: 254
             addr: 0
-    "#).unwrap();
-    trace!(device);
-    trace!(device, "Device said hello!");
-    debug!(device, "Device said hello!");
-    info!(device, "Device said hello!");
-    warn!(device, "Device said hello!");
-    error!(device, "Device said hello!");
+    "#,
+    )
+    .unwrap();
+
+    // You can just give it a device
+    device_trace!(device);
+    device_debug!(device);
+    device_info!(device);
+    device_warn!(device);
+    device_error!(device);
+
+    // Or provide an additional message
+    device_trace!(device, "Device said hello!");
+    device_debug!(device, "Device said hello!");
+    device_info!(device, "Device said hello!");
+    device_warn!(device, "Device said hello!");
+    device_error!(device, "Device said hello!");
 }
+
