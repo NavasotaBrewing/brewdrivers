@@ -35,9 +35,9 @@ impl Default for DeviceState {
     /// ```
     fn default() -> Self {
         Self {
-            relay_state: Default::default(),
-            pv: Default::default(),
-            sv: Default::default(),
+            relay_state: Some(BinaryState::Off),
+            pv: Some(PV::default()),
+            sv: Some(SV::default()),
         }
     }
 }

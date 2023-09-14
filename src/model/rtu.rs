@@ -28,6 +28,8 @@ pub struct RTU {
 impl RTU {
     /// This calls [`Device::enact`](crate::model::Device::enact) on each device in the RTU.
     /// Returns the first Err() encountered.
+    ///
+    /// This is not used very often, because it enacts every device.
     //
     // TODO: Maybe collect errors and return a list of errors, if any?
     pub async fn enact(&mut self) -> Result<(), InstrumentError> {
