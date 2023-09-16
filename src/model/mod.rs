@@ -1,6 +1,7 @@
 use crate::drivers::InstrumentError;
 use async_trait::async_trait;
 
+pub mod conditions;
 pub mod device;
 pub mod model_error;
 pub mod rtu;
