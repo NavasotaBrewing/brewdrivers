@@ -15,7 +15,7 @@ pub enum ConditionKind {
     RelayStateIs,
     PVIsAtLeast,
     PVIsAround,
-    PVReachesSV,
+    PVMeetsSV,
 }
 
 pub struct Condition<'a> {
@@ -70,7 +70,7 @@ impl<'a> Condition<'a> {
                 self.ensure_actual_value(self.device.state.pv, "pv")?;
                 return self.evaluate_pv_is_around(self.state.pv.unwrap());
             }
-            ConditionKind::PVReachesSV => {
+            ConditionKind::PVMeetsSV => {
                 // This evaluates if the PV is around the SV, with margins applied
                 self.ensure_actual_value(self.device.state.pv, "pv")?;
                 self.ensure_actual_value(self.device.state.sv, "sv")?;
@@ -264,16 +264,57 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_pv_meets_sv() {
+        let mut omega = test_device_from_type(Controller::CN7500);
+
+        // Target state actually doesn't matter here because we want to compare the pv and sv
+        // values on the controller itself
+        let target_state = DeviceState {
+            relay_state: None,
+            pv: None,
+            sv: None,
+        };
+
+        let mut condition = Condition {
+            name: format!("My Condition"),
+            id: format!("my-condition"),
+            kind: ConditionKind::PVMeetsSV,
+            device: &mut omega.clone(),
+            state: target_state,
+            margin_above: 10.0,
+            margin_below: 10.0,
+        };
+
+        omega.update().await.unwrap();
+
+        omega.state.sv = omega.state.pv;
+        omega.enact().await.unwrap();
+
+        assert!(condition.evaluate().await.unwrap());
+
+        omega.state.sv = Some(omega.state.pv.unwrap() + 4.0);
+        omega.enact().await.unwrap();
+
+        assert!(condition.evaluate().await.unwrap());
+
+        omega.state.sv = Some(omega.state.pv.unwrap() + 25.0);
+        omega.enact().await.unwrap();
+
+        assert!(!condition.evaluate().await.unwrap());
+    }
+
+    #[tokio::test]
     async fn test_pv_is_around() {
         let mut omega = test_device_from_type(Controller::CN7500);
 
-        // We can't set the PV and we never really know what it is
+        // We can't set the PV
         omega.update().await.unwrap();
         let pv = omega.state.pv.unwrap();
 
         let target_state = DeviceState {
             relay_state: None,
-            pv: Some(pv + 8.0),
+            // Margins should apply to this condition
+            pv: Some(pv + 2.0),
             sv: None,
         };
 
@@ -283,8 +324,8 @@ mod tests {
             kind: ConditionKind::PVIsAround,
             device: &mut omega.clone(),
             state: target_state,
-            margin_above: 10.0,
-            margin_below: 10.0,
+            margin_above: 5.0,
+            margin_below: 5.0,
         };
 
         assert!(condition.evaluate().await.unwrap());
