@@ -9,9 +9,12 @@ use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::drivers::InstrumentError;
 use crate::logging_utils::device_info;
+use crate::model::conditions::ConditionCollection;
 use crate::model::Connection;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
+
+use super::conditions::Condition;
 
 type Result<T> = std::result::Result<T, InstrumentError>;
 
@@ -47,6 +50,7 @@ pub struct Device {
 impl Device {
     pub async fn update(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
+
         for i in 1..=total_attempts {
             device_info!(
                 &self,
@@ -79,6 +83,7 @@ impl Device {
 
     pub async fn enact(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
+
         for i in 1..=total_attempts {
             device_info!(
                 &self,

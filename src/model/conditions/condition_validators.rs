@@ -9,9 +9,9 @@ use crate::{
     },
 };
 
-use super::Conditions;
+use super::Condition;
 
-pub fn conditions_have_unique_ids(conditions: &Conditions) -> Result<(), ConditionError> {
+pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
     let mut seen: HashMap<&String, bool> = HashMap::new();
     for condition in conditions {
         if seen.get(&condition.id).is_some() {
@@ -27,7 +27,7 @@ pub fn conditions_have_unique_ids(conditions: &Conditions) -> Result<(), Conditi
     Ok(())
 }
 
-pub fn conditions_have_no_whitespace(conditions: &Conditions) -> Result<(), ConditionError> {
+pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
     for cond in conditions {
         if cond.id.contains(char::is_whitespace) {
             return Err(ConditionError::validation_error(
@@ -41,7 +41,7 @@ pub fn conditions_have_no_whitespace(conditions: &Conditions) -> Result<(), Cond
     Ok(())
 }
 
-pub fn conditions_have_existing_device(conditions: &Conditions) -> Result<(), ConditionError> {
+pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
     let rtu = RTU::generate(None).unwrap();
 
     let device_ids = rtu
@@ -68,7 +68,9 @@ pub fn conditions_have_existing_device(conditions: &Conditions) -> Result<(), Co
     Ok(())
 }
 
-pub fn conditions_have_correct_device_type(conditions: &Conditions) -> Result<(), ConditionError> {
+pub fn conditions_have_correct_device_type(
+    conditions: &Vec<Condition>,
+) -> Result<(), ConditionError> {
     let rtu = RTU::generate(None).unwrap();
 
     for cond in conditions {

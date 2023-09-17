@@ -1,16 +1,74 @@
 pub mod condition_error;
 pub mod condition_validators;
 
+use std::fs;
+
 use crate::defaults::*;
 pub use condition_error::ConditionError;
 use log::*;
 use serde::{Deserialize, Serialize};
 
+use crate::defaults::conditions_file;
 use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
 
-pub type Conditions = Vec<Condition>;
+#[derive(Deserialize)]
+pub struct ConditionCollection(pub Vec<Condition>);
+
+impl ConditionCollection {
+    fn get_from_file() -> Result<Self, ConditionError> {
+        let file_path = conditions_file();
+        info!("Generating Conditions. Using config file: {:?}", file_path);
+
+        // Get the contents of the config file
+        let file_contents =
+            fs::read_to_string(file_path).map_err(|err| ConditionError::IOError(err))?;
+
+        // Deserialize the file. Return an Err if it doesn't succeed
+        let conditions = serde_yaml::from_str::<ConditionCollection>(&file_contents)
+            .map_err(|err| ConditionError::SerdeParseError(err))?;
+
+        Ok(conditions)
+    }
+
+    /// Gets all conditions from the file, and validates them
+    pub fn get_all() -> Result<Self, ConditionError> {
+        let conditions = ConditionCollection::get_from_file()?;
+        conditions.validate()?;
+        Ok(conditions)
+    }
+
+    /// Runs all validators on the conditions found
+    pub fn validate(&self) -> Result<(), ConditionError> {
+        use condition_validators::*;
+
+        conditions_have_unique_ids(&self.0)?;
+        conditions_have_existing_device(&self.0)?;
+        conditions_have_correct_device_type(&self.0)?;
+        conditions_have_no_whitespace(&self.0)?;
+
+        Ok(())
+    }
+
+    /// Gets conditions from the conditions file, but filters then by the device id
+    ///
+    /// Validates only the filtered ones.
+    pub fn get_for_device(device_id: &str) -> Result<Self, ConditionError> {
+        let collection = ConditionCollection::get_from_file()?;
+        let filtered_collection = ConditionCollection(
+            collection
+                .0
+                .into_iter()
+                .filter(|cond| cond.device_id == device_id)
+                .collect(),
+        );
+
+        filtered_collection.validate()?;
+
+        Ok(filtered_collection)
+    }
+}
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum ConditionKind {
