@@ -1,11 +1,22 @@
 pub mod condition_definition;
 pub mod condition_error;
+
+use condition_error::ConditionError;
 use log::*;
+use serde::Deserialize;
 
 use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
-use condition_definition::{ConditionDefinition, ConditionKind};
+use condition_definition::ConditionDefinition;
+
+#[derive(Deserialize)]
+pub enum ConditionKind {
+    RelayStateIs,
+    PVIsAtLeast,
+    PVIsAround,
+    PVReachesSV,
+}
 
 pub struct Condition<'a> {
     pub name: String,
@@ -158,10 +169,13 @@ impl<'a> Condition<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{controllers::BinaryState, tests::test_device_from_type};
+    use crate::{
+        controllers::{BinaryState, Controller},
+        tests::test_device_from_type,
+    };
 
     fn test_relay() -> Device {
-        test_device_from_type(crate::controllers::Controller::STR1)
+        test_device_from_type(Controller::STR1)
     }
 
     #[test]
@@ -217,6 +231,36 @@ mod tests {
 
         assert!(condition.evaluate().await.unwrap());
     }
+
+    #[tokio::test]
+    async fn test_pv_is_at_least() {
+        let mut omega = test_device_from_type(Controller::CN7500);
+
+        // We can't set the PV and we never really know what it is
+        omega.update().await.unwrap();
+        let pv = omega.state.pv.unwrap();
+
+        let target_state = DeviceState {
+            relay_state: None,
+            pv: Some(pv - 20.0),
+            sv: None,
+        };
+
+        let mut condition = Condition {
+            name: format!("My Condition"),
+            id: format!("my-condition"),
+            kind: ConditionKind::PVIsAtLeast,
+            device: &mut omega.clone(),
+            state: target_state,
+            margin_above: 0.0,
+            margin_below: 0.0,
+        };
+
+        assert!(condition.evaluate().await.unwrap());
+
+        condition.state.pv = Some(pv + 20.0);
+
+        assert!(!condition.evaluate().await.unwrap());
+    }
 }
 
-use self::condition_error::ConditionError;

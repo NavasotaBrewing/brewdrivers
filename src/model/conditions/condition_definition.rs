@@ -3,13 +3,7 @@ use serde::Deserialize;
 use crate::defaults::*;
 use crate::state::DeviceState;
 
-#[derive(Deserialize)]
-pub enum ConditionKind {
-    RelayStateIs,
-    PVIsAtLeast,
-    PVIsAround,
-    PVReachesSV,
-}
+use crate::model::conditions::ConditionKind;
 
 #[derive(Deserialize)]
 pub struct ConditionDefinition {
