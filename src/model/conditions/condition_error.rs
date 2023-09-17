@@ -2,6 +2,12 @@ use thiserror::Error;
 
 use crate::controllers::InstrumentError;
 
+/// An error when evaluating a condition.
+///
+/// While technically the MissingTargetValueError is checked at start time and *shouldn't* ever be
+/// returned at run time, ConditionErrors should only be returned at run time.
+/// [ModelError](crate::model::ModelError) is returned at start time if the condition fails it's
+/// validation.
 #[derive(Error, Debug)]
 pub enum ConditionError {
     /// An instrument error, in case the instrument fails when we're updating it's value

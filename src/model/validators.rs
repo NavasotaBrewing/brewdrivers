@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use crate::controllers::Controller;
 
-use super::{ModelError, RTU};
+use crate::model::{ModelError, RTU};
 
 // Note that when an RTU generates, if it recieves an error from one of these methods,
 // it will call log::error!() on it, then bubble up the error.
@@ -232,9 +232,35 @@ pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
+pub fn devices_in_conditions_have_devices(rtu: &RTU) -> Result<(), ModelError> {
+    let device_ids = rtu
+        .devices
+        .iter()
+        .map(|device| device.id.clone())
+        .collect::<Vec<String>>();
+    for cond_def in &rtu.conditions {
+        if !device_ids.contains(&cond_def.device_id) {
+            return Err(
+                ModelError::validation_error(
+                    &cond_def.id,
+                    ("device_id", &cond_def.device_id),
+                    &format!(
+                        "Conditions must be attached to a device that exists in the configuration. Could not find `{}`",
+                        cond_def.device_id
+                    )
+                )
+            );
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod test_validators {
     use super::*;
+    use crate::model::conditions::ConditionDefinition;
+    use crate::tests::test_device_from_type;
 
     use std::{net::Ipv4Addr, str::FromStr};
     use tokio_test::{assert_err, assert_ok};
@@ -242,17 +268,27 @@ mod test_validators {
     use crate::model::{Device, RTU};
 
     // Just quickly sets up an RTU for testing purposes
-    fn rtu(name: &str, id: &str, devices: Vec<Device>) -> RTU {
+    fn rtu(
+        name: &str,
+        id: &str,
+        devices: Vec<Device>,
+        conditions: Vec<ConditionDefinition>,
+    ) -> RTU {
         RTU {
             name: String::from(name),
             id: String::from(id),
             ip_addr: Ipv4Addr::from_str("0.0.0.0").unwrap(),
             devices,
+            conditions,
         }
     }
 
     // Quickly builds a device for testing purposes
     fn device(input: &str) -> Device {
+        serde_yaml::from_str(input).unwrap()
+    }
+
+    fn condition(input: &str) -> ConditionDefinition {
         serde_yaml::from_str(input).unwrap()
     }
 
@@ -300,7 +336,7 @@ mod test_validators {
             ),
         ];
 
-        let mut rtu = rtu("Testing RTU", "testing-id", devices);
+        let mut rtu = rtu("Testing RTU", "testing-id", devices, vec![]);
 
         assert_err!(devices_have_unique_ids(&rtu));
         rtu.devices.remove(1);
@@ -323,7 +359,7 @@ mod test_validators {
             "#,
         )];
 
-        let mut rtu = rtu("Testing RTU", "testing id with whitespace", devices);
+        let mut rtu = rtu("Testing RTU", "testing id with whitespace", devices, vec![]);
 
         assert_err!(id_has_no_whitespace(&rtu));
         rtu.devices[0].id = String::from("something-without-whitespace");
@@ -350,7 +386,7 @@ mod test_validators {
             "#,
         )];
 
-        let mut rtu = rtu("testing RTU", "test-id", devices);
+        let mut rtu = rtu("testing RTU", "test-id", devices, vec![]);
 
         assert_ok!(serial_port_is_valid(&rtu));
 
@@ -405,7 +441,7 @@ mod test_validators {
             "#,
         )];
 
-        let mut rtu = rtu("testing RTU", "test-id", devices);
+        let mut rtu = rtu("testing RTU", "test-id", devices, vec![]);
 
         assert_ok!(controller_baudrate_is_valid(&rtu));
 
@@ -442,7 +478,7 @@ mod test_validators {
             "#,
         )];
 
-        let mut rtu = rtu("testing RTU", "test-id", devices);
+        let mut rtu = rtu("testing RTU", "test-id", devices, vec![]);
 
         assert_ok!(timeout_valid(&rtu));
 
@@ -511,13 +547,18 @@ mod test_validators {
             "#,
         );
 
-        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device]);
+        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device], vec![]);
         assert_ok!(command_retries_valid(&rtu1));
 
-        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device]);
+        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device], vec![]);
         assert_err!(command_retries_valid(&rtu2));
 
-        let rtu3 = rtu("Invalid RTU", "testing-id", vec![undeserializable_device]);
+        let rtu3 = rtu(
+            "Invalid RTU",
+            "testing-id",
+            vec![undeserializable_device],
+            vec![],
+        );
         assert_err!(command_retries_valid(&rtu3));
     }
 
@@ -553,10 +594,55 @@ mod test_validators {
             "#,
         );
 
-        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device]);
+        let rtu1 = rtu("Valid RTU", "testing-id", vec![valid_device], vec![]);
         assert_ok!(retry_delay_valid(&rtu1));
 
-        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device]);
+        let rtu2 = rtu("Invalid RTU", "testing-id", vec![invalid_device], vec![]);
         assert_err!(retry_delay_valid(&rtu2));
+    }
+
+    #[test]
+    fn test_condition_device_exists() {
+        let device = test_device_from_type(Controller::STR1);
+        let condition_def = condition(&format!(
+            r#"
+            name: My Condition
+            id: my-condition
+            condition: RelayStateIs
+            device_id: {}
+            state:
+                relay_state: On
+            "#,
+            device.id
+        ));
+
+        let rtu1 = rtu(
+            "RTU with condition",
+            "testing-id",
+            vec![device.clone()],
+            vec![condition_def.clone()],
+        );
+
+        assert_ok!(devices_in_conditions_have_devices(&rtu1));
+
+        let condition_def2 = condition(
+            r#"
+            name: My Condition
+            id: my-condition
+            condition: RelayStateIs
+            device_id: some-id-that-does-not-exist
+            state:
+                relay_state: On
+            "#,
+        );
+
+        let rtu2 = rtu(
+            "RTU with condition",
+            "testing-id",
+            vec![device],
+            vec![condition_def, condition_def2],
+        );
+
+        assert_err!(devices_in_conditions_have_devices(&rtu2));
     }
 }

@@ -3,14 +3,14 @@ pub mod condition_error;
 
 use condition_error::ConditionError;
 use log::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
-use condition_definition::ConditionDefinition;
+pub use condition_definition::ConditionDefinition;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum ConditionKind {
     RelayStateIs,
     PVIsAtLeast,
@@ -50,6 +50,7 @@ impl<'a> Condition<'a> {
             self.device.id
         );
 
+        // Update the device state so we have accurate values
         if let Err(e) = self.device.update().await {
             device_error!(
                 self.device,
@@ -335,4 +336,3 @@ mod tests {
         assert!(!condition.evaluate().await.unwrap());
     }
 }
-

@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::drivers::InstrumentError;
 
-use super::{validators, Device, ModelError};
+use super::{
+    conditions::condition_definition::ConditionDefinition, validators, Device, ModelError,
+};
 
 /// A digital representation of an RTU.
 ///
@@ -23,6 +25,12 @@ pub struct RTU {
     pub ip_addr: Ipv4Addr,
     /// A list of devices connected to the RTU
     pub devices: Vec<Device>,
+    /// A list of condition definitions
+    //
+    // We don't serialize, because there's really no reason to send these out
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    pub conditions: Vec<ConditionDefinition>,
 }
 
 impl RTU {

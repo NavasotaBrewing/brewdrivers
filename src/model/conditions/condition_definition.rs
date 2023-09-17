@@ -1,11 +1,11 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::defaults::*;
 use crate::state::DeviceState;
 
 use crate::model::conditions::ConditionKind;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct ConditionDefinition {
     /// Name of the condition
     pub name: String,
