@@ -262,5 +262,36 @@ mod tests {
 
         assert!(!condition.evaluate().await.unwrap());
     }
+
+    #[tokio::test]
+    async fn test_pv_is_around() {
+        let mut omega = test_device_from_type(Controller::CN7500);
+
+        // We can't set the PV and we never really know what it is
+        omega.update().await.unwrap();
+        let pv = omega.state.pv.unwrap();
+
+        let target_state = DeviceState {
+            relay_state: None,
+            pv: Some(pv + 8.0),
+            sv: None,
+        };
+
+        let mut condition = Condition {
+            name: format!("My Condition"),
+            id: format!("my-condition"),
+            kind: ConditionKind::PVIsAround,
+            device: &mut omega.clone(),
+            state: target_state,
+            margin_above: 10.0,
+            margin_below: 10.0,
+        };
+
+        assert!(condition.evaluate().await.unwrap());
+
+        condition.state.pv = Some(pv + 20.0);
+
+        assert!(!condition.evaluate().await.unwrap());
+    }
 }
 
