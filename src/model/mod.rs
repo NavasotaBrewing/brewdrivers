@@ -2,11 +2,13 @@ use crate::drivers::InstrumentError;
 use async_trait::async_trait;
 
 pub mod conditions;
+pub mod connection;
 pub mod device;
 pub mod model_error;
 pub mod rtu;
 mod validators;
 
+pub use connection::Connection;
 pub use device::Device;
 pub use model_error::ModelError;
 pub use rtu::RTU;

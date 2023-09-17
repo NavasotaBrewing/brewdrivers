@@ -9,12 +9,11 @@ pub type PV = f64;
 pub type SV = f64;
 
 // TODO: maybe add an `extras` field here? It could be an Option<HashMap>
-
 /// A generalized state that is attached to all `Device`s
 ///
 /// Note that each controller uses a different set of these values. For example,
 /// a relay board uses `relay_state` but won't ever touch `pv` or `sv`.
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize, Clone)]
 pub struct DeviceState {
     pub relay_state: Option<BinaryState>,
     pub pv: Option<PV>,
@@ -28,27 +27,6 @@ impl std::fmt::Display for DeviceState {
             "[relay_state: {:?}, pv: {:?}, sv: {:?}]",
             self.relay_state, self.pv, self.sv
         )
-    }
-}
-
-impl Default for DeviceState {
-    /// Creates a default state. This is used when deserializing an RTU model from the
-    /// configuration file. If the user doesn't provide state values in the config file (why would they?),
-    /// then this will fill in the defaults.
-    ///
-    /// ```text
-    /// DeviceState {
-    ///     relay_state: Some(BinaryState::Off),
-    ///     pv: Some(0.0),
-    ///     sv: Some(0.0)
-    /// }
-    /// ```
-    fn default() -> Self {
-        Self {
-            relay_state: Some(BinaryState::Off),
-            pv: Some(PV::default()),
-            sv: Some(SV::default()),
-        }
     }
 }
 

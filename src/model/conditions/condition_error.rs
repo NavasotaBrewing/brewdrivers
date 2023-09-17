@@ -33,4 +33,17 @@ pub enum ConditionError {
         condition_id: String,
         device_id: String,
     },
+
+    /// Error when validating the configuration
+    #[error("Validation Error: Condition `{condition_id}` failed validation because: `{msg}`")]
+    ValidationError { condition_id: String, msg: String },
+}
+
+impl ConditionError {
+    pub fn validation_error(condition_id: &str, msg: String) -> Self {
+        return Self::ValidationError {
+            condition_id: condition_id.to_string(),
+            msg,
+        };
+    }
 }

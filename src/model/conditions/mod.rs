@@ -1,13 +1,16 @@
 pub mod condition_error;
+pub mod condition_validators;
 
 use crate::defaults::*;
-use condition_error::ConditionError;
+pub use condition_error::ConditionError;
 use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
+
+pub type Conditions = Vec<Condition>;
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum ConditionKind {
