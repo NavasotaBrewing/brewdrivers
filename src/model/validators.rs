@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use crate::controllers::Controller;
 
+use crate::model::conditions::ConditionKind;
 use crate::model::{ModelError, RTU};
 
 // Note that when an RTU generates, if it recieves an error from one of these methods,
@@ -25,6 +26,8 @@ pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
     command_retries_valid(&rtu)?;
     retry_delay_valid(&rtu)?;
     conditions_have_existing_device(&rtu)?;
+    conditions_have_unique_ids(&rtu)?;
+    conditions_have_correct_device_type(&rtu)?;
     Ok(())
 }
 
@@ -42,7 +45,24 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
         seen.insert(&device.id, true);
     }
 
-    info!("RTU passed devices_have_unique_ids() validator");
+    info!("RTU validation check passed: all device IDs are unique");
+    Ok(())
+}
+
+pub fn conditions_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
+    let mut seen: HashMap<&String, bool> = HashMap::new();
+    for condition in &rtu.conditions {
+        if seen.get(&condition.id).is_some() {
+            return Err(ModelError::validation_error(
+                &condition.id,
+                ("id", condition.id.as_str()),
+                "conditions must have unique IDs",
+            ));
+        }
+        seen.insert(&condition.id, true);
+    }
+
+    info!("RTU validation check passed: all condition IDs are unique");
     Ok(())
 }
 
@@ -66,7 +86,17 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
-    info!("RTU passed id_has_no_whitespace() validator");
+    for cond in &rtu.conditions {
+        if cond.id.contains(char::is_whitespace) {
+            return Err(ModelError::validation_error(
+                &cond.id,
+                ("id", &cond.id),
+                "condition ID cannot contain whitespace",
+            ));
+        }
+    }
+
+    info!("RTU validation check passed: all ID values provided are valid");
     Ok(())
 }
 
@@ -110,7 +140,7 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
-    info!("RTU passed serial_port_is_valid() validator");
+    info!("RTU validation check passed: all serial port values provided are valid");
     Ok(())
 }
 
@@ -160,7 +190,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
-    info!("RTU passed controller_baudrate_is_valid() validator");
+    info!("RTU validation check passed: all controller baudrates provided are valid");
     Ok(())
 }
 
@@ -177,23 +207,24 @@ pub fn timeout_valid(rtu: &RTU) -> Result<(), ModelError> {
             }
             // Allowed, but warn the user
             (16..=35) => {
-                warn!(
-                    "Timeout for device `{}` with controller type `{}` is low. This *might* work,
-                    but you may experience device instability, especially under load.
-                    Consider raising your timeout to 30ms or 40ms",
-                    dev.name,
-                    dev.conn.controller()
-                );
-                info!("I've tested the following to be reasonbly stable:");
-                info!("STR1:\t\t17ms at baud 38400");
-                info!("CN7500:\t\t36ms at baud 19200");
-                info!("WaveshareV2:\t41ms at baud 38400");
+                // Temporarily disabling these for now
+                // warn!(
+                //     "Timeout for device `{}` with controller type `{}` is low. This *might* work,
+                //     but you may experience device instability, especially under load.
+                //     Consider raising your timeout to 30ms or 40ms",
+                //     dev.name,
+                //     dev.conn.controller()
+                // );
+                // info!("I've tested the following to be reasonbly stable:");
+                // info!("STR1:\t\t17ms at baud 38400");
+                // info!("CN7500:\t\t36ms at baud 19200");
+                // info!("WaveshareV2:\t41ms at baud 38400");
             }
             _ => {}
         }
     }
 
-    info!("RTU passed timeout_valid() validator");
+    info!("RTU validation check passed: all timeout values provided are valid");
     Ok(())
 }
 
@@ -211,7 +242,7 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
-    info!("RTU passed command_retries_valid() validator");
+    info!("RTU validation check passed: all command_retries values provided are valid");
     Ok(())
 }
 
@@ -229,7 +260,7 @@ pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
-    info!("RTU passed retry_delay_valid() validator");
+    info!("RTU validation check passed: all relay_delay values provided are valid");
     Ok(())
 }
 
@@ -254,6 +285,63 @@ pub fn conditions_have_existing_device(rtu: &RTU) -> Result<(), ModelError> {
         }
     }
 
+    info!("RTU validation check passed: all conditions have an associated device that exists in the configuration");
+    Ok(())
+}
+
+pub fn conditions_have_correct_device_type(rtu: &RTU) -> Result<(), ModelError> {
+    for cond in &rtu.conditions {
+        // First, get the device that's attached to it
+        let device = rtu
+            .devices
+            .iter()
+            .find(|device| device.id == cond.device_id);
+
+        if device.is_none() {
+            return Err(
+                ModelError::validation_error(
+                    &cond.id,
+                    ("device_id", &cond.device_id),
+                    &format!(
+                        "Couldn't find device `{}` attached to condition, even though I already checked for it. This shouldn't happen.", cond.device_id
+                    )
+                )
+            );
+        }
+
+        let device_type = &device.unwrap().conn.controller;
+
+        // Prebuild the error to keep the code a bit cleaner
+        // This error is very complicated
+        let error = ModelError::validation_error(
+                        &cond.id,
+                        ("condition", &format!("{:?}", cond.kind)),
+                        &format!(
+                            "Condition called '{}' (id `{}`) with kind `{:?}` is not applicable to device called {} (id `{}`) because the device has type `{}`",
+                            cond.name,
+                            cond.id,
+                            cond.kind,
+                            device.unwrap().name,
+                            device.unwrap().id,
+                            device_type
+                        )
+                    );
+
+        match cond.kind {
+            ConditionKind::RelayStateIs => match device_type {
+                Controller::STR1 | Controller::Waveshare | Controller::WaveshareV2 => {}
+                _ => return Err(error),
+            },
+            ConditionKind::PVIsAtLeast | ConditionKind::PVIsAround | ConditionKind::PVMeetsSV => {
+                match device_type {
+                    Controller::CN7500 => {}
+                    _ => return Err(error),
+                }
+            }
+        }
+    }
+
+    info!("RTU validation check passed: all conditions have the proper device type attached");
     Ok(())
 }
 
