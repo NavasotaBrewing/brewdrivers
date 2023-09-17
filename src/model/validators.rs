@@ -24,6 +24,7 @@ pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
     timeout_valid(&rtu)?;
     command_retries_valid(&rtu)?;
     retry_delay_valid(&rtu)?;
+    conditions_have_existing_device(&rtu)?;
     Ok(())
 }
 
@@ -232,7 +233,7 @@ pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
-pub fn devices_in_conditions_have_devices(rtu: &RTU) -> Result<(), ModelError> {
+pub fn conditions_have_existing_device(rtu: &RTU) -> Result<(), ModelError> {
     let device_ids = rtu
         .devices
         .iter()
@@ -623,7 +624,7 @@ mod test_validators {
             vec![condition_def.clone()],
         );
 
-        assert_ok!(devices_in_conditions_have_devices(&rtu1));
+        assert_ok!(conditions_have_existing_device(&rtu1));
 
         let condition_def2 = condition(
             r#"
@@ -643,6 +644,6 @@ mod test_validators {
             vec![condition_def, condition_def2],
         );
 
-        assert_err!(devices_in_conditions_have_devices(&rtu2));
+        assert_err!(conditions_have_existing_device(&rtu2));
     }
 }

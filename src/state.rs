@@ -21,6 +21,16 @@ pub struct DeviceState {
     pub sv: Option<SV>,
 }
 
+impl std::fmt::Display for DeviceState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[relay_state: {:?}, pv: {:?}, sv: {:?}]",
+            self.relay_state, self.pv, self.sv
+        )
+    }
+}
+
 impl Default for DeviceState {
     /// Creates a default state. This is used when deserializing an RTU model from the
     /// configuration file. If the user doesn't provide state values in the config file (why would they?),
