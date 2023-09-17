@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::drivers::InstrumentError;
 
-use super::{
-    conditions::condition_definition::ConditionDefinition, validators, Device, ModelError,
-};
+use super::{conditions::Condition, validators, Device, ModelError};
 
 /// A digital representation of an RTU.
 ///
@@ -30,7 +28,7 @@ pub struct RTU {
     // We don't serialize, because there's really no reason to send these out
     #[serde(skip_serializing)]
     #[serde(default)]
-    pub conditions: Vec<ConditionDefinition>,
+    pub conditions: Vec<Condition>,
 }
 
 impl RTU {

@@ -348,7 +348,7 @@ pub fn conditions_have_correct_device_type(rtu: &RTU) -> Result<(), ModelError> 
 #[cfg(test)]
 mod test_validators {
     use super::*;
-    use crate::model::conditions::ConditionDefinition;
+    use crate::model::conditions::Condition;
     use crate::tests::test_device_from_type;
 
     use std::{net::Ipv4Addr, str::FromStr};
@@ -357,12 +357,7 @@ mod test_validators {
     use crate::model::{Device, RTU};
 
     // Just quickly sets up an RTU for testing purposes
-    fn rtu(
-        name: &str,
-        id: &str,
-        devices: Vec<Device>,
-        conditions: Vec<ConditionDefinition>,
-    ) -> RTU {
+    fn rtu(name: &str, id: &str, devices: Vec<Device>, conditions: Vec<Condition>) -> RTU {
         RTU {
             name: String::from(name),
             id: String::from(id),
@@ -377,7 +372,7 @@ mod test_validators {
         serde_yaml::from_str(input).unwrap()
     }
 
-    fn condition(input: &str) -> ConditionDefinition {
+    fn condition(input: &str) -> Condition {
         serde_yaml::from_str(input).unwrap()
     }
 

@@ -26,4 +26,11 @@ pub enum ConditionError {
         device_id: String,
         state_name: String,
     },
+    #[error(
+        "Device `{device_id}` not found in device list when evaluating condition `{condition_id}`"
+    )]
+    MissingDeviceError {
+        condition_id: String,
+        device_id: String,
+    },
 }
