@@ -1,4 +1,5 @@
 pub mod condition_definition;
+pub mod condition_error;
 use log::*;
 
 use crate::logging_utils::device_error;
@@ -29,104 +30,193 @@ impl<'a> Condition<'a> {
         };
     }
 
-    pub async fn evaluate(&mut self) -> bool {
+    pub async fn evaluate(&mut self) -> Result<bool, ConditionError> {
+        trace!(
+            "Evaluating condition {} (`{}`) on device {} (`{}`)",
+            self.name,
+            self.id,
+            self.device.name,
+            self.device.id
+        );
+
         if let Err(e) = self.device.update().await {
             device_error!(
                 self.device,
                 &format!(
                     "error updating device when evaluating condition `{}`: {e}",
-                    self.name
+                    self.id
                 )
             );
+            return Err(ConditionError::InstrumentError(e));
         }
 
-        let result = match self.kind {
-            ConditionKind::RelayStateIs => self.evaluate_relay_state_is(),
-            ConditionKind::PVIsAtLeast => self.evaluate_pv_is_at_least(),
-            ConditionKind::PVIsAround => self.evaluate_pv_is_around(),
-            ConditionKind::PVReachesSV => todo!(),
+        match self.kind {
+            ConditionKind::RelayStateIs => return self.evaluate_relay_state_is(),
+            ConditionKind::PVIsAtLeast => return self.evaluate_pv_is_at_least(),
+            ConditionKind::PVIsAround => {
+                // This evaluates if the PV is around the target value from the condition
+                // definition
+                self.ensure_actual_value(self.device.state.pv, "pv")?;
+                return self.evaluate_pv_is_around(self.state.pv.unwrap());
+            }
+            ConditionKind::PVReachesSV => {
+                // This evaluates if the PV is around the SV, with margins applied
+                self.ensure_actual_value(self.device.state.pv, "pv")?;
+                self.ensure_actual_value(self.device.state.sv, "sv")?;
+                return self.evaluate_pv_is_around(self.device.state.sv.unwrap());
+            }
         };
-
-        return result;
     }
 
-    /// Returns false if the relay from the condition definition is none.
-    /// Note that this shouldn't be possible because the DeviceState struct provides a default
-    /// value for relay_state. This is just an extra check.
-    fn ensure_relay_state(&self) -> bool {
-        if self.state.relay_state.is_none() {
-            error!("Error when evaluating condition `{}`. There was no `relay_state` provided to match against. This shouldn't be possible", self.name);
-            return false;
+    fn ensure_target_value<T>(&self, value: Option<T>, name: &str) -> Result<(), ConditionError> {
+        if value.is_none() {
+            return Err(ConditionError::MissingTargetValueError {
+                condition_id: self.id.clone(),
+                state_name: name.to_string(),
+            });
         }
-        return true;
+        Ok(())
     }
 
-    /// Returns false if the pv from the condition definition is none.
-    /// Note that this shouldn't be possible because the DeviceState struct provides a default
-    /// value for pv. This is just an extra check.
-    fn ensure_pv(&self) -> bool {
-        if self.state.pv.is_none() {
-            error!("Error when evaluating condition `{}`. There was no `pv` state provided to match against. This shouldn't be possible", self.name);
-            return false;
+    fn ensure_actual_value<T>(&self, value: Option<T>, name: &str) -> Result<(), ConditionError> {
+        if value.is_none() {
+            return Err(ConditionError::MissingActualValueError {
+                condition_id: self.id.clone(),
+                device_id: self.device.id.clone(),
+                state_name: name.to_string(),
+            });
         }
-        return true;
+        Ok(())
     }
 
-    /// Returns false if the sv from the condition definition is none.
-    /// Note that this shouldn't be possible because the DeviceState struct provides a default
-    /// value for sv. This is just an extra check.
-    #[allow(unused)]
-    fn ensure_sv(&self) -> bool {
-        if self.state.sv.is_none() {
-            error!("Error when evaluating condition `{}`. There was no `sv` state provided to match against. This shouldn't be possible", self.name);
-            return false;
-        }
-        return true;
+    fn evaluate_relay_state_is(&mut self) -> Result<bool, ConditionError> {
+        // Ensure we have a target state (from the condition definition)
+        self.ensure_target_value(self.state.relay_state, "relay_state")?;
+        // And an actual state
+        self.ensure_actual_value(self.device.state.relay_state, "relay_state")?;
+
+        let result = self.device.state.relay_state.unwrap() == self.state.relay_state.unwrap();
+
+        trace!(
+            "`{}`: Evaluating that `{}`.relay_state is `{}` and found that to be {}",
+            self.id,
+            self.device.id,
+            self.state.relay_state.unwrap(),
+            result
+        );
+
+        Ok(result)
     }
 
-    fn evaluate_relay_state_is(&mut self) -> bool {
-        if self.device.state.relay_state.is_none() {
-            device_error!(self.device, "device relay state was None. How?");
-            return false;
-        }
+    fn evaluate_pv_is_at_least(&self) -> Result<bool, ConditionError> {
+        self.ensure_target_value(self.state.pv, "pv")?;
+        self.ensure_actual_value(self.device.state.pv, "pv")?;
 
-        if !self.ensure_relay_state() {
-            return false;
-        }
+        let result = self.device.state.pv >= self.state.pv;
 
-        return self.device.state.relay_state.unwrap() == self.state.relay_state.unwrap();
+        trace!(
+            "`{}`: Evaluating that `{}`.pv is at least `{}` and found that to be {}",
+            self.id,
+            self.device.id,
+            self.state.pv.unwrap(),
+            result
+        );
+
+        Ok(result)
     }
 
-    fn evaluate_pv_is_at_least(&self) -> bool {
-        if !self.ensure_pv() {
-            return false;
-        }
-
-        if self.device.state.pv.is_none() {
-            device_error!(self.device, "device pv was None. How?");
-            return false;
-        }
-
-        return self.device.state.pv.unwrap() >= self.state.pv.unwrap();
-    }
-
-    fn evaluate_pv_is_around(&self) -> bool {
-        if !self.ensure_pv() {
-            return false;
-        }
-
-        if self.device.state.pv.is_none() {
-            device_error!(self.device, "device pv was None. How?");
-            return false;
-        }
+    /// Compares the pv of the device to the given value, with the margins applied.
+    fn evaluate_pv_is_around(&self, target: f64) -> Result<bool, ConditionError> {
+        self.ensure_actual_value(self.device.state.pv, "pv")?;
 
         let actual = self.device.state.pv.unwrap();
-        let target = self.state.pv.unwrap();
 
         let lower_bound = target - self.margin_below;
         let upper_bound = target + self.margin_above;
 
-        return actual >= lower_bound && actual <= upper_bound;
+        let result = actual >= lower_bound && actual <= upper_bound;
+
+        trace!(
+            "`{}`: Evaluating that `{}`.pv is in the range [{}, {}] and found that to be {}",
+            self.id,
+            self.device.id,
+            lower_bound,
+            upper_bound,
+            result
+        );
+        trace!(
+            "`{}`: range was found by taking target value {} and applying the lower/upper margins: [-{},+{}]",
+            self.id,
+            target,
+            self.margin_below,
+            self.margin_above
+        );
+        Ok(result)
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{controllers::BinaryState, tests::test_device_from_type};
+
+    fn test_relay() -> Device {
+        test_device_from_type(crate::controllers::Controller::STR1)
+    }
+
+    #[test]
+    fn test_condition_from_definition() {
+        let source = r#"
+            name: My Condition
+            id: my-condition
+            condition: RelayStateIs
+            device_id: relay1
+            state:
+                relay_state: On
+            "#;
+
+        let result = serde_yaml::from_str::<ConditionDefinition>(&source);
+        assert!(result.is_ok());
+
+        let mut device = test_relay();
+        Condition::from_definition(result.unwrap(), &mut device);
+    }
+
+    #[tokio::test]
+    async fn test_relay_state_is_condition() {
+        let mut device = test_relay();
+
+        // Make sure it's off
+        device.state.relay_state = Some(BinaryState::Off);
+        device.enact().await.unwrap();
+
+        let target_state = DeviceState {
+            relay_state: Some(BinaryState::Off),
+            pv: None,
+            sv: None,
+        };
+
+        let mut condition = Condition {
+            name: format!("My Condition"),
+            id: format!("my-condition"),
+            kind: ConditionKind::RelayStateIs,
+            device: &mut device.clone(),
+            state: target_state,
+            margin_above: 0.0,
+            margin_below: 0.0,
+        };
+
+        assert!(condition.evaluate().await.unwrap());
+
+        device.state.relay_state = Some(BinaryState::On);
+        device.enact().await.unwrap();
+
+        assert!(!condition.evaluate().await.unwrap());
+
+        condition.state.relay_state = Some(BinaryState::On);
+
+        assert!(condition.evaluate().await.unwrap());
+    }
+}
+
+use self::condition_error::ConditionError;

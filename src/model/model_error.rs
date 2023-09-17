@@ -15,6 +15,7 @@ pub enum ModelError {
     #[error("Serde parse error: {0}")]
     SerdeParseError(serde_yaml::Error),
 
+    /// Error when validating the configuration
     #[error("Validation Error: {item_id}.{key} = `{value}` (Rule: {rule})")]
     ValidationError {
         // The item that failed validation, usually a device id

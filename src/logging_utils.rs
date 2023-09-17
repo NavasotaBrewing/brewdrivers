@@ -14,7 +14,7 @@ use crate::model::Device;
 /// ```text
 /// [2023-09-12T20:09:29Z TRACE logging_test] [`pump` -> relay_state: Some(true)] Device said hello!
 /// ```
-pub fn format_log_prefix(device: &Device) -> String {
+pub fn format_device_log_prefix(device: &Device) -> String {
     let mut states_string = String::new();
     match device.conn.controller {
         Controller::CN7500 => {
@@ -38,7 +38,7 @@ macro_rules! device_trace {
     ($device:expr, $msg:expr) => {
         log::trace!(
             "{} {}",
-            $crate::logging_utils::format_log_prefix(&$device),
+            $crate::logging_utils::format_device_log_prefix(&$device),
             $msg
         );
     };
@@ -52,7 +52,7 @@ macro_rules! device_debug {
     ($device:expr, $msg:expr) => {
         log::debug!(
             "{} {}",
-            $crate::logging_utils::format_log_prefix(&$device),
+            $crate::logging_utils::format_device_log_prefix(&$device),
             $msg
         );
     };
@@ -66,7 +66,7 @@ macro_rules! device_info {
     ($device:expr, $msg:expr) => {
         log::info!(
             "{} {}",
-            $crate::logging_utils::format_log_prefix(&$device),
+            $crate::logging_utils::format_device_log_prefix(&$device),
             $msg
         );
     };
@@ -80,7 +80,7 @@ macro_rules! device_warn {
     ($device:expr, $msg:expr) => {
         log::warn!(
             "{} {}",
-            $crate::logging_utils::format_log_prefix(&$device),
+            $crate::logging_utils::format_device_log_prefix(&$device),
             $msg
         );
     };
@@ -94,7 +94,7 @@ macro_rules! device_error {
     ($device:expr, $msg:expr) => {
         log::error!(
             "{} {}",
-            $crate::logging_utils::format_log_prefix(&$device),
+            $crate::logging_utils::format_device_log_prefix(&$device),
             $msg
         );
     };
@@ -107,4 +107,3 @@ pub use device_error;
 pub use device_info;
 pub use device_trace;
 pub use device_warn;
-
