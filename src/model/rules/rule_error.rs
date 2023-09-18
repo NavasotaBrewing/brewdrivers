@@ -1,4 +1,4 @@
-use crate::model::conditions::ConditionError;
+use crate::{controllers::InstrumentError, model::conditions::ConditionError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -8,6 +8,9 @@ pub enum RuleError {
 
     #[error("Parse error: {0}")]
     SerdeParseError(serde_yaml::Error),
+
+    #[error("Instrument error: {0}")]
+    InstrumentError(InstrumentError),
 
     #[error("Condition `{0}` was not found. Is it defined?")]
     ConditionNotFoundError(String),

@@ -65,6 +65,9 @@ impl Rule {
     ///
     /// You must provide the device named in the rules condition, and the devices
     /// affected.
+    ///
+    /// This *does* call update on the dependant device, and enact if necessary on the resultant
+    /// devices
     pub async fn apply(&self, mut devices: Vec<&mut Device>) -> Result<(), RuleError> {
         // These error checks should be caught by validators when iris starts, but they're still
         // checked here because that's the spirit of Rust
@@ -87,6 +90,11 @@ impl Rule {
                 }
             };
 
+        dependant_device
+            .update()
+            .await
+            .map_err(|e| RuleError::InstrumentError(e))?;
+
         let condition_result = condition.evaluate_on(&mut dependant_device).await;
 
         match condition_result {
@@ -98,7 +106,7 @@ impl Rule {
             Ok(true) => {
                 trace!("Evaluated condition `{}` using device `{}` for rule `{}` and found result to be true (rule does apply)", condition.id, dependant_device.id, self.id);
                 // Apply state sets
-                self.apply_state_sets(devices)?;
+                self.apply_state_sets(devices).await?;
                 return Ok(());
             }
             Err(e) => {
@@ -112,7 +120,7 @@ impl Rule {
     }
 
     /// Applies the specific StateSets to the right devices
-    fn apply_state_sets(&self, mut devices: Vec<&mut Device>) -> Result<(), RuleError> {
+    async fn apply_state_sets(&self, mut devices: Vec<&mut Device>) -> Result<(), RuleError> {
         // We've already checked the condition, so just apply all new state sets to all devices.
         for new_state in &self.set {
             let found_device = match devices.iter_mut().find(|dev| dev.id == new_state.device_id) {
@@ -125,7 +133,15 @@ impl Rule {
                 }
             };
 
-            found_device.state = new_state.target_state.clone();
+            // If the device is already in that state, then don't enact
+            if found_device.state != new_state.target_state {
+                // Update the state and enact
+                found_device.state = new_state.target_state.clone();
+                found_device
+                    .enact()
+                    .await
+                    .map_err(|e| RuleError::InstrumentError(e))?
+            }
         }
         Ok(())
     }
