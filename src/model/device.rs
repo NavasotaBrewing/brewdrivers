@@ -9,12 +9,12 @@ use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::drivers::InstrumentError;
 use crate::logging_utils::device_info;
-use crate::model::conditions::ConditionCollection;
+// use crate::model::conditions::ConditionCollection;
 use crate::model::Connection;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
 
-use super::conditions::Condition;
+// use super::conditions::Condition;
 
 type Result<T> = std::result::Result<T, InstrumentError>;
 

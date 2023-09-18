@@ -7,6 +7,10 @@ pub fn config_file() -> &'static str {
     "/etc/NavasotaBrewing/rtu_conf.yaml"
 }
 
+pub fn rules_file() -> &'static str {
+    "/etc/NavasotaBrewing/rules.yaml"
+}
+
 pub fn conditions_file() -> &'static str {
     "/etc/NavasotaBrewing/conditions.yaml"
 }

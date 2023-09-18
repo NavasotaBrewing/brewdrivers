@@ -6,6 +6,7 @@ pub mod connection;
 pub mod device;
 pub mod model_error;
 pub mod rtu;
+pub mod rules;
 mod validators;
 
 pub use connection::Connection;

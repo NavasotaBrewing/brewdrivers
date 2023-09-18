@@ -9,7 +9,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::defaults::conditions_file;
-use crate::logging_utils::device_error;
+// use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
 
@@ -68,6 +68,14 @@ impl ConditionCollection {
 
         Ok(filtered_collection)
     }
+
+    pub fn get_by_id(condition_id: &str) -> Option<Condition> {
+        let collection = ConditionCollection::get_from_file().ok()?;
+        collection
+            .0
+            .into_iter()
+            .find(|cond| cond.id == condition_id)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -101,20 +109,11 @@ pub struct Condition {
 }
 
 impl Condition {
-    pub async fn evaluate_on(
-        &mut self,
-        mut devices: Vec<&mut Device>,
-    ) -> Result<bool, ConditionError> {
-        let device = match devices.iter_mut().find(|dev| dev.id == self.device_id) {
-            Some(device) => device,
-            None => {
-                return Err(ConditionError::MissingDeviceError {
-                    condition_id: self.id.clone(),
-                    device_id: self.device_id.clone(),
-                })
-            }
-        };
-
+    /// Evaluates if the condition is true or false.
+    ///
+    /// Note that this does *not* poll the device for updated values. It's your responsibility to
+    /// update the device before calling this method on it.
+    pub async fn evaluate_on(&mut self, device: &mut Device) -> Result<bool, ConditionError> {
         trace!(
             "Evaluating condition {} (`{}`) on device {} (`{}`)",
             self.name,
@@ -124,16 +123,16 @@ impl Condition {
         );
 
         // Update the device state so we have accurate values
-        if let Err(e) = device.update().await {
-            device_error!(
-                device,
-                &format!(
-                    "error updating device when evaluating condition `{}`: {e}",
-                    self.id
-                )
-            );
-            return Err(ConditionError::InstrumentError(e));
-        }
+        // if let Err(e) = device.update().await {
+        //     device_error!(
+        //         device,
+        //         &format!(
+        //             "error updating device when evaluating condition `{}`: {e}",
+        //             self.id
+        //         )
+        //     );
+        //     return Err(ConditionError::InstrumentError(e));
+        // }
 
         match self.kind {
             ConditionKind::RelayStateIs => return self.evaluate_relay_state_is(device),
@@ -282,16 +281,16 @@ mod tests {
             margin_below: 0.0,
         };
 
-        assert!(condition.evaluate_on(vec![&mut device]).await.unwrap());
+        assert!(condition.evaluate_on(&mut device).await.unwrap());
 
         device.state.relay_state = Some(BinaryState::On);
         device.enact().await.unwrap();
 
-        assert!(!condition.evaluate_on(vec![&mut device]).await.unwrap());
+        assert!(!condition.evaluate_on(&mut device).await.unwrap());
 
         condition.state.relay_state = Some(BinaryState::On);
 
-        assert!(condition.evaluate_on(vec![&mut device]).await.unwrap());
+        assert!(condition.evaluate_on(&mut device).await.unwrap());
     }
 
     #[tokio::test]
@@ -318,11 +317,11 @@ mod tests {
             margin_below: 0.0,
         };
 
-        assert!(condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(condition.evaluate_on(&mut omega).await.unwrap());
 
         condition.state.pv = Some(pv + 20.0);
 
-        assert!(!condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(!condition.evaluate_on(&mut omega).await.unwrap());
     }
 
     #[tokio::test]
@@ -352,17 +351,17 @@ mod tests {
         omega.state.sv = omega.state.pv;
         omega.enact().await.unwrap();
 
-        assert!(condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(condition.evaluate_on(&mut omega).await.unwrap());
 
         omega.state.sv = Some(omega.state.pv.unwrap() + 4.0);
         omega.enact().await.unwrap();
 
-        assert!(condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(condition.evaluate_on(&mut omega).await.unwrap());
 
         omega.state.sv = Some(omega.state.pv.unwrap() + 25.0);
         omega.enact().await.unwrap();
 
-        assert!(!condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(!condition.evaluate_on(&mut omega).await.unwrap());
     }
 
     #[tokio::test]
@@ -390,11 +389,11 @@ mod tests {
             margin_below: 5.0,
         };
 
-        assert!(condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(condition.evaluate_on(&mut omega).await.unwrap());
 
         condition.state.pv = Some(pv + 20.0);
 
-        assert!(!condition.evaluate_on(vec![&mut omega]).await.unwrap());
+        assert!(!condition.evaluate_on(&mut omega).await.unwrap());
     }
 
     #[test]
