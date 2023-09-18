@@ -1,4 +1,7 @@
-use crate::{controllers::InstrumentError, model::conditions::ConditionError};
+use crate::{
+    controllers::InstrumentError,
+    model::{conditions::ConditionError, ModelError},
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,6 +24,21 @@ pub enum RuleError {
     #[error("{0}")]
     ConditionError(ConditionError),
 
+    #[error("{0}")]
+    ModelError(ModelError),
+
     #[error("Rule Error: Rule `{rule_id}` failed validation because: `{msg}`")]
     ValidationError { rule_id: String, msg: String },
+}
+
+impl From<InstrumentError> for RuleError {
+    fn from(error: InstrumentError) -> Self {
+        Self::InstrumentError(error)
+    }
+}
+
+impl From<ModelError> for RuleError {
+    fn from(error: ModelError) -> Self {
+        Self::ModelError(error)
+    }
 }

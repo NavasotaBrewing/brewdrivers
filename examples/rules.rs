@@ -1,23 +1,15 @@
-use log::*;
-
-use brewdrivers::model::rules::RuleSet;
-use brewdrivers::model::RTU;
+use brewdrivers::{model::RTU, state::BinaryState};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("trace"));
 
-    let rules = RuleSet::get_all()?;
+    let mut rtu = RTU::generate().unwrap();
 
-    for rule in &rules.0 {
-        info!("Found rule {}", rule.name);
-    }
+    let mut some_device = rtu.devices.get_mut(1).unwrap();
+    some_device.state.relay_state = Some(BinaryState::On);
 
-    let mut rtu = RTU::generate(None)?;
-
-    for rule in &rules.0 {
-        rule.apply(rtu.devices.iter_mut().collect()).await?;
-    }
+    some_device.enact().await?;
 
     Ok(())
 }

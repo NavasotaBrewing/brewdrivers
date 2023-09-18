@@ -39,7 +39,7 @@ async fn test_retry_command_delay() -> Result<(), InstrumentError> {
 async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> {
     // This generates an RTU state from the config file and updates all state
     // values in all devices. It's like taking a snapshot of all state values for the whole RTU.
-    let res = RTU::generate(Some(brewdrivers::defaults::test_config_file()));
+    let res = RTU::generate();
     assert!(res.is_ok());
     let mut rtu = res.unwrap();
     assert!(rtu.devices.len() > 0);
@@ -87,7 +87,7 @@ async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> 
 async fn test_device_enact() -> Result<(), InstrumentError> {
     // There does exist an RTU::enact() method, but we try not to use it
     // because it will try to write to every device. This takes a long time.
-    let res = RTU::generate(Some(brewdrivers::defaults::test_config_file()));
+    let res = RTU::generate();
     assert!(res.is_ok());
     let mut rtu = res.unwrap();
     assert!(rtu.devices.len() > 0);

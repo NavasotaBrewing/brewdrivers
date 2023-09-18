@@ -39,8 +39,7 @@ mod tests {
     /// and return the device details of a given type of controller.
     /// This is just used in tests
     pub fn test_device_from_type(con_type: controllers::Controller) -> model::Device {
-        let rtu = crate::model::RTU::generate(Some(crate::defaults::test_config_file()))
-            .expect("Couldn't read config file into RTU model");
+        let rtu = crate::model::RTU::generate().expect("Couldn't read config file into RTU model");
         rtu.devices
             .iter()
             .find(|dev| dev.conn.controller == con_type)

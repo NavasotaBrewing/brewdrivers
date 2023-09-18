@@ -4,7 +4,7 @@ use std::net::Ipv4Addr;
 use log::*;
 use serde::{Deserialize, Serialize};
 
-use crate::drivers::InstrumentError;
+use crate::{defaults::config_file, drivers::InstrumentError};
 
 use super::{validators, Device, ModelError};
 
@@ -67,17 +67,14 @@ impl RTU {
     ///
     /// This method calls [`RTU::validate()`](crate::model::RTU::validate) and returns an error if any of
     /// them don't succeed.
-    pub fn generate(conf_path: Option<&str>) -> Result<RTU, ModelError> {
-        let file_path = conf_path.or(Some(crate::defaults::config_file()));
+    pub fn generate() -> Result<RTU, ModelError> {
+        let file_path = config_file();
         info!("Generating RTU. Using config file: {:?}", file_path);
         // TODO: Get IPv4 here programatically instead of writing it in the file
 
         // Get the contents of the config file
-        let file_contents = fs::read_to_string(
-            // this is safe
-            file_path.unwrap(),
-        )
-        .map_err(|err| ModelError::IOError(err))?;
+        let file_contents =
+            fs::read_to_string(file_path).map_err(|err| ModelError::IOError(err))?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
         let rtu = serde_yaml::from_str::<RTU>(&file_contents)
@@ -110,7 +107,7 @@ mod tests {
 
     #[test]
     async fn test_generate_rtu() {
-        let rtu = RTU::generate(Some(crate::defaults::test_config_file()));
+        let rtu = RTU::generate();
         assert!(rtu.is_ok());
         assert!(rtu.unwrap().devices.len() > 0);
     }

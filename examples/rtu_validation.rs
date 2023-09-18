@@ -8,7 +8,7 @@ fn main() {
     // I think there's also an argument in the CLI package that will validate the rtu config
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("trace"));
 
-    if let Err(e) = RTU::generate(None) {
+    if let Err(e) = RTU::generate() {
         log::error!("{e}");
     }
 }

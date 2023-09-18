@@ -9,7 +9,9 @@ use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::drivers::InstrumentError;
 use crate::logging_utils::device_info;
+use log::*;
 // use crate::model::conditions::ConditionCollection;
+use crate::model::rules::RuleSet;
 use crate::model::Connection;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
@@ -98,7 +100,13 @@ impl Device {
             };
 
             match result {
-                Ok(_) => return Ok(()),
+                Ok(_) => {
+                    if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+                        error!("an error occured when applying rules, and I'm not handling it.");
+                        error!("{e}");
+                    }
+                    return Ok(());
+                }
                 Err(e) => {
                     // If we're on the last iteration of the loop
                     // ie. the last retry and we still fail, then return the error
@@ -112,6 +120,45 @@ impl Device {
         }
 
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
+    }
+
+    /// Enacts a device, but doesn't apply rules. This is used by the rules themselves, so
+    /// that there's no recursion.
+    ///
+    // TODO: refactor this with enact()
+    pub async fn enact_without_applying_rules(&mut self) -> Result<()> {
+        let total_attempts = self.command_retries + 1;
+
+        for i in 1..=total_attempts {
+            device_info!(
+                &self,
+                &format!("enacting (attempt {i} of {})", total_attempts)
+            );
+
+            let result = match self.conn.controller {
+                Controller::STR1 => STR1::enact(self).await,
+                Controller::CN7500 => CN7500::enact(self).await,
+                Controller::Waveshare => Waveshare::enact(self).await,
+                Controller::WaveshareV2 => WaveshareV2::enact(self).await,
+            };
+
+            match result {
+                Ok(_) => {
+                    return Ok(());
+                }
+                Err(e) => {
+                    // If we're on the last iteration of the loop
+                    // ie. the last retry and we still fail, then return the error
+                    if i == total_attempts {
+                        return Err(e);
+                    }
+                    device_info!(&self, &format!("enacting failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
+                    std::thread::sleep(Duration::from_millis(self.retry_delay));
+                }
+            }
+        }
+
+        panic!("temp");
     }
 }
 

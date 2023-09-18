@@ -42,7 +42,7 @@ pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<(), 
 }
 
 pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
-    let rtu = RTU::generate(None).unwrap();
+    let rtu = RTU::generate().unwrap();
 
     let device_ids = rtu
         .devices
@@ -71,7 +71,7 @@ pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()
 pub fn conditions_have_correct_device_type(
     conditions: &Vec<Condition>,
 ) -> Result<(), ConditionError> {
-    let rtu = RTU::generate(None).unwrap();
+    let rtu = RTU::generate().unwrap();
 
     for cond in conditions {
         // First, get the device that's attached to it
