@@ -30,6 +30,9 @@ pub mod drivers;
 pub mod logging_utils;
 pub mod model;
 pub mod state;
+pub mod error;
+
+pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
 #[cfg(test)]
 mod tests {

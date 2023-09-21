@@ -16,7 +16,7 @@ use tokio_modbus::{
     prelude::Slave,
 };
 
-use crate::drivers::{InstrumentError, Result};
+use crate::{Result, error::Error};
 
 /// A generic async Modbus instrument.
 ///
@@ -52,9 +52,8 @@ impl ModbusInstrument {
             Err(serial_err) => {
                 error!("Error when connecting to Modbus Instrument. There is likely no port location at `{}`", port_path);
                 error!("Serial Error: {}", serial_err);
-                return Err(InstrumentError::serialError(
-                    format!("serial error: {}", serial_err),
-                    Some(slave_addr),
+                return Err(Error::InstrumentError(
+                    format!("serial error on slave addr `{}`: {}", slave_addr, serial_err)
                 ));
             }
         };
@@ -79,12 +78,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(res) => res.map_err(InstrumentError::IOError),
-            Err(_) => {
-                Err(InstrumentError::modbusTimeoutError(
-                    &self.port_path,
-                    self.slave_addr,
-                    register,
+            Ok(res) => res.map_err(Error::IOError),
+            Err(e) => {
+                Err(Error::InstrumentError(
+                    format!(
+                        "error reading register `{register}` on modbus instrument with address `{}`: {e}",
+                        self.slave_addr
+                    )
                 ))
             }
         }
@@ -97,12 +97,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => resp.map_err(InstrumentError::IOError),
-            Err(_) => {
-                Err(InstrumentError::modbusTimeoutError(
-                    &self.port_path,
-                    self.slave_addr,
-                    register,
+            Ok(resp) => resp.map_err(Error::IOError),
+            Err(e) => {
+                Err(Error::InstrumentError(
+                    format!(
+                        "error writing value `{value}` to register `{register}` on modbus instrument with address `{}`: {e}",
+                        self.slave_addr
+                    )
                 ))
             }
         }
@@ -115,12 +116,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => resp.map_err(InstrumentError::IOError),
-            Err(_) => {
-                Err(InstrumentError::modbusTimeoutError(
-                    &self.port_path,
-                    self.slave_addr,
-                    coil,
+            Ok(resp) => resp.map_err(Error::IOError),
+            Err(e) => {
+                Err(Error::InstrumentError(
+                    format!(
+                        "error reading coil `{coil}` on modbus instrument with address `{}`: {e}",
+                        self.slave_addr
+                    )
                 ))
             }
         }
@@ -133,12 +135,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => resp.map_err(InstrumentError::IOError),
-            Err(_) => {
-                Err(InstrumentError::modbusTimeoutError(
-                    &self.port_path,
-                    self.slave_addr,
-                    coil,
+            Ok(resp) => resp.map_err(Error::IOError),
+            Err(e) => {
+                Err(Error::InstrumentError(
+                    format!(
+                        "error writing value `{value}` to coil `{coil}` on modbus instrument with address `{}`: {e}",
+                        self.slave_addr
+                    )
                 ))
             }
         }

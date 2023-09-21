@@ -12,7 +12,7 @@ use derivative::Derivative;
 // ext uses
 use serialport::{DataBits, FlowControl, Parity, StopBits, SerialPort};
 
-use crate::drivers::{InstrumentError, Result};
+use crate::{Result, error::Error};
 
 /// A generic serial instrument.
 #[derive(Derivative)]
@@ -75,10 +75,7 @@ impl SerialInstrument {
                 })
             }
             Err(e) => {
-                Err(InstrumentError::serialError(
-                    format!("{}", e),
-                    Some(address),
-                ))
+                Err(Error::instrument(format!("couldn't open serial port: {e}")))
             }
         }
     }
@@ -103,10 +100,9 @@ impl SerialInstrument {
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
         match self.port.write(&bytes) {
             Err(e) => {
-                return Err(InstrumentError::serialError(
-                    format!("Error writing to board: {}", e),
-                    Some(self.address()),
-                ))
+                return Err(Error::InstrumentError(
+                    format!("couldn't write to serial device: {e}")
+                ));
             }
             _ => {}
         };
