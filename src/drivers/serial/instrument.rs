@@ -8,16 +8,19 @@
 use std::io::{Read, Write};
 use std::time::Duration;
 
+use derivative::Derivative;
 // ext uses
-use serialport::{DataBits, FlowControl, Parity, StopBits, TTYPort};
+use serialport::{DataBits, FlowControl, Parity, StopBits, SerialPort};
 
 use crate::drivers::{InstrumentError, Result};
 
 /// A generic serial instrument.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct SerialInstrument {
     address: u8,
-    port: TTYPort,
+    #[derivative(Debug = "ignore")]
+    port: Box<dyn SerialPort>,
     baudrate: usize,
     timeout: Duration,
 }
@@ -34,7 +37,7 @@ impl SerialInstrument {
     }
 
     /// Returns the borrowed TTYPort
-    pub fn port(&self) -> &TTYPort {
+    pub fn port(&self) -> &Box<dyn SerialPort> {
         &self.port
     }
 
@@ -45,7 +48,7 @@ impl SerialInstrument {
 
     #[allow(unused)]
     /// Yields the TTYPort, consuming the `SerialInstrument` struct
-    pub fn owned_port(self) -> TTYPort {
+    pub fn owned_port(self) -> Box<dyn SerialPort> {
         self.port
     }
 
@@ -85,14 +88,15 @@ impl SerialInstrument {
         port_path: &str,
         baudrate: usize,
         timeout: Duration,
-    ) -> std::result::Result<TTYPort, serialport::Error> {
-        serialport::new(port_path, baudrate as u32)
+    ) -> std::result::Result<Box<dyn SerialPort>, serialport::Error> {
+        Ok(serialport::new(port_path, baudrate as u32)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
             .stop_bits(StopBits::One)
             .flow_control(FlowControl::None)
             .timeout(timeout)
             .open_native()
+            .map(|port| Box::new(port) )?)
     }
 
     /// Writes a vector of bytes to the device

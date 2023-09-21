@@ -238,7 +238,7 @@ impl Waveshare {
                 InstrumentError::serialError(
                     format!(
                         "The board didn't return it's software revision correctly. Possible connection issue. port: {:?}, response: {:?}",
-                        self.0.port(),
+                        self.0,
                         resp
                     ),
                     Some(self.0.address())
