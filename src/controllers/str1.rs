@@ -138,8 +138,8 @@ impl STR1 {
         let result = hex::encode(output_buf);
 
         match result.chars().nth(7) {
-            Some('1') => return Ok(BinaryState::On),
-            _ => return Ok(BinaryState::Off),
+            Some('1') => Ok(BinaryState::On),
+            _ => Ok(BinaryState::Off),
         }
     }
 
@@ -209,13 +209,13 @@ impl STR1 {
                 ]);
                 self.write_to_device(bs)?;
                 self.0.set_baudrate(new_baudrate);
-                return Ok(());
+                Ok(())
             }
             None => {
-                return Err(InstrumentError::SerialError {
+                Err(InstrumentError::SerialError {
                     msg: format!("Bad baudrate for STR1 `{}`", new_baudrate),
                     addr: Some(self.0.address()),
-                });
+                })
             }
         }
     }
@@ -229,15 +229,15 @@ impl STR1 {
         // number of inputs, number of analog inputs,
         // number of analog outputs, 0, 0, CS, SLE
         if out.len() < 4 {
-            return Err(InstrumentError::serialError(
+            Err(InstrumentError::serialError(
                 format!(
                     "The STR1 board didn't return the correct response, recieved {:?}",
                     out
                 ),
                 Some(self.0.address()),
-            ));
+            ))
         } else {
-            return Ok(out[3]);
+            Ok(out[3])
         }
     }
 }
@@ -249,7 +249,7 @@ impl TryFrom<&Device> for STR1 {
         Self::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
-            device.conn.baudrate().clone(),
+            *device.conn.baudrate(),
             device.conn.timeout(),
         )
     }

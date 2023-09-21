@@ -79,13 +79,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(res) => return res.map_err(|err| InstrumentError::IOError(err)),
+            Ok(res) => res.map_err(InstrumentError::IOError),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(
+                Err(InstrumentError::modbusTimeoutError(
                     &self.port_path,
                     self.slave_addr,
                     register,
-                ));
+                ))
             }
         }
     }
@@ -97,13 +97,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
+            Ok(resp) => resp.map_err(InstrumentError::IOError),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(
+                Err(InstrumentError::modbusTimeoutError(
                     &self.port_path,
                     self.slave_addr,
                     register,
-                ));
+                ))
             }
         }
     }
@@ -115,13 +115,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
+            Ok(resp) => resp.map_err(InstrumentError::IOError),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(
+                Err(InstrumentError::modbusTimeoutError(
                     &self.port_path,
                     self.slave_addr,
                     coil,
-                ));
+                ))
             }
         }
     }
@@ -133,13 +133,13 @@ impl ModbusInstrument {
         let timeout = time::timeout(self.timeout, task);
 
         match timeout.await {
-            Ok(resp) => return resp.map_err(|ioerror| InstrumentError::IOError(ioerror)),
+            Ok(resp) => resp.map_err(InstrumentError::IOError),
             Err(_) => {
-                return Err(InstrumentError::modbusTimeoutError(
+                Err(InstrumentError::modbusTimeoutError(
                     &self.port_path,
                     self.slave_addr,
                     coil,
-                ));
+                ))
             }
         }
     }

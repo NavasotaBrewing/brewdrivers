@@ -27,7 +27,7 @@ pub fn format_device_log_prefix(device: &Device) -> String {
             states_string.push_str(&format!("relay_state: {:?}", device.state.relay_state))
         }
     }
-    return format!("[`{}` -> {}]", device.id, states_string);
+    format!("[`{}` -> {}]", device.id, states_string)
 }
 
 #[macro_export]

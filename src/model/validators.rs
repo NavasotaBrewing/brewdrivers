@@ -17,13 +17,13 @@ use crate::model::{ModelError, RTU};
 // it will call log::error!() on it, then bubble up the error.
 
 pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
-    devices_have_unique_ids(&rtu)?;
-    id_has_no_whitespace(&rtu)?;
-    serial_port_is_valid(&rtu)?;
-    controller_baudrate_is_valid(&rtu)?;
-    timeout_valid(&rtu)?;
-    command_retries_valid(&rtu)?;
-    retry_delay_valid(&rtu)?;
+    devices_have_unique_ids(rtu)?;
+    id_has_no_whitespace(rtu)?;
+    serial_port_is_valid(rtu)?;
+    controller_baudrate_is_valid(rtu)?;
+    timeout_valid(rtu)?;
+    command_retries_valid(rtu)?;
+    retry_delay_valid(rtu)?;
     Ok(())
 }
 
@@ -79,7 +79,7 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
     for dev in &rtu.devices {
         // If they somehow pass an empty string
         // maybe with port: "" in the config file
-        if dev.conn.port().len() == 0 {
+        if dev.conn.port().is_empty() {
             return Err(ModelError::validation_error(
                 &dev.id,
                 ("port", &dev.conn.port()),

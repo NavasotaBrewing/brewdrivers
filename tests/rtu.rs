@@ -42,7 +42,7 @@ async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> 
     let res = RTU::generate();
     assert!(res.is_ok());
     let mut rtu = res.unwrap();
-    assert!(rtu.devices.len() > 0);
+    assert!(!rtu.devices.is_empty());
 
     let relay = rtu
         .devices
@@ -90,7 +90,7 @@ async fn test_device_enact() -> Result<(), InstrumentError> {
     let res = RTU::generate();
     assert!(res.is_ok());
     let mut rtu = res.unwrap();
-    assert!(rtu.devices.len() > 0);
+    assert!(!rtu.devices.is_empty());
 
     let relay = rtu
         .devices

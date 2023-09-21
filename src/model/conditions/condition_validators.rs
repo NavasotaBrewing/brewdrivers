@@ -17,7 +17,7 @@ pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<(), Con
         if seen.get(&condition.id).is_some() {
             return Err(ConditionError::validation_error(
                 &condition.id,
-                format!("conditions must have unique IDs"),
+                "conditions must have unique IDs".to_string(),
             ));
         }
         seen.insert(&condition.id, true);
@@ -32,7 +32,7 @@ pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<(), 
         if cond.id.contains(char::is_whitespace) {
             return Err(ConditionError::validation_error(
                 &cond.id,
-                format!("condition ID cannot contain whitespace"),
+                "condition ID cannot contain whitespace".to_string(),
             ));
         }
     }
@@ -140,16 +140,14 @@ mod tests {
 
     #[test]
     fn test_condition_device_exists() {
-        let condition_def = condition(&format!(
-            r#"
+        let condition_def = condition(&r#"
             name: My Condition
             id: my-condition
             condition: RelayStateIs
             device_id: relay0
             state:
                 relay_state: On
-            "#,
-        ));
+            "#.to_string());
 
         assert_ok!(conditions_have_existing_device(&vec![condition_def]));
 

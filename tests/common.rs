@@ -9,6 +9,5 @@ pub fn get_device_from_configuration(controller_type: Controller) -> Option<Devi
     let rtu = RTU::generate().unwrap();
     rtu.devices
         .iter()
-        .find(|dev| *dev.conn.controller() == controller_type)
-        .map(|dev| dev.clone())
+        .find(|dev| *dev.conn.controller() == controller_type).cloned()
 }

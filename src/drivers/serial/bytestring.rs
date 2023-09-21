@@ -112,7 +112,7 @@ impl Bytestring {
     /// ```
     pub fn checksum_as_hex(&self) -> u8 {
         let sum = self.data.iter().map(|&val| val as i32 ).sum::<i32>();
-        return (sum % 0x100) as u8;
+        (sum % 0x100) as u8
     }
 
     /// Returns a String of all bytes (including "master" bytes) as hex, padded to 2 spaces.
@@ -147,7 +147,7 @@ impl Bytestring {
         
         bytes.push(self.checksum_as_hex());
         bytes.push(MAE);
-        return bytes;
+        bytes
     }
 }
 

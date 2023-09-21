@@ -18,11 +18,11 @@ impl RuleSet {
         info!("Generating rules. Using config file: {:?}", file_path);
 
         // Get the contents of the config file
-        let file_contents = fs::read_to_string(file_path).map_err(|err| RuleError::IOError(err))?;
+        let file_contents = fs::read_to_string(file_path).map_err(RuleError::IOError)?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
         let rules = serde_yaml::from_str::<RuleSet>(&file_contents)
-            .map_err(|err| RuleError::SerdeParseError(err))?;
+            .map_err(RuleError::SerdeParseError)?;
 
         Ok(rules)
     }
@@ -93,7 +93,7 @@ impl Rule {
         };
 
         // Get the dependant device from the list. Return an error if it can't be found
-        let mut dependant_device =
+        let dependant_device =
             match devices.iter_mut().find(|dev| dev.id == condition.device_id) {
                 Some(dep) => dep,
                 None => {
@@ -107,7 +107,7 @@ impl Rule {
         // Update the dependant device so that we have new values
         dependant_device.update().await?;
         // And evaluate the condition based on that device
-        let condition_result = condition.evaluate_on(&mut dependant_device).await;
+        let condition_result = condition.evaluate_on(dependant_device).await;
 
         // Match on the result
         match condition_result {
@@ -116,21 +116,21 @@ impl Rule {
             Ok(false) => {
                 trace!("evaluated condition `{}` using device `{}` for rule `{}` and found result to be false (does not apply)", condition.id, dependant_device.id, self.id);
                 // Do nothing
-                return Ok(());
+                Ok(())
             }
             // If the condition is true, then we want to potentially enact() some states.
             Ok(true) => {
                 trace!("evaluated condition `{}` using device `{}` for rule `{}` and found result to be true (rule does apply)", condition.id, dependant_device.id, self.id);
                 // Apply state sets
                 self.apply_state_sets(devices).await?;
-                return Ok(());
+                Ok(())
             }
             Err(e) => {
                 error!(
                     "rule `{}` encountered an error when evaluating condition `{}`: {}",
                     self.id, condition.id, e
                 );
-                return Err(RuleError::ConditionError(e));
+                Err(RuleError::ConditionError(e))
             }
         }
     }
@@ -195,7 +195,7 @@ mod tests {
                   relay_state: On
             "#;
 
-        let rule = serde_yaml::from_str::<Rule>(&source);
+        let rule = serde_yaml::from_str::<Rule>(source);
         assert_ok!(rule);
     }
 }

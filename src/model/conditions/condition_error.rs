@@ -50,9 +50,9 @@ pub enum ConditionError {
 
 impl ConditionError {
     pub fn validation_error(condition_id: &str, msg: String) -> Self {
-        return Self::ValidationError {
+        Self::ValidationError {
             condition_id: condition_id.to_string(),
             msg,
-        };
+        }
     }
 }

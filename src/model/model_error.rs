@@ -31,11 +31,11 @@ pub enum ModelError {
 impl ModelError {
     /// Constructs an `ModelError::ValidationError`
     pub fn validation_error(item_id: &str, key_value: (&str, &str), rule: &str) -> ModelError {
-        return ModelError::ValidationError {
+        ModelError::ValidationError {
             item_id: item_id.to_string(),
             key: key_value.0.to_string(),
             value: key_value.1.to_string(),
             rule: rule.to_string(),
-        };
+        }
     }
 }

@@ -184,7 +184,7 @@ impl CN7500 {
         );
         self.0.read_registers(0x102F, 1).await.map_err(|_|
             InstrumentError::SerialError {
-                msg: format!("Software revision couldn't be retrieved, the controller likely isn't connected"),
+                msg: "Software revision couldn't be retrieved, the controller likely isn't connected".to_string(),
                 addr: Some(self.0.slave_addr)
             }
         )

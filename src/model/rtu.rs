@@ -74,11 +74,11 @@ impl RTU {
 
         // Get the contents of the config file
         let file_contents =
-            fs::read_to_string(file_path).map_err(|err| ModelError::IOError(err))?;
+            fs::read_to_string(file_path).map_err(ModelError::IOError)?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
         let rtu = serde_yaml::from_str::<RTU>(&file_contents)
-            .map_err(|err| ModelError::SerdeParseError(err))?;
+            .map_err(ModelError::SerdeParseError)?;
 
         info!("[RTU `{}`] generated.", rtu.id);
         rtu.validate()?;
@@ -89,7 +89,7 @@ impl RTU {
     pub fn validate(&self) -> Result<(), ModelError> {
         use validators::*;
 
-        if let Err(e) = all_validators(&self) {
+        if let Err(e) = all_validators(self) {
             error!("{e}");
             return Err(e);
         }
@@ -109,6 +109,6 @@ mod tests {
     async fn test_generate_rtu() {
         let rtu = RTU::generate();
         assert!(rtu.is_ok());
-        assert!(rtu.unwrap().devices.len() > 0);
+        assert!(!rtu.unwrap().devices.is_empty());
     }
 }

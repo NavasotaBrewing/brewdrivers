@@ -23,11 +23,11 @@ impl ConditionCollection {
 
         // Get the contents of the config file
         let file_contents =
-            fs::read_to_string(file_path).map_err(|err| ConditionError::IOError(err))?;
+            fs::read_to_string(file_path).map_err(ConditionError::IOError)?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
         let conditions = serde_yaml::from_str::<ConditionCollection>(&file_contents)
-            .map_err(|err| ConditionError::SerdeParseError(err))?;
+            .map_err(ConditionError::SerdeParseError)?;
 
         Ok(conditions)
     }
@@ -135,21 +135,21 @@ impl Condition {
         // }
 
         match self.kind {
-            ConditionKind::RelayStateIs => return self.evaluate_relay_state_is(device),
-            ConditionKind::PVIsAtLeast => return self.evaluate_pv_is_at_least(device),
+            ConditionKind::RelayStateIs => self.evaluate_relay_state_is(device),
+            ConditionKind::PVIsAtLeast => self.evaluate_pv_is_at_least(device),
             ConditionKind::PVIsAround => {
                 // This evaluates if the PV is around the target value from the condition
                 // definition
                 self.ensure_actual_value(device.state.pv, "pv", device)?;
-                return self.evaluate_pv_is_around(self.state.pv.unwrap(), device);
+                self.evaluate_pv_is_around(self.state.pv.unwrap(), device)
             }
             ConditionKind::PVMeetsSV => {
                 // This evaluates if the PV is around the SV, with margins applied
                 self.ensure_actual_value(device.state.pv, "pv", device)?;
                 self.ensure_actual_value(device.state.sv, "sv", device)?;
-                return self.evaluate_pv_is_around(device.state.sv.unwrap(), device);
+                self.evaluate_pv_is_around(device.state.sv.unwrap(), device)
             }
-        };
+        }
     }
 
     fn ensure_target_value<T>(&self, value: Option<T>, name: &str) -> Result<(), ConditionError> {
@@ -272,8 +272,8 @@ mod tests {
         };
 
         let mut condition = Condition {
-            name: format!("My Condition"),
-            id: format!("my-condition"),
+            name: "My Condition".to_string(),
+            id: "my-condition".to_string(),
             kind: ConditionKind::RelayStateIs,
             device_id: device.id.clone(),
             state: target_state,
@@ -308,8 +308,8 @@ mod tests {
         };
 
         let mut condition = Condition {
-            name: format!("My Condition"),
-            id: format!("my-condition"),
+            name: "My Condition".to_string(),
+            id: "my-condition".to_string(),
             kind: ConditionKind::PVIsAtLeast,
             device_id: omega.id.clone(),
             state: target_state,
@@ -337,8 +337,8 @@ mod tests {
         };
 
         let mut condition = Condition {
-            name: format!("My Condition"),
-            id: format!("my-condition"),
+            name: "My Condition".to_string(),
+            id: "my-condition".to_string(),
             kind: ConditionKind::PVMeetsSV,
             device_id: omega.id.clone(),
             state: target_state,
@@ -380,8 +380,8 @@ mod tests {
         };
 
         let mut condition = Condition {
-            name: format!("My Condition"),
-            id: format!("my-condition"),
+            name: "My Condition".to_string(),
+            id: "my-condition".to_string(),
             kind: ConditionKind::PVIsAround,
             device_id: omega.id.clone(),
             state: target_state,
@@ -407,7 +407,7 @@ mod tests {
                 relay_state: On
             "#;
 
-        let result = serde_yaml::from_str::<Condition>(&source);
+        let result = serde_yaml::from_str::<Condition>(source);
         assert!(result.is_ok());
 
         let source2 = r#"
@@ -421,7 +421,7 @@ mod tests {
             margin_below: 0.0
             "#;
 
-        let result2 = serde_yaml::from_str::<Condition>(&source2);
+        let result2 = serde_yaml::from_str::<Condition>(source2);
         assert!(result2.is_ok());
     }
 }

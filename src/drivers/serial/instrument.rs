@@ -67,18 +67,18 @@ impl SerialInstrument {
     pub fn new(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
         match SerialInstrument::open_port(port_path, baudrate, timeout) {
             Ok(port) => {
-                return Ok(SerialInstrument {
+                Ok(SerialInstrument {
                     address,
                     port,
                     baudrate,
                     timeout,
-                });
+                })
             }
             Err(e) => {
-                return Err(InstrumentError::serialError(
+                Err(InstrumentError::serialError(
                     format!("{}", e),
                     Some(address),
-                ));
+                ))
             }
         }
     }
@@ -96,7 +96,7 @@ impl SerialInstrument {
             .flow_control(FlowControl::None)
             .timeout(timeout)
             .open_native()
-            .map(|port| Box::new(port) )?)
+            .map(Box::new )?)
     }
 
     /// Writes a vector of bytes to the device
@@ -156,7 +156,7 @@ mod tests {
         let resp = board.write_to_device(cmd.to_bytes());
         // Make sure we get a response
         assert!(resp.is_ok());
-        assert!(resp.unwrap().len() > 0);
+        assert!(!resp.unwrap().is_empty());
     }
 }
 

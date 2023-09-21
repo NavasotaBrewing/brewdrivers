@@ -48,7 +48,7 @@ impl SCADADevice for WaveshareV2 {
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
-            device.conn.baudrate().clone(),
+            *device.conn.baudrate(),
             device.conn.timeout(),
         )?;
 
@@ -65,7 +65,7 @@ impl SCADADevice for WaveshareV2 {
             device.conn.controller_addr,
             &device.conn.port(),
             // TODO: read these from the device once it's implemented
-            device.conn.baudrate().clone(),
+            *device.conn.baudrate(),
             device.conn.timeout(),
         )?;
 
@@ -177,9 +177,9 @@ impl WaveshareV2 {
         let statuses: Vec<BinaryState> = self.get_all_relays()?;
 
         if let Some(&state) = statuses.get(relay_num as usize) {
-            return Ok(state);
+            Ok(state)
         } else {
-            return Err(
+            Err(
                 InstrumentError::serialError(
                     format!(
                         "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
@@ -188,13 +188,13 @@ impl WaveshareV2 {
                     ),
                     Some(self.0.address())
                 )
-            );
+            )
         }
     }
 
     // Calculates the CRC checksum for the data bytes to send to the board
     fn append_checksum(bytes: &mut Vec<u8>) -> Result<()> {
-        let checksum = CRC_MODBUS.checksum(&bytes).to_le_bytes();
+        let checksum = CRC_MODBUS.checksum(bytes).to_le_bytes();
         bytes.push(checksum[0]);
         bytes.push(checksum[1]);
         Ok(())
@@ -414,7 +414,7 @@ impl TryFrom<&Device> for WaveshareV2 {
         Self::connect(
             device.conn.controller_addr(),
             &device.conn.port(),
-            device.conn.baudrate().clone(),
+            *device.conn.baudrate(),
             device.conn.timeout(),
         )
     }
@@ -443,7 +443,7 @@ mod tests {
         let ws = WaveshareV2::connect(
             c.controller_addr(),
             &c.port(),
-            c.baudrate().clone(),
+            *c.baudrate(),
             c.timeout(),
         );
         assert!(ws.is_ok());

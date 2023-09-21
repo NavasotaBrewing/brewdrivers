@@ -1,5 +1,5 @@
 use brewdrivers::model::RTU;
-use env_logger;
+
 
 fn main() {
     // This will generate an RTU from the default location (look in defaults.rs in brewdrivers)
