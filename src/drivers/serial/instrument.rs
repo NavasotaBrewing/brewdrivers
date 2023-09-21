@@ -75,7 +75,7 @@ impl SerialInstrument {
                 })
             }
             Err(e) => {
-                Err(Error::instrument(format!("couldn't open serial port: {e}")))
+                Err(Error::InstrumentError(format!("couldn't open serial port: {e}")))
             }
         }
     }
