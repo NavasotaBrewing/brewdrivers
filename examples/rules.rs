@@ -6,7 +6,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut rtu = RTU::generate().unwrap();
 
-    let mut some_device = rtu.devices.get_mut(1).unwrap();
+    let some_device = rtu.devices.get_mut(1).unwrap();
     some_device.state.relay_state = Some(BinaryState::On);
 
     some_device.enact().await?;
