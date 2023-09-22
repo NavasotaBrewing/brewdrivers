@@ -26,4 +26,7 @@ pub enum Error {
 
     #[error("Permission Error: {0}")]
     PermissionError(String),
+
+    #[error("Bad value: {0}")]
+    BadValueError(String),
 }

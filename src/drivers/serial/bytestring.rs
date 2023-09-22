@@ -64,7 +64,6 @@ const MA1: u8 = 0xAA;
 // Master end byte
 const MAE: u8 = 0x77;
 
-
 /// The [`Bytestring`](crate::drivers::serial::Bytestring) struct, representing a message to the STR1XX board.
 #[derive(Debug)]
 pub struct Bytestring {
@@ -85,11 +84,8 @@ impl Bytestring {
     /// assert_eq!(bs.data[1], 0x14);
     /// ```
     pub fn from(bytes: Vec<u8>) -> Bytestring {
-        Bytestring {
-            data: bytes
-        }
+        Bytestring { data: bytes }
     }
-
 
     /// Returns the checksum of the bytestring, as a single byte. The checksum
     /// is the sum of all the bytes, excluding the `MA0`, `MA1` and `MAE` bytes.
@@ -111,7 +107,7 @@ impl Bytestring {
     /// assert_eq!(bs.checksum_as_hex(), 0xE6);
     /// ```
     pub fn checksum_as_hex(&self) -> u8 {
-        let sum = self.data.iter().map(|&val| val as i32 ).sum::<i32>();
+        let sum = self.data.iter().map(|&val| val as i32).sum::<i32>();
         (sum % 0x100) as u8
     }
 
@@ -125,8 +121,19 @@ impl Bytestring {
     /// assert_eq!(bs.full(), "55aaf3f3e677");
     /// ```
     pub fn full(&self) -> String {
-        let data_strings = self.data.iter().map(|&val| format!("{:0>2}", format!("{:x}", val)) ).collect::<Vec<String>>();
-        format!("{:0>2x}{:0>2x}{}{:0>2x}{:0>2x}", MA0, MA1, data_strings.join(""), self.checksum_as_hex(), MAE)
+        let data_strings = self
+            .data
+            .iter()
+            .map(|&val| format!("{:0>2}", format!("{:x}", val)))
+            .collect::<Vec<String>>();
+        format!(
+            "{:0>2x}{:0>2x}{}{:0>2x}{:0>2x}",
+            MA0,
+            MA1,
+            data_strings.join(""),
+            self.checksum_as_hex(),
+            MAE
+        )
     }
 
     /// Consumes the Bytestring, returning the full bytestring
@@ -140,11 +147,11 @@ impl Bytestring {
     /// ```
     pub fn to_bytes(self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![MA0, MA1];
- 
+
         for byte in &self.data {
             bytes.push(*byte);
         }
-        
+
         bytes.push(self.checksum_as_hex());
         bytes.push(MAE);
         bytes
@@ -166,14 +173,16 @@ impl std::fmt::Display for Bytestring {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn full_bytestring() {
-        assert_eq!("55aafeff01030177", Bytestring::from(vec![254, 255, 1, 3]).full());
+        assert_eq!(
+            "55aafeff01030177",
+            Bytestring::from(vec![254, 255, 1, 3]).full()
+        );
         assert_eq!("55aafefe77", Bytestring::from(vec![254]).full());
         assert_eq!("55aa010177", Bytestring::from(vec![1]).full());
         assert_eq!("55aa0077", Bytestring::from(vec![]).full());

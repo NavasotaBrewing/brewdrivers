@@ -1,10 +1,8 @@
-pub mod condition_error;
 pub mod condition_validators;
 
 use std::fs;
 
 use crate::defaults::*;
-pub use condition_error::ConditionError;
 use log::*;
 use serde::{Deserialize, Serialize};
 
@@ -12,35 +10,35 @@ use crate::defaults::conditions_file;
 // use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
+use crate::{error::Error, Result};
 
 #[derive(Deserialize)]
 pub struct ConditionCollection(pub Vec<Condition>);
 
 impl ConditionCollection {
-    fn get_from_file() -> Result<Self, ConditionError> {
+    fn get_from_file() -> Result<Self> {
         let file_path = conditions_file();
         info!("Generating Conditions. Using config file: {:?}", file_path);
 
         // Get the contents of the config file
-        let file_contents =
-            fs::read_to_string(file_path).map_err(ConditionError::IOError)?;
+        let file_contents = fs::read_to_string(file_path).map_err(Error::IOError)?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
         let conditions = serde_yaml::from_str::<ConditionCollection>(&file_contents)
-            .map_err(ConditionError::SerdeParseError)?;
+            .map_err(Error::YamlError)?;
 
         Ok(conditions)
     }
 
     /// Gets all conditions from the file, and validates them
-    pub fn get_all() -> Result<Self, ConditionError> {
+    pub fn get_all() -> Result<Self> {
         let conditions = ConditionCollection::get_from_file()?;
         conditions.validate()?;
         Ok(conditions)
     }
 
     /// Runs all validators on the conditions found
-    pub fn validate(&self) -> Result<(), ConditionError> {
+    pub fn validate(&self) -> Result<()> {
         use condition_validators::*;
 
         conditions_have_unique_ids(&self.0)?;
@@ -54,7 +52,7 @@ impl ConditionCollection {
     /// Gets conditions from the conditions file, but filters then by the device id
     ///
     /// Validates only the filtered ones.
-    pub fn get_for_device(device_id: &str) -> Result<Self, ConditionError> {
+    pub fn get_for_device(device_id: &str) -> Result<Self> {
         let collection = ConditionCollection::get_from_file()?;
         let filtered_collection = ConditionCollection(
             collection
@@ -113,7 +111,7 @@ impl Condition {
     ///
     /// Note that this does *not* poll the device for updated values. It's your responsibility to
     /// update the device before calling this method on it.
-    pub async fn evaluate_on(&mut self, device: &mut Device) -> Result<bool, ConditionError> {
+    pub async fn evaluate_on(&mut self, device: &mut Device) -> Result<bool> {
         trace!(
             "Evaluating condition {} (`{}`) on device {} (`{}`)",
             self.name,
@@ -152,34 +150,30 @@ impl Condition {
         }
     }
 
-    fn ensure_target_value<T>(&self, value: Option<T>, name: &str) -> Result<(), ConditionError> {
+    fn ensure_target_value<T>(&self, value: Option<T>, name: &str) -> Result<()> {
         if value.is_none() {
-            return Err(ConditionError::MissingTargetValueError {
-                condition_id: self.id.clone(),
-                state_name: name.to_string(),
-            });
+            return Err(Error::ConditionError(format!(
+                "condition `{}` is missing target value `{}`",
+                self.id, name
+            )));
         }
         Ok(())
     }
 
     // We need to pass in a device for error reporting
-    fn ensure_actual_value<T>(
-        &self,
-        value: Option<T>,
-        name: &str,
-        device: &Device,
-    ) -> Result<(), ConditionError> {
+    fn ensure_actual_value<T>(&self, value: Option<T>, name: &str, device: &Device) -> Result<()> {
         if value.is_none() {
-            return Err(ConditionError::MissingActualValueError {
-                condition_id: self.id.clone(),
-                device_id: device.id.clone(),
-                state_name: name.to_string(),
-            });
+            return Err(Error::ConditionError(format!(
+                "when evaluating condition `{}`, missing target value `{}` which should be provided by device `{}`",
+                self.id,
+                name,
+                device.id
+            )));
         }
         Ok(())
     }
 
-    fn evaluate_relay_state_is(&mut self, device: &Device) -> Result<bool, ConditionError> {
+    fn evaluate_relay_state_is(&mut self, device: &Device) -> Result<bool> {
         // Ensure we have a target state (from the condition definition)
         self.ensure_target_value(self.state.relay_state, "relay_state")?;
         // And an actual state
@@ -198,7 +192,7 @@ impl Condition {
         Ok(result)
     }
 
-    fn evaluate_pv_is_at_least(&self, device: &Device) -> Result<bool, ConditionError> {
+    fn evaluate_pv_is_at_least(&self, device: &Device) -> Result<bool> {
         self.ensure_target_value(self.state.pv, "pv")?;
         self.ensure_actual_value(device.state.pv, "pv", device)?;
 
@@ -216,7 +210,7 @@ impl Condition {
     }
 
     /// Compares the pv of the device to the given value, with the margins applied.
-    fn evaluate_pv_is_around(&self, target: f64, device: &Device) -> Result<bool, ConditionError> {
+    fn evaluate_pv_is_around(&self, target: f64, device: &Device) -> Result<bool> {
         self.ensure_actual_value(device.state.pv, "pv", device)?;
 
         let actual = device.state.pv.unwrap();

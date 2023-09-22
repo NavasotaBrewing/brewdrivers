@@ -8,7 +8,6 @@ pub mod str1;
 pub mod waveshare;
 pub mod wavesharev2;
 
-pub use crate::drivers::InstrumentError;
 pub use crate::state::BinaryState;
 pub use cn7500::CN7500;
 pub use str1::STR1;

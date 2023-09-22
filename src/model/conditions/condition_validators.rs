@@ -3,22 +3,30 @@ use std::collections::HashMap;
 
 use crate::{
     controllers::Controller,
-    model::{
-        conditions::{ConditionError, ConditionKind},
-        RTU,
-    },
+    error::Error,
+    model::{conditions::ConditionKind, RTU},
+    Result,
 };
 
 use super::Condition;
 
-pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
+fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
+    Err(Error::ValidationError(format!(
+        "condition validation failed on component `{condition_id}` | {} = {}, which is not valid because {why}",
+        key_value.0,
+        key_value.1
+    )))
+}
+
+pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<()> {
     let mut seen: HashMap<&String, bool> = HashMap::new();
     for condition in conditions {
         if seen.get(&condition.id).is_some() {
-            return Err(ConditionError::validation_error(
+            return fail(
                 &condition.id,
-                "conditions must have unique IDs".to_string(),
-            ));
+                ("id", &condition.id),
+                "conditions must have unique IDs",
+            );
         }
         seen.insert(&condition.id, true);
     }
@@ -27,13 +35,14 @@ pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<(), Con
     Ok(())
 }
 
-pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
+pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<()> {
     for cond in conditions {
         if cond.id.contains(char::is_whitespace) {
-            return Err(ConditionError::validation_error(
+            return fail(
                 &cond.id,
-                "condition ID cannot contain whitespace".to_string(),
-            ));
+                ("id", &cond.id),
+                "conditions IDs cannot contain whitespace",
+            );
         }
     }
 
@@ -41,7 +50,7 @@ pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<(), 
     Ok(())
 }
 
-pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<(), ConditionError> {
+pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()> {
     let rtu = RTU::generate().unwrap();
 
     let device_ids = rtu
@@ -52,14 +61,10 @@ pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()
 
     for cond_def in conditions {
         if !device_ids.contains(&cond_def.device_id) {
-            return Err(
-                ConditionError::validation_error(
-                    &cond_def.id,
-                    format!(
-                        "conditions must be attached to a device that exists in the configuration. Could not find `{}`",
-                        cond_def.device_id
-                    )
-                )
+            return fail(
+                &cond_def.id,
+                ("device_id", &cond_def.device_id),
+                "conditions must be attached to a device that exists in the RTU configuration, and that device could be found"
             );
         }
     }
@@ -68,9 +73,7 @@ pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()
     Ok(())
 }
 
-pub fn conditions_have_correct_device_type(
-    conditions: &Vec<Condition>,
-) -> Result<(), ConditionError> {
+pub fn conditions_have_correct_device_type(conditions: &Vec<Condition>) -> Result<()> {
     let rtu = RTU::generate().unwrap();
 
     for cond in conditions {
@@ -81,13 +84,10 @@ pub fn conditions_have_correct_device_type(
             .find(|device| device.id == cond.device_id);
 
         if device.is_none() {
-            return Err(
-                ConditionError::validation_error(
-                    &cond.id,
-                    format!(
-                        "Couldn't find device `{}` attached to condition, even though I already checked for it. This shouldn't happen.", cond.device_id
-                    )
-                )
+            return fail(
+                &cond.id,
+                ("device_id", &cond.device_id),
+                "conditions must be attached to a device that exists in the RTU configuration, and that device could be found"
             );
         }
 
@@ -95,10 +95,9 @@ pub fn conditions_have_correct_device_type(
 
         // Prebuild the error to keep the code a bit cleaner
         // This error is very complicated
-        let error = ConditionError::validation_error(
-                        &cond.id,
+        let error = Error::ValidationError(
                         format!(
-                            "Condition called '{}' (id `{}`) with kind `{:?}` is not applicable to device called {} (id `{}`) because the device has type `{}`",
+                            "condition called '{}' (id `{}`) with kind `{:?}` is not applicable to device called {} (id `{}`) because the device has type `{}`",
                             cond.name,
                             cond.id,
                             cond.kind,
@@ -140,14 +139,17 @@ mod tests {
 
     #[test]
     fn test_condition_device_exists() {
-        let condition_def = condition(&r#"
+        let condition_def = condition(
+            &r#"
             name: My Condition
             id: my-condition
             condition: RelayStateIs
             device_id: relay0
             state:
                 relay_state: On
-            "#.to_string());
+            "#
+            .to_string(),
+        );
 
         assert_ok!(conditions_have_existing_device(&vec![condition_def]));
 

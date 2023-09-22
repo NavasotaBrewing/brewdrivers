@@ -1,5 +1,3 @@
-pub mod rule_error;
-
 use std::fs;
 
 use crate::{defaults::rules_file, state::DeviceState};

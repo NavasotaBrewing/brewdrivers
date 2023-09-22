@@ -1,7 +1,8 @@
 //! Generalize states for controllers
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use thiserror::Error;
+
+use crate::error::Error;
 
 /// A process value, alias to `f64`
 pub type PV = f64;
@@ -30,18 +31,6 @@ impl std::fmt::Display for DeviceState {
     }
 }
 
-/// A general state error. This is mostly used when a bad state value is passed,
-/// or the wrong type of state is given to a device.
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("Couldn't deserialize `{0}` into state variant")]
-    Deserialize(String),
-    #[error("Bad state values: {0:?}")]
-    BadValue(DeviceState),
-    #[error("State found to be null")]
-    NullState,
-}
-
 /// A binary state, as used in a relay or similar. This can be 'On' or 'Off'.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum BinaryState {
@@ -50,7 +39,7 @@ pub enum BinaryState {
 }
 
 impl FromStr for BinaryState {
-    type Err = StateError;
+    type Err = crate::error::Error;
     /// Converts from a string to a BinaryState
     ///
     /// ```rust
@@ -73,7 +62,7 @@ impl FromStr for BinaryState {
         match s {
             "On" | "ON" | "on" => Ok(BinaryState::On),
             "Off" | "OFF" | "off" => Ok(BinaryState::Off),
-            _ => Err(StateError::Deserialize(s.to_string())),
+            _ => Err(Error::BadValueError(s.to_string())),
         }
     }
 }
