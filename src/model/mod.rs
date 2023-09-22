@@ -1,16 +1,11 @@
 use async_trait::async_trait;
 
 pub mod conditions;
-pub mod connection;
-pub mod device;
-pub mod model_error;
 pub mod rtu;
 pub mod rules;
-mod validators;
 
-pub use connection::Connection;
-pub use device::Device;
-pub use model_error::ModelError;
+pub use rtu::connection::Connection;
+pub use rtu::device::Device;
 pub use rtu::RTU;
 
 use crate::Result;

@@ -1,10 +1,14 @@
+pub mod connection;
+pub mod device;
+mod rtu_validators;
+
 use std::fs;
 use std::net::Ipv4Addr;
 
 use log::*;
 use serde::{Deserialize, Serialize};
 
-use super::{validators, Device};
+use super::Device;
 use crate::defaults::config_file;
 use crate::{error::Error, Result};
 
@@ -85,9 +89,7 @@ impl RTU {
 
     /// Run all the [`validators`](crate::model::validators). Return an error if any of them don't succeed.
     pub fn validate(&self) -> Result<()> {
-        use validators::*;
-
-        if let Err(e) = all_validators(self) {
+        if let Err(e) = rtu_validators::all_validators(self) {
             error!("{e}");
             return Err(e);
         }

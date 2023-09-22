@@ -182,6 +182,8 @@ mod tests {
     use super::*;
     use tokio_test::assert_ok;
 
+    // TODO: Write more tests for rules
+
     #[test]
     fn test_deserialize_rule() {
         let source = r#"
