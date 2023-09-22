@@ -7,34 +7,33 @@ use log::*;
 use serde::Deserialize;
 
 use super::{conditions::ConditionCollection, Device, RTU};
-pub use rule_error::RuleError;
+use crate::{error::Error, Result};
 
 #[derive(Debug, Deserialize)]
 pub struct RuleSet(pub Vec<Rule>);
 
 impl RuleSet {
-    fn get_from_file() -> Result<Self, RuleError> {
+    fn get_from_file() -> Result<Self> {
         let file_path = rules_file();
         info!("Generating rules. Using config file: {:?}", file_path);
 
         // Get the contents of the config file
-        let file_contents = fs::read_to_string(file_path).map_err(RuleError::IOError)?;
+        let file_contents = fs::read_to_string(file_path).map_err(Error::IOError)?;
 
         // Deserialize the file. Return an Err if it doesn't succeed
-        let rules = serde_yaml::from_str::<RuleSet>(&file_contents)
-            .map_err(RuleError::SerdeParseError)?;
+        let rules = serde_yaml::from_str::<RuleSet>(&file_contents).map_err(Error::YamlError)?;
 
         Ok(rules)
     }
 
-    pub fn get_all() -> Result<Self, RuleError> {
+    pub fn get_all() -> Result<Self> {
         let rules = RuleSet::get_from_file()?;
         rules.validate()?;
         Ok(rules)
     }
 
     /// Applies all rules in the rule set over the given devices
-    pub async fn apply_all(&self, mut devices: Vec<Device>) -> Result<(), RuleError> {
+    pub async fn apply_all(&self, mut devices: Vec<Device>) -> Result<()> {
         for rule in &self.0 {
             rule.apply(devices.iter_mut().collect()).await?;
         }
@@ -43,14 +42,14 @@ impl RuleSet {
 
     /// Gets all rules and conditions from the rules/conditions files, and generates an RTU from
     /// the rtu file, then applies all rules to all devices.
-    pub async fn apply_all_to_all_devices() -> Result<(), RuleError> {
+    pub async fn apply_all_to_all_devices() -> Result<()> {
         let rule_set = Self::get_all()?;
         let rtu = RTU::generate()?;
         rule_set.apply_all(rtu.devices).await?;
         Ok(())
     }
 
-    pub fn validate(&self) -> Result<(), RuleError> {
+    pub fn validate(&self) -> Result<()> {
         // For now, do nothing
         // TODO: write validators
         Ok(())
@@ -84,25 +83,30 @@ impl Rule {
     ///
     /// This calls `update()` on the dependant device, on the resultant device if the condition
     /// passes, and `enact()` on the resultant devices if they're state needs updating.
-    pub async fn apply(&self, mut devices: Vec<&mut Device>) -> Result<(), RuleError> {
+    pub async fn apply(&self, mut devices: Vec<&mut Device>) -> Result<()> {
         // These error checks should be caught by validators when iris starts, but they're still
         // checked here because that's the spirit of Rust
         let mut condition = match ConditionCollection::get_by_id(&self.condition_id) {
             Some(cond) => cond,
-            None => return Err(RuleError::ConditionNotFoundError(self.condition_id.clone())),
+            None => {
+                return Err(Error::RuleError(format!(
+                    "condition `{}` was not found in the condition definitions file",
+                    self.condition_id
+                )))
+            }
         };
 
         // Get the dependant device from the list. Return an error if it can't be found
-        let dependant_device =
-            match devices.iter_mut().find(|dev| dev.id == condition.device_id) {
-                Some(dep) => dep,
-                None => {
-                    return Err(RuleError::DeviceNotFoundError {
-                        device_id: condition.device_id,
-                        rule_id: self.id.clone(),
-                    })
-                }
-            };
+        let dependant_device = match devices.iter_mut().find(|dev| dev.id == condition.device_id) {
+            Some(dep) => dep,
+            None => {
+                return Err(Error::RuleError(format!(
+                    "device `{}` was not found in the collection, and it is needed to evaluate condition `{}`",
+                    condition.device_id,
+                    condition.id,
+                )));
+            }
+        };
 
         // Update the dependant device so that we have new values
         dependant_device.update().await?;
@@ -130,7 +134,7 @@ impl Rule {
                     "rule `{}` encountered an error when evaluating condition `{}`: {}",
                     self.id, condition.id, e
                 );
-                Err(RuleError::ConditionError(e))
+                Err(Error::ConditionError(format!("{e}")))
             }
         }
     }
@@ -138,16 +142,17 @@ impl Rule {
     /// Applies the specific StateSets to the right devices. This will call update() on the
     /// resultant devices to evaluate if they need an enact() call based on their current state
     /// values.
-    async fn apply_state_sets(&self, mut devices: Vec<&mut Device>) -> Result<(), RuleError> {
+    async fn apply_state_sets(&self, mut devices: Vec<&mut Device>) -> Result<()> {
         // We've already checked the condition, so just apply all new state sets to all devices.
         for new_state in &self.set {
             let found_device = match devices.iter_mut().find(|dev| dev.id == new_state.device_id) {
                 Some(dev) => dev,
                 None => {
-                    return Err(RuleError::DeviceNotFoundError {
-                        device_id: new_state.device_id.clone(),
-                        rule_id: self.id.clone(),
-                    })
+                    return Err(Error::RuleError(format!(
+                        "device `{}` was not found in the collection, and it is needed to set a new state because a rule (`{}`) was triggered",
+                        new_state.device_id,
+                        self.id
+                    )));
                 }
             };
 

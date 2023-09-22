@@ -27,10 +27,10 @@
 pub mod controllers;
 pub mod defaults;
 pub mod drivers;
+pub mod error;
 pub mod logging_utils;
 pub mod model;
 pub mod state;
-pub mod error;
 
 pub type Result<T> = std::result::Result<T, crate::error::Error>;
 

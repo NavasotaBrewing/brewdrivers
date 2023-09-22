@@ -20,10 +20,11 @@ use async_trait::async_trait;
 use log::trace;
 
 // internal uses
-use crate::drivers::{serial::Bytestring, InstrumentError, Result, SerialInstrument};
+use crate::drivers::{serial::Bytestring, SerialInstrument};
 use crate::logging_utils::device_trace;
 use crate::model::{Device, SCADADevice};
-use crate::state::{BinaryState, StateError};
+use crate::state::BinaryState;
+use crate::{error::Error, Result};
 
 pub const STR1_BAUDRATES: [usize; 10] = [
     300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200,
@@ -62,9 +63,10 @@ impl SCADADevice for STR1 {
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
             None => {
-                return Err(InstrumentError::StateError(StateError::BadValue(
-                    device.state.clone(),
-                )))
+                return Err(Error::InstrumentError(format!(
+                    "STR1 board at address `{}`, relay `{}` received a bad state: {:?}",
+                    device.conn.controller_addr, device.conn.addr, device.state
+                )));
             }
         }
         device_trace!(device, "enacted");
@@ -85,13 +87,10 @@ impl STR1 {
             address, port_path, baudrate, timeout,
         )?);
         str1.connected().map_err(|instr_err| {
-            InstrumentError::serialError(
-                format!(
-                    "STR1 board connection failed, likely busy. Error: {}",
-                    instr_err
-                ),
-                Some(address),
-            )
+            Error::InstrumentError(format!(
+                "STR1 board connection at addr `{address}` failed, likely busy. Error: {}",
+                instr_err
+            ))
         })?;
         Ok(str1)
     }
@@ -211,12 +210,10 @@ impl STR1 {
                 self.0.set_baudrate(new_baudrate);
                 Ok(())
             }
-            None => {
-                Err(InstrumentError::SerialError {
-                    msg: format!("Bad baudrate for STR1 `{}`", new_baudrate),
-                    addr: Some(self.0.address()),
-                })
-            }
+            None => Err(Error::InstrumentError(format!(
+                "Bad baudrate `{new_baudrate}` for STR1 board at address `{}`",
+                self.0.address()
+            ))),
         }
     }
 
@@ -229,13 +226,11 @@ impl STR1 {
         // number of inputs, number of analog inputs,
         // number of analog outputs, 0, 0, CS, SLE
         if out.len() < 4 {
-            Err(InstrumentError::serialError(
-                format!(
-                    "The STR1 board didn't return the correct response, recieved {:?}",
-                    out
-                ),
-                Some(self.0.address()),
-            ))
+            Err(Error::InstrumentError(format!(
+                "STR1 board at address `{}` didn't return the correct response, received {:?}",
+                self.0.address(),
+                out
+            )))
         } else {
             Ok(out[3])
         }
@@ -244,7 +239,7 @@ impl STR1 {
 
 /// Creates a controller connection from a Device
 impl TryFrom<&Device> for STR1 {
-    type Error = InstrumentError;
+    type Error = crate::error::Error;
     fn try_from(device: &Device) -> std::result::Result<Self, Self::Error> {
         Self::connect(
             device.conn.controller_addr(),

@@ -8,10 +8,11 @@
 //! All units returned from the board or sent to it (when setting the setpoint value) will use the unit that the board is configured to at the time.
 use std::time::Duration;
 
-use crate::drivers::{modbus::ModbusInstrument, InstrumentError, Result};
+use crate::drivers::modbus::ModbusInstrument;
 use crate::logging_utils::device_trace;
 use crate::model::{Device, SCADADevice};
 use crate::state::BinaryState;
+use crate::{error::Error, Result};
 use async_trait::async_trait;
 use log::trace;
 
@@ -87,13 +88,9 @@ impl CN7500 {
         trace!("[CN7500 addr: {}] connected", slave_addr);
         let mut cn = CN7500(ModbusInstrument::new(slave_addr, port_path, baudrate, timeout).await?);
         cn.connected().await.map_err(|instr_err| {
-            InstrumentError::modbusError(
-                format!(
-                    "CN7500 connection failed, likely busy. Error: {}",
-                    instr_err
-                ),
-                Some(slave_addr),
-            )
+            Error::InstrumentError(format!(
+                "CN7500 connection at addr `{slave_addr}` failed, likely busy: {instr_err}"
+            ))
         })?;
         Ok(cn)
     }
@@ -182,12 +179,12 @@ impl CN7500 {
             "[CN7500 addr: {}] polled software revision",
             self.0.slave_addr
         );
-        self.0.read_registers(0x102F, 1).await.map_err(|_|
-            InstrumentError::SerialError {
-                msg: "Software revision couldn't be retrieved, the controller likely isn't connected".to_string(),
-                addr: Some(self.0.slave_addr)
-            }
-        )
+        self.0
+            .read_registers(0x102F, 1)
+            .await
+            .map_err(|e| Error::InstrumentError(
+                    format!("Software revision couldn't be retrieved, the controller likely isn't connected: {e}")
+            ))
     }
 }
 

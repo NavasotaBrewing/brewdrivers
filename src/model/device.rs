@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
-use crate::drivers::InstrumentError;
 use crate::logging_utils::device_info;
+use crate::Result;
 use log::*;
 // use crate::model::conditions::ConditionCollection;
 use crate::model::rules::RuleSet;
@@ -17,8 +17,6 @@ use crate::model::SCADADevice;
 use crate::state::DeviceState;
 
 // use super::conditions::Condition;
-
-type Result<T> = std::result::Result<T, InstrumentError>;
 
 /// A digital representation of a device
 ///

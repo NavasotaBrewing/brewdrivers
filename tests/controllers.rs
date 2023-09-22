@@ -2,10 +2,10 @@ mod common;
 use common::*;
 
 use brewdrivers::controllers::*;
-
+use brewdrivers::Result;
 
 #[tokio::test]
-async fn test_cn7500_controller() -> Result<(), InstrumentError> {
+async fn test_cn7500_controller() -> Result<()> {
     // Only run this test if we have a CN7500 in the testing config file, ie. we have one
     // physically connected.
     let dev = get_device_from_configuration(Controller::CN7500);
@@ -26,7 +26,7 @@ async fn test_cn7500_controller() -> Result<(), InstrumentError> {
 }
 
 #[test]
-fn test_str1_controller() -> Result<(), InstrumentError> {
+fn test_str1_controller() -> Result<()> {
     // Only run this test if we have a STR1 in the testing config file, ie. we have one
     // physically connected.
     let dev = get_device_from_configuration(Controller::STR1);
@@ -51,7 +51,7 @@ fn test_str1_controller() -> Result<(), InstrumentError> {
 }
 
 #[test]
-fn test_wavesharev2_controller() -> Result<(), InstrumentError> {
+fn test_wavesharev2_controller() -> Result<()> {
     // Only run this test if we have a WaveshareV2 in the testing config file, ie. we have one
     // physically connected.
     let dev = get_device_from_configuration(Controller::WaveshareV2);
@@ -76,7 +76,7 @@ fn test_wavesharev2_controller() -> Result<(), InstrumentError> {
 }
 
 #[test]
-fn test_waveshare_controller() -> Result<(), InstrumentError> {
+fn test_waveshare_controller() -> Result<()> {
     // Only run this test if we have a Waveshare in the testing config file, ie. we have one
     // physically connected.
     let dev = get_device_from_configuration(Controller::Waveshare);
@@ -99,3 +99,4 @@ fn test_waveshare_controller() -> Result<(), InstrumentError> {
 
     Ok(())
 }
+

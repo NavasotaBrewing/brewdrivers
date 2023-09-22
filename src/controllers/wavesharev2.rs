@@ -14,10 +14,11 @@ use crc::{Crc, CRC_16_MODBUS};
 use log::trace;
 
 // internal uses
-use crate::drivers::{serial::SerialInstrument, InstrumentError, Result};
+use crate::drivers::serial::SerialInstrument;
 use crate::logging_utils::device_trace;
 use crate::model::Device;
-use crate::state::{BinaryState, StateError};
+use crate::state::BinaryState;
+use crate::{error::Error, Result};
 
 use crate::model::SCADADevice;
 
@@ -72,9 +73,10 @@ impl SCADADevice for WaveshareV2 {
         match device.state.relay_state {
             Some(new_state) => board.set_relay(device.conn.addr(), new_state)?,
             None => {
-                return Err(InstrumentError::StateError(StateError::BadValue(
-                    device.state.clone(),
-                )))
+                return Err(Error::InstrumentError(format!(
+                    "Waveshare V2 board at address `{}`, relay `{}` received a bad state: {:?}",
+                    device.conn.controller_addr, device.conn.addr, device.state
+                )));
             }
         }
 
@@ -94,10 +96,9 @@ impl WaveshareV2 {
         timeout: Duration,
     ) -> Result<Self> {
         if !WAVESHAREV2_BAUDRATES.contains(&baudrate) {
-            return Err(InstrumentError::SerialError {
-                msg: format!("Invalid baudrate `{baudrate}`"),
-                addr: Some(address),
-            });
+            return Err(Error::InstrumentError(format!(
+                "invalid baudrate `{baudrate}` for Waveshare V2 board at address `{address}`"
+            )));
         }
 
         let mut ws = Self(SerialInstrument::new(
@@ -105,13 +106,10 @@ impl WaveshareV2 {
         )?);
 
         ws.connected().map_err(|instr_err| {
-            InstrumentError::serialError(
-                format!(
-                    "WaveshareV2 board connection failed, likely busy. Error: {}",
-                    instr_err
-                ),
-                Some(address),
-            )
+            Error::InstrumentError(format!(
+                "Waveshare V2 board at address `{address}` connection failed, likely busy. Error: {}",
+                instr_err
+            ))
         })?;
         trace!("[WaveshareV2 addr: {}] connected", address);
         Ok(ws)
@@ -179,16 +177,10 @@ impl WaveshareV2 {
         if let Some(&state) = statuses.get(relay_num as usize) {
             Ok(state)
         } else {
-            Err(
-                InstrumentError::serialError(
-                    format!(
-                        "The board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
-                        relay_num,
-                        statuses
-                    ),
-                    Some(self.0.address())
-                )
-            )
+            Err(Error::InstrumentError(format!(
+                "Waveshare V2 board didn't return the proper amount of statuses, tried relay {}, found: {:?}",
+                relay_num, statuses
+            )))
         }
     }
 
@@ -240,13 +232,11 @@ impl WaveshareV2 {
 
             Ok(statuses)
         } else {
-            Err(InstrumentError::serialError(
-                format!(
-                    "Board did not return the proper response, received {:?}",
-                    resp
-                ),
-                Some(self.0.address()),
-            ))
+            Err(Error::InstrumentError(format!(
+                "Waveshare V2 board at address `{}` did not return the proper response, received {:?}",
+                self.0.address(),
+                resp
+            )))
         }
     }
 
@@ -269,13 +259,13 @@ impl WaveshareV2 {
             Ok(format!("v{:.2}", (version_num as f64 / 100.0)))
         } else {
             Err(
-                InstrumentError::serialError(
+                Error::InstrumentError(
                     format!(
-                        "The board didn't return it's software revision correctly. Possible connection issue. port: {:?}, response: {:?}",
+                        "Waveshare V2 board at address `{}` didn't return it's software revision correctly. Possible connection issue. port: {:?}, response: {:?}",
+                        self.0.address(),
                         self.0,
                         resp
                     ),
-                    Some(self.0.address())
                 )
             )
         }
@@ -305,12 +295,12 @@ impl WaveshareV2 {
         trace!("get_address() Resp: {:X?}", resp);
 
         resp.get(4)
-            .ok_or(InstrumentError::serialError(
+            .ok_or(Error::InstrumentError(
                 format!(
-                    "The board didn't return the proper response, recieved: {:?}",
+                    "Waveshare V2 board at address `{}` didn't return the proper response, recieved: {:?}",
+                    self.0.address(),
                     resp
                 ),
-                Some(self.0.address()),
             ))
             .copied()
     }
@@ -374,12 +364,11 @@ impl WaveshareV2 {
 
     pub fn set_baudrate(&mut self, new_baud: usize) -> Result<()> {
         if !WAVESHAREV2_BAUDRATES.contains(&new_baud) {
-            error!("Invalid baud rate: `{}`", new_baud);
-            error!("Valid baudrates are: {:?}", WAVESHAREV2_BAUDRATES);
-            return Err(InstrumentError::SerialError {
-                msg: format!("`{new_baud}` is not a valid baudrate for the WaveshareV2"),
-                addr: Some(self.0.address()),
-            });
+            error!("invalid baud rate: `{}`", new_baud);
+            error!("valid baudrates are: {:?}", WAVESHAREV2_BAUDRATES);
+            return Err(Error::InstrumentError(format!(
+                "`{new_baud}` is not a valid baudrate for the WaveshareV2"
+            )));
         }
 
         let baud_code = WAVESHAREV2_BAUDRATES
@@ -409,7 +398,7 @@ impl WaveshareV2 {
 
 /// Creates a controller connection from a Device
 impl TryFrom<&Device> for WaveshareV2 {
-    type Error = InstrumentError;
+    type Error = crate::error::Error;
     fn try_from(device: &Device) -> std::result::Result<Self, Self::Error> {
         Self::connect(
             device.conn.controller_addr(),
@@ -440,12 +429,7 @@ mod tests {
         // get the connection details
         let device = crate::tests::test_device_from_type(Controller::WaveshareV2);
         let c = device.conn;
-        let ws = WaveshareV2::connect(
-            c.controller_addr(),
-            &c.port(),
-            *c.baudrate(),
-            c.timeout(),
-        );
+        let ws = WaveshareV2::connect(c.controller_addr(), &c.port(), *c.baudrate(), c.timeout());
         assert!(ws.is_ok());
     }
 

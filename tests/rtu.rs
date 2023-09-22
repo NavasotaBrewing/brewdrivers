@@ -1,8 +1,8 @@
 use brewdrivers::{
     controllers::Controller,
-    drivers::InstrumentError,
     model::{Device, RTU},
     state::BinaryState,
+    Result,
 };
 
 // This isn't a conventional test. I want to make sure that the timeout/command retries are
@@ -10,7 +10,7 @@ use brewdrivers::{
 // run in the normal test suite.
 #[allow(unused)]
 // #[tokio::test]
-async fn test_retry_command_delay() -> Result<(), InstrumentError> {
+async fn test_retry_command_delay() -> Result<()> {
     // RUST_LOG=trace cargo test test_retry_command_delay -- --nocapture
     env_logger::init();
     let mut device: Device = serde_yaml::from_str(
@@ -36,7 +36,7 @@ async fn test_retry_command_delay() -> Result<(), InstrumentError> {
 }
 
 #[tokio::test]
-async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> {
+async fn test_generate_and_update_device_state() -> Result<()> {
     // This generates an RTU state from the config file and updates all state
     // values in all devices. It's like taking a snapshot of all state values for the whole RTU.
     let res = RTU::generate();
@@ -84,7 +84,7 @@ async fn test_generate_and_update_device_state() -> Result<(), InstrumentError> 
 }
 
 #[tokio::test]
-async fn test_device_enact() -> Result<(), InstrumentError> {
+async fn test_device_enact() -> Result<()> {
     // There does exist an RTU::enact() method, but we try not to use it
     // because it will try to write to every device. This takes a long time.
     let res = RTU::generate();

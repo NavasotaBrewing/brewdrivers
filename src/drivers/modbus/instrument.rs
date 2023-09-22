@@ -16,7 +16,7 @@ use tokio_modbus::{
     prelude::Slave,
 };
 
-use crate::{Result, error::Error};
+use crate::{error::Error, Result};
 
 /// A generic async Modbus instrument.
 ///
@@ -52,9 +52,10 @@ impl ModbusInstrument {
             Err(serial_err) => {
                 error!("Error when connecting to Modbus Instrument. There is likely no port location at `{}`", port_path);
                 error!("Serial Error: {}", serial_err);
-                return Err(Error::InstrumentError(
-                    format!("serial error on slave addr `{}`: {}", slave_addr, serial_err)
-                ));
+                return Err(Error::InstrumentError(format!(
+                    "serial error on slave addr `{}`: {}",
+                    slave_addr, serial_err
+                )));
             }
         };
 
@@ -79,14 +80,10 @@ impl ModbusInstrument {
 
         match timeout.await {
             Ok(res) => res.map_err(Error::IOError),
-            Err(e) => {
-                Err(Error::InstrumentError(
-                    format!(
-                        "error reading register `{register}` on modbus instrument with address `{}`: {e}",
-                        self.slave_addr
-                    )
-                ))
-            }
+            Err(e) => Err(Error::InstrumentError(format!(
+                "error reading register `{register}` on modbus instrument with address `{}`: {e}",
+                self.slave_addr
+            ))),
         }
     }
 
@@ -117,14 +114,10 @@ impl ModbusInstrument {
 
         match timeout.await {
             Ok(resp) => resp.map_err(Error::IOError),
-            Err(e) => {
-                Err(Error::InstrumentError(
-                    format!(
-                        "error reading coil `{coil}` on modbus instrument with address `{}`: {e}",
-                        self.slave_addr
-                    )
-                ))
-            }
+            Err(e) => Err(Error::InstrumentError(format!(
+                "error reading coil `{coil}` on modbus instrument with address `{}`: {e}",
+                self.slave_addr
+            ))),
         }
     }
 

@@ -10,13 +10,22 @@ use log::{error, info, warn};
 use std::collections::HashMap;
 
 use crate::controllers::Controller;
+use crate::model::RTU;
+use crate::{error::Error, Result};
 
-use crate::model::{ModelError, RTU};
+// Helper function.
+// Returns an error variant with a nicely formatted error message.
+fn fail(id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
+    return Err(Error::ValidationError(format!(
+        "RTU validation failed on component `{id}` | {} = {}, which is not valid because {why}",
+        key_value.0, key_value.1
+    )));
+}
 
 // Note that when an RTU generates, if it recieves an error from one of these methods,
 // it will call log::error!() on it, then bubble up the error.
 
-pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
+pub fn all_validators(rtu: &RTU) -> Result<()> {
     devices_have_unique_ids(rtu)?;
     id_has_no_whitespace(rtu)?;
     serial_port_is_valid(rtu)?;
@@ -28,15 +37,15 @@ pub fn all_validators(rtu: &RTU) -> Result<(), ModelError> {
 }
 
 /// Returns `Ok(())` if each device in the RTU has a unique ID
-pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
+pub fn devices_have_unique_ids(rtu: &RTU) -> Result<()> {
     let mut seen: HashMap<&String, bool> = HashMap::new();
     for device in &rtu.devices {
         if seen.get(&device.id).is_some() {
-            return Err(ModelError::validation_error(
+            return fail(
                 &device.id,
                 ("id", device.id.as_str()),
                 "devices must have unique IDs across all RTUs",
-            ));
+            );
         }
         seen.insert(&device.id, true);
     }
@@ -46,22 +55,22 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<(), ModelError> {
 }
 
 /// Returns `Ok(())` if the RTU ID and every device ID does not contain whitespace
-pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
+pub fn id_has_no_whitespace(rtu: &RTU) -> Result<()> {
     if rtu.id.contains(char::is_whitespace) {
-        return Err(ModelError::validation_error(
+        return fail(
             "RTU",
             ("id", &rtu.id),
-            "RTU ID cannot contain whitespace",
-        ));
+            "the RTU ID cannot contain whitespace",
+        );
     }
 
     for dev in &rtu.devices {
         if dev.id.contains(char::is_whitespace) {
-            return Err(ModelError::validation_error(
+            return fail(
                 &dev.id,
                 ("id", &dev.id),
-                "device ID cannot contain whitespace",
-            ));
+                "device IDs cannot contain whitespace",
+            );
         }
     }
 
@@ -75,26 +84,26 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<(), ModelError> {
 ///
 /// This will however print a `warn!()` statement if the port doesn't exist, if a logger is configured.
 /// That will help if the brewer configures the wrong port or there's an electrical error.
-pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
+pub fn serial_port_is_valid(rtu: &RTU) -> Result<()> {
     for dev in &rtu.devices {
         // If they somehow pass an empty string
         // maybe with port: "" in the config file
         if dev.conn.port().is_empty() {
-            return Err(ModelError::validation_error(
+            return fail(
                 &dev.id,
                 ("port", &dev.conn.port()),
-                "serial port cannot be empty",
-            ));
+                "serial ports cannot be empty",
+            );
         }
 
         let path = &dev.conn.port;
 
         if !path.starts_with("/dev") {
-            return Err(ModelError::validation_error(
+            return fail(
                 &dev.id,
                 ("port", &dev.conn.port()),
                 "port path must be in /dev/*",
-            ));
+            );
         }
 
         match path.try_exists() {
@@ -113,7 +122,7 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
-pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
+pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<()> {
     use crate::controllers::{
         cn7500::CN7500_BAUDRATES, str1::STR1_BAUDRATES, wavesharev2::WAVESHAREV2_BAUDRATES,
     };
@@ -121,39 +130,39 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
         match dev.conn.controller() {
             Controller::STR1 => {
                 if !STR1_BAUDRATES.contains(dev.conn.baudrate()) {
-                    return Err(ModelError::validation_error(
+                    return fail(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "invalid baudrate for STR1 controller",
-                    ));
+                        "this baudrate is not valid for an STR1 controller",
+                    );
                 }
             }
             Controller::CN7500 => {
                 if !CN7500_BAUDRATES.contains(dev.conn.baudrate()) {
-                    return Err(ModelError::validation_error(
+                    return fail(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "invalid baudrate for CN7500 controller",
-                    ));
+                        "this baudrate is not valid for a CN7500 controller",
+                    );
                 }
             }
             Controller::Waveshare => {
                 // This uses the same baudrates as Version 2
                 if !WAVESHAREV2_BAUDRATES.contains(dev.conn.baudrate()) {
-                    return Err(ModelError::validation_error(
+                    return fail(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "invalid baudrate for WaveshareV2 controller",
-                    ));
+                        "this baudrate is not valid for a Waveshare V1 controller",
+                    );
                 }
             }
             Controller::WaveshareV2 => {
                 if !WAVESHAREV2_BAUDRATES.contains(dev.conn.baudrate()) {
-                    return Err(ModelError::validation_error(
+                    return fail(
                         &dev.id,
                         ("baudrate", &format!("{}", dev.conn.baudrate())),
-                        "invalid baudrate for WaveshareV2 controller",
-                    ));
+                        "this baudrate is not valid for a Waveshare V2 controller",
+                    );
                 }
             }
         }
@@ -163,27 +172,21 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
-pub fn timeout_valid(rtu: &RTU) -> Result<(), ModelError> {
+pub fn timeout_valid(rtu: &RTU) -> Result<()> {
     for dev in &rtu.devices {
         match dev.conn.timeout {
             // Not allowed
             (0..=15) => {
-                return Err(ModelError::validation_error(
+                return fail(
                     &dev.id,
                     ("timeout", &format!("{}ms", dev.conn.timeout)),
-                    "Timeout cannot be lower than 16 ms",
-                ));
+                    "device timeouts cannot be lower than 16 ms",
+                )
             }
             // Allowed, but warn the user
             (16..=35) => {
+                warn!("timeout for device `{}` with controller type `{}` is low ({} ms). Consider increasing it.", dev.name, dev.conn.controller(), dev.conn.timeout)
                 // Temporarily disabling these for now
-                // warn!(
-                //     "Timeout for device `{}` with controller type `{}` is low. This *might* work,
-                //     but you may experience device instability, especially under load.
-                //     Consider raising your timeout to 30ms or 40ms",
-                //     dev.name,
-                //     dev.conn.controller()
-                // );
                 // info!("I've tested the following to be reasonbly stable:");
                 // info!("STR1:\t\t17ms at baud 38400");
                 // info!("CN7500:\t\t36ms at baud 19200");
@@ -197,16 +200,16 @@ pub fn timeout_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
-pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
+pub fn command_retries_valid(rtu: &RTU) -> Result<()> {
     for device in &rtu.devices {
         match device.command_retries {
             0..=5 => {}
             _ => {
-                return Err(ModelError::validation_error(
+                return fail(
                     &device.id,
                     ("command_retries", &format!("{}", device.command_retries)),
-                    "command retries must be in range [0, 6]",
-                ))
+                    "command_retries must be in range [0, 6]",
+                )
             }
         }
     }
@@ -215,17 +218,17 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<(), ModelError> {
     Ok(())
 }
 
-pub fn retry_delay_valid(rtu: &RTU) -> Result<(), ModelError> {
+pub fn retry_delay_valid(rtu: &RTU) -> Result<()> {
     for device in &rtu.devices {
         if device.retry_delay <= device.conn.timeout || device.retry_delay >= 2000 {
-            return Err(ModelError::validation_error(
+            return fail(
                 &device.id,
                 ("retry_delay", &format!("{}", device.retry_delay)),
                 &format!(
-                    "retry delay for this device must be in the range [{}, 2000] (units in ms)",
+                    "the retry delay for this device must be in the range [{}, 2000] (units in ms)",
                     device.conn.timeout
                 ),
-            ));
+            );
         }
     }
 
