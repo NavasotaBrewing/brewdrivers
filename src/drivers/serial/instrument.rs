@@ -10,9 +10,9 @@ use std::time::Duration;
 
 use derivative::Derivative;
 // ext uses
-use serialport::{DataBits, FlowControl, Parity, StopBits, SerialPort};
+use serialport::{DataBits, FlowControl, Parity, SerialPort, StopBits};
 
-use crate::{Result, error::Error};
+use crate::{error::Error, Result};
 
 /// A generic serial instrument.
 #[derive(Derivative)]
@@ -34,11 +34,6 @@ impl SerialInstrument {
     // Updated the stored address
     pub fn set_address(&mut self, new_addr: u8) {
         self.address = new_addr;
-    }
-
-    /// Returns the borrowed TTYPort
-    pub fn port(&self) -> &Box<dyn SerialPort> {
-        &self.port
     }
 
     /// Returns the timeout
@@ -66,17 +61,15 @@ impl SerialInstrument {
     /// Tries to connect to an instrument at the given port and address
     pub fn new(address: u8, port_path: &str, baudrate: usize, timeout: Duration) -> Result<Self> {
         match SerialInstrument::open_port(port_path, baudrate, timeout) {
-            Ok(port) => {
-                Ok(SerialInstrument {
-                    address,
-                    port,
-                    baudrate,
-                    timeout,
-                })
-            }
-            Err(e) => {
-                Err(Error::InstrumentError(format!("couldn't open serial port: {e}")))
-            }
+            Ok(port) => Ok(SerialInstrument {
+                address,
+                port,
+                baudrate,
+                timeout,
+            }),
+            Err(e) => Err(Error::InstrumentError(format!(
+                "couldn't open serial port: {e}"
+            ))),
         }
     }
 
@@ -93,32 +86,20 @@ impl SerialInstrument {
             .flow_control(FlowControl::None)
             .timeout(timeout)
             .open_native()
-            .map(Box::new )?)
+            .map(Box::new)?)
     }
 
     /// Writes a vector of bytes to the device
     pub fn write_to_device(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
-        match self.port.write(&bytes) {
-            Err(e) => {
-                return Err(Error::InstrumentError(
-                    format!("couldn't write to serial device: {e}")
-                ));
-            }
-            _ => {}
-        };
+        if let Err(e) = self.port.write(&bytes) {
+            return Err(Error::InstrumentError(format!(
+                "couldn't write to serial device: {e}"
+            )));
+        }
 
         let mut output_buf: Vec<u8> = vec![];
 
-        match self.port.read_to_end(&mut output_buf) {
-            Ok(_) => {}
-            Err(_) => {
-                // timeout, expected
-                // I'm pretty sure that the port never returns the number of bytes
-                // to be read, and it just times out every time, even on successful writes.
-                // It still reads successfully even after timeouts, so it's fine for now.
-            }
-        }
-
+        self.port.read_to_end(&mut output_buf).ok();
         Ok(output_buf)
     }
 }
@@ -155,4 +136,3 @@ mod tests {
         assert!(!resp.unwrap().is_empty());
     }
 }
-
