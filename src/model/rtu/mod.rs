@@ -62,10 +62,8 @@ impl RTU {
         self.devices.iter_mut().find(|dev| dev.id == device_id)
     }
 
-    /// Reads the configuration file and builds an RTU from that. Note that while this method
-    /// does take an optional file path, that's just used for testing purposes. You should pass
-    /// `None` to this method and use the defualt configuration file at
-    /// [crate::defaults](crate::defaults).
+    /// Reads the configuration file and builds the representation of an RTU from that. It does not
+    /// enact/update any devices, so if any state is stored in the RTU struct, it will be stale.
     ///
     /// This will fail if the RTU cannot be deserialized from the configuration file.
     ///

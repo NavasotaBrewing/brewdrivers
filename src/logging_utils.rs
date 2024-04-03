@@ -100,8 +100,8 @@ macro_rules! device_error {
     };
 }
 
-// We technically don't need crate:: for all of these
-// except warn, which conflicts with the #[warn] builtin
+// We prefix these with device_ so we still have access to the regular
+// logging macros.
 pub use device_debug;
 pub use device_error;
 pub use device_info;

@@ -11,6 +11,7 @@ use crate::defaults::conditions_file;
 use crate::model::Device;
 use crate::state::DeviceState;
 use crate::{error::Error, Result};
+use condition_validators::all_validators;
 
 #[derive(Deserialize)]
 pub struct ConditionCollection(pub Vec<Condition>);
@@ -39,13 +40,7 @@ impl ConditionCollection {
 
     /// Runs all validators on the conditions found
     pub fn validate(&self) -> Result<()> {
-        use condition_validators::*;
-
-        conditions_have_unique_ids(&self.0)?;
-        conditions_have_existing_device(&self.0)?;
-        conditions_have_correct_device_type(&self.0)?;
-        conditions_have_no_whitespace(&self.0)?;
-
+        all_validators(&self.0)?;
         Ok(())
     }
 

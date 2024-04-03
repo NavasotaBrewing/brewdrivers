@@ -18,6 +18,14 @@ fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
+pub fn all_validators(conditions: &Vec<Condition>) -> Result<()> {
+    conditions_have_unique_ids(conditions)?;
+    conditions_have_existing_device(conditions)?;
+    conditions_have_correct_device_type(conditions)?;
+    conditions_have_no_whitespace(conditions)?;
+    Ok(())
+}
+
 pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<()> {
     let mut seen: HashMap<&String, bool> = HashMap::new();
     for condition in conditions {
