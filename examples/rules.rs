@@ -11,5 +11,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     some_device.enact().await?;
 
+    some_device.state.relay_state = Some(BinaryState::Off);
+    some_device.enact().await?;
+
     Ok(())
 }

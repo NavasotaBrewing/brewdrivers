@@ -17,7 +17,7 @@ use condition_validators::all_validators;
 pub struct ConditionCollection(pub Vec<Condition>);
 
 impl ConditionCollection {
-    fn get_from_file() -> Result<Self> {
+    pub(crate) fn get_from_file() -> Result<Self> {
         let file_path = conditions_file();
         info!("Generating Conditions. Using config file: {:?}", file_path);
 

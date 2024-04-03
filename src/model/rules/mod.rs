@@ -7,6 +7,8 @@ use serde::Deserialize;
 use super::{conditions::ConditionCollection, Device, RTU};
 use crate::{error::Error, Result};
 
+mod rule_validators;
+
 #[derive(Debug, Deserialize)]
 pub struct RuleSet(pub Vec<Rule>);
 
@@ -48,8 +50,7 @@ impl RuleSet {
     }
 
     pub fn validate(&self) -> Result<()> {
-        // For now, do nothing
-        // TODO: write validators
+        rule_validators::all_validators(&self.0)?;
         Ok(())
     }
 }
@@ -179,6 +180,8 @@ impl Rule {
 
 #[cfg(test)]
 mod tests {
+    use crate::state::BinaryState;
+
     use super::*;
     use tokio_test::assert_ok;
 
@@ -202,5 +205,53 @@ mod tests {
 
         let rule = serde_yaml::from_str::<Rule>(source);
         assert_ok!(rule);
+    }
+
+    #[tokio::test]
+    async fn test_rule_triggers_enaction() {
+        // Generate the RTU so we can grab real devices
+        let rtu = RTU::generate().unwrap();
+
+        // get two real relays
+        let mut device_a = rtu
+            .devices
+            .iter()
+            .find(|dev| dev.id == "relay0")
+            .unwrap()
+            .clone();
+        let mut device_b = rtu
+            .devices
+            .iter()
+            .find(|dev| dev.id == "relay1")
+            .unwrap()
+            .clone();
+
+        // Turn both relays off as our base state
+        device_a.state.relay_state = Some(BinaryState::Off);
+        device_b.state.relay_state = Some(BinaryState::Off);
+
+        device_a.enact().await.unwrap();
+        device_b.enact().await.unwrap();
+
+        device_a.update().await.unwrap();
+        device_b.update().await.unwrap();
+
+        // Assert that they're off
+        assert_eq!(device_a.state.relay_state, Some(BinaryState::Off));
+        assert_eq!(device_b.state.relay_state, Some(BinaryState::Off));
+
+        // Only turn on relay A
+        device_a.state.relay_state = Some(BinaryState::On);
+        device_a.enact().await.unwrap();
+
+        // and assert that relay B is now on
+        device_b.update().await.unwrap();
+        assert_eq!(device_b.state.relay_state, Some(BinaryState::On));
+
+        // Now we turn off relay A and assert that relay B turned off too
+        device_a.state.relay_state = Some(BinaryState::Off);
+        device_a.enact().await.unwrap();
+        device_b.update().await.unwrap();
+        assert_eq!(device_b.state.relay_state, Some(BinaryState::Off));
     }
 }
