@@ -2,7 +2,7 @@ use brewdrivers::{model::RTU, state::BinaryState};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("trace"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
 
     let mut rtu = RTU::generate().unwrap();
 
