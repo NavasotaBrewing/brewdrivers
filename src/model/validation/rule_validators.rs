@@ -2,7 +2,11 @@ use log::{debug, trace};
 
 use crate::{
     error::Error,
-    model::{conditions::ConditionCollection, rules::Rule, RTU},
+    model::{
+        conditions::ConditionCollection,
+        rules::{Rule, RuleSet},
+        RTU,
+    },
     Result,
 };
 
@@ -12,14 +16,18 @@ fn fail(rule_id: &str, why: &str) -> Result<()> {
     )))
 }
 
-pub fn all(rules: &Vec<Rule>) -> std::result::Result<(), Vec<Error>> {
+pub fn all(
+    rules: &RuleSet,
+    conditions: &ConditionCollection,
+    rtu: &RTU,
+) -> std::result::Result<(), Vec<Error>> {
     let mut errors: Vec<Error> = Vec::new();
 
-    if let Err(e) = all_used_conditions_exist(&rules) {
+    if let Err(e) = all_used_conditions_exist(&rules.0, conditions) {
         errors.push(e);
     }
 
-    if let Err(e) = all_used_devices_exist(&rules) {
+    if let Err(e) = all_used_devices_exist(&rules.0, rtu) {
         errors.push(e);
     }
 
@@ -29,18 +37,10 @@ pub fn all(rules: &Vec<Rule>) -> std::result::Result<(), Vec<Error>> {
     Err(errors)
 }
 
-pub fn all_used_conditions_exist(rules: &Vec<Rule>) -> Result<()> {
-    // We call get_from_file because that bypasses the conditions validation.
-    // We don't want to revalidate all the conditions for each rule validation
-    let conditions = match ConditionCollection::generate() {
-        Ok(conditions) => conditions,
-        Err(e) => {
-            return Err(Error::ValidationError(format!(
-                "couldn't get list of conditions to use in rule validation. Probably an IO error: {e}"
-            )));
-        }
-    };
-
+pub fn all_used_conditions_exist(
+    rules: &Vec<Rule>,
+    conditions: &ConditionCollection,
+) -> Result<()> {
     let condition_ids: Vec<String> = conditions.0.iter().map(|cond| cond.id.clone()).collect();
 
     for rule in rules {
@@ -61,17 +61,7 @@ pub fn all_used_conditions_exist(rules: &Vec<Rule>) -> Result<()> {
     Ok(())
 }
 
-pub fn all_used_devices_exist(rules: &Vec<Rule>) -> Result<()> {
-    // TODO: this will validate the RTU when called. Maybe add a way to bypass?
-    let rtu = match RTU::generate() {
-        Ok(rtu) => rtu,
-        Err(e) => {
-            return Err(Error::ValidationError(format!(
-                "Couldn't get device list when validating rules: {e}"
-            )))
-        }
-    };
-
+pub fn all_used_devices_exist(rules: &Vec<Rule>, rtu: &RTU) -> Result<()> {
     let device_ids: Vec<String> = rtu.devices.iter().map(|device| device.id.clone()).collect();
 
     for rule in rules {

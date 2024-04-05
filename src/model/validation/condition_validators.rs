@@ -5,7 +5,7 @@ use crate::{
     controllers::Controller,
     error::Error,
     model::{
-        conditions::{Condition, ConditionKind},
+        conditions::{Condition, ConditionCollection, ConditionKind},
         RTU,
     },
     Result,
@@ -19,22 +19,22 @@ fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
-pub fn all(conditions: &Vec<Condition>) -> std::result::Result<(), Vec<Error>> {
+pub fn all(conditions: &ConditionCollection, rtu: &RTU) -> std::result::Result<(), Vec<Error>> {
     let mut errors: Vec<Error> = Vec::new();
 
-    if let Err(e) = conditions_have_unique_ids(conditions) {
+    if let Err(e) = conditions_have_unique_ids(&conditions.0) {
         errors.push(e);
     }
 
-    if let Err(e) = conditions_have_existing_device(conditions) {
+    if let Err(e) = conditions_have_existing_device(&conditions.0, rtu) {
         errors.push(e);
     }
 
-    if let Err(e) = conditions_have_correct_device_type(conditions) {
+    if let Err(e) = conditions_have_correct_device_type(&conditions.0, rtu) {
         errors.push(e);
     }
 
-    if let Err(e) = conditions_have_no_whitespace(conditions) {
+    if let Err(e) = conditions_have_no_whitespace(&conditions.0) {
         errors.push(e);
     }
 
@@ -76,9 +76,7 @@ pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<()> 
     Ok(())
 }
 
-pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()> {
-    let rtu = RTU::generate().unwrap();
-
+pub fn conditions_have_existing_device(conditions: &Vec<Condition>, rtu: &RTU) -> Result<()> {
     let device_ids = rtu
         .devices
         .iter()
@@ -99,11 +97,10 @@ pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()
     Ok(())
 }
 
-pub fn conditions_have_correct_device_type(conditions: &Vec<Condition>) -> Result<()> {
-    let rtu = RTU::generate().unwrap();
-
+pub fn conditions_have_correct_device_type(conditions: &Vec<Condition>, rtu: &RTU) -> Result<()> {
     for cond in conditions {
         // First, get the device that's attached to it
+        // TODO:  Refactor and use the available device() method
         let device = rtu
             .devices
             .iter()
@@ -179,7 +176,8 @@ mod tests {
             .to_string(),
         );
 
-        assert_ok!(conditions_have_existing_device(&vec![condition_def]));
+        let rtu = RTU::generate().unwrap();
+        assert_ok!(conditions_have_existing_device(&vec![condition_def], &rtu));
 
         let condition_def2 = condition(
             r#"
@@ -192,6 +190,7 @@ mod tests {
             "#,
         );
 
-        assert_err!(conditions_have_existing_device(&vec![condition_def2]));
+        let rtu = RTU::generate().unwrap();
+        assert_err!(conditions_have_existing_device(&vec![condition_def2], &rtu));
     }
 }

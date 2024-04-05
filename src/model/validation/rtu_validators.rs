@@ -202,8 +202,8 @@ pub fn timeout_valid(rtu: &RTU) -> Result<()> {
             }
             // Allowed, but warn the user
             (16..=35) => {
-                warn!("timeout for device `{}` with controller type `{}` is low ({} ms). Consider increasing it.", dev.name, dev.conn.controller(), dev.conn.timeout)
                 // Temporarily disabling these for now
+                // warn!("timeout for device `{}` with controller type `{}` is low ({} ms). Consider increasing it.", dev.name, dev.conn.controller(), dev.conn.timeout)
                 // info!("I've tested the following to be reasonbly stable:");
                 // info!("STR1:\t\t17ms at baud 38400");
                 // info!("CN7500:\t\t36ms at baud 19200");

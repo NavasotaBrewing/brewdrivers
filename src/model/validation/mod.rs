@@ -21,10 +21,6 @@ pub fn validate_all(
     conditions: &ConditionCollection,
     rules: &RuleSet,
 ) -> Result<(), Vec<Error>> {
-    // TODO: Add logging of errors?
-    // TODO: add error collection?
-    // TODO: Change these to accept RuleSet and ConditionCollection
-
     let mut all_errors = Vec::new();
 
     match rtu_validators::all(rtu) {
@@ -38,7 +34,7 @@ pub fn validate_all(
         }
     }
 
-    match condition_validators::all(&conditions.0) {
+    match condition_validators::all(conditions, rtu) {
         Ok(_) => info!("Condition validation passed"),
         Err(errors) => {
             error!("Condition validation failed with the following errors:");
@@ -49,7 +45,7 @@ pub fn validate_all(
         }
     }
 
-    match rule_validators::all(&rules.0) {
+    match rule_validators::all(rules, conditions, rtu) {
         Ok(_) => info!("Rule validation passed"),
         Err(errors) => {
             error!("Rule validation failed with the following errors:");
@@ -61,6 +57,7 @@ pub fn validate_all(
     }
 
     if all_errors.len() == 0 {
+        info!("All validation passed with no errors");
         return Ok(());
     }
     Err(all_errors)
