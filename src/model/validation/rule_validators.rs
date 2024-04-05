@@ -1,4 +1,4 @@
-use log::{debug, trace};
+use log::{debug, trace, warn};
 
 use crate::{
     error::Error,
@@ -19,7 +19,7 @@ fn fail(rule_id: &str, why: &str) -> Result<()> {
 pub fn all(
     rules: &RuleSet,
     conditions: &ConditionCollection,
-    rtu: &RTU,
+    rtu: &mut RTU,
 ) -> std::result::Result<(), Vec<Error>> {
     let mut errors: Vec<Error> = Vec::new();
 
@@ -28,6 +28,10 @@ pub fn all(
     }
 
     if let Err(e) = all_used_devices_exist(&rules.0, rtu) {
+        errors.push(e);
+    }
+
+    if let Err(e) = state_sets_are_correct_for_device_type(&rules.0, rtu) {
         errors.push(e);
     }
 
@@ -79,5 +83,55 @@ pub fn all_used_devices_exist(rules: &Vec<Rule>, rtu: &RTU) -> Result<()> {
     }
 
     trace!("rule validation check passed: all devices used by rules exist");
+    Ok(())
+}
+
+pub fn state_sets_are_correct_for_device_type(rules: &Vec<Rule>, rtu: &mut RTU) -> Result<()> {
+    for rule in rules {
+        for state_set in &rule.set {
+            if let Some(device) = rtu.device(&state_set.device_id) {
+                // check device type and state set type
+                use crate::controllers::Controller::*;
+
+                let ts = &state_set.target_state;
+
+                match device.conn.controller {
+                    STR1 | Waveshare | WaveshareV2 => {
+                        if ts.relay_state.is_none() {
+                            // No relay state was provided, but the device is a relay
+                            return fail(
+                                &rule.id,
+                                &format!(
+                                    "this rule operates on a relay, but does not specify the target state when the rule triggers. relay_state should be set to On or Off in the target state for devices of type {}",
+                                    device.conn.controller
+                                    )
+                                );
+                        }
+
+                        if ts.pv.is_some() || ts.sv.is_some() {
+                            warn!("rule `{}` tries to set the SV of {} device. This is likely an error with the rule configuration, and will have no effect.", &rule.id, device.conn.controller);
+                        }
+                    }
+                    CN7500 => {
+                        if ts.pv.is_some() {
+                            warn!("in rule `{}`, you are attempting to set the PV of a PID. This is not possible, as the process value is a readonly attribute", &rule.id);
+                        }
+
+                        if ts.sv.is_none() && ts.relay_state.is_none() {
+                            return fail(
+                                &rule.id,
+                                &format!("this rule does not set the SV or relay state of a PID, so it has no effect. Either the SV or relay state should be set, or the rule should be removed")
+                            );
+                        }
+                    }
+                }
+            } else {
+                // Normally this would be an error; the device named in the state set doesn't
+                // exist. However we already checked this in a previous validator, so we'll do nothing
+            }
+        }
+    }
+
+    trace!("rule validation check passed: all rules set the correct type of state for the device they operate on");
     Ok(())
 }

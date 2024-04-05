@@ -17,7 +17,7 @@ pub mod rtu_validators;
 pub mod rule_validators;
 
 pub fn validate_all(
-    rtu: &RTU,
+    rtu: &mut RTU,
     conditions: &ConditionCollection,
     rules: &RuleSet,
 ) -> Result<(), Vec<Error>> {
@@ -69,10 +69,10 @@ mod tests {
 
     #[test]
     fn test_all_validation() {
-        let rtu = RTU::generate().unwrap();
+        let mut rtu = RTU::generate().unwrap();
         let conditions = ConditionCollection::generate().unwrap();
         let rules = RuleSet::generate().unwrap();
 
-        assert!(validate_all(&rtu, &conditions, &rules).is_ok());
+        assert!(validate_all(&mut rtu, &conditions, &rules).is_ok());
     }
 }
