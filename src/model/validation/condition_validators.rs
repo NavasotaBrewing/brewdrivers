@@ -4,11 +4,12 @@ use std::collections::HashMap;
 use crate::{
     controllers::Controller,
     error::Error,
-    model::{conditions::ConditionKind, RTU},
+    model::{
+        conditions::{Condition, ConditionKind},
+        RTU,
+    },
     Result,
 };
-
-use super::Condition;
 
 fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     Err(Error::ValidationError(format!(
@@ -18,7 +19,7 @@ fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
-pub fn all_validators(conditions: &Vec<Condition>) -> Result<()> {
+pub fn all(conditions: &Vec<Condition>) -> Result<()> {
     conditions_have_unique_ids(conditions)?;
     conditions_have_existing_device(conditions)?;
     conditions_have_correct_device_type(conditions)?;

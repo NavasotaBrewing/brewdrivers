@@ -7,13 +7,11 @@ use serde::Deserialize;
 use super::{conditions::ConditionCollection, Device, RTU};
 use crate::{error::Error, Result};
 
-mod rule_validators;
-
 #[derive(Debug, Deserialize)]
 pub struct RuleSet(pub Vec<Rule>);
 
 impl RuleSet {
-    fn get_from_file() -> Result<Self> {
+    pub fn generate() -> Result<Self> {
         let file_path = rules_file();
         info!("Generating rules. Using config file: {:?}", file_path);
 
@@ -23,12 +21,6 @@ impl RuleSet {
         // Deserialize the file. Return an Err if it doesn't succeed
         let rules = serde_yaml::from_str::<RuleSet>(&file_contents).map_err(Error::YamlError)?;
 
-        Ok(rules)
-    }
-
-    pub fn get_all() -> Result<Self> {
-        let rules = RuleSet::get_from_file()?;
-        rules.validate()?;
         Ok(rules)
     }
 
@@ -43,14 +35,9 @@ impl RuleSet {
     /// Gets all rules and conditions from the rules/conditions files, and generates an RTU from
     /// the rtu file, then applies all rules to all devices.
     pub async fn apply_all_to_all_devices() -> Result<()> {
-        let rule_set = Self::get_all()?;
+        let rule_set = Self::generate()?;
         let rtu = RTU::generate()?;
         rule_set.apply_all(rtu.devices).await?;
-        Ok(())
-    }
-
-    pub fn validate(&self) -> Result<()> {
-        rule_validators::all_validators(&self.0)?;
         Ok(())
     }
 }

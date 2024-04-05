@@ -1,5 +1,3 @@
-pub mod condition_validators;
-
 use std::fs;
 
 use crate::defaults::*;
@@ -7,7 +5,6 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use crate::defaults::conditions_file;
-// use crate::logging_utils::device_error;
 use crate::model::Device;
 use crate::state::DeviceState;
 use crate::{error::Error, Result};
@@ -16,7 +13,8 @@ use crate::{error::Error, Result};
 pub struct ConditionCollection(pub Vec<Condition>);
 
 impl ConditionCollection {
-    pub(crate) fn get_from_file() -> Result<Self> {
+    /// Reads all conditions from the conditions yaml file and returns the set of them
+    pub fn generate() -> Result<Self> {
         let file_path = conditions_file();
         info!("Generating Conditions. Using config file: {:?}", file_path);
 
@@ -30,27 +28,9 @@ impl ConditionCollection {
         Ok(conditions)
     }
 
-    /// Gets all conditions from the file, and validates them
-    pub fn generate() -> Result<Self> {
-        let conditions = ConditionCollection::get_from_file()?;
-        conditions.validate()?;
-        Ok(conditions)
-    }
-
-    /// Runs all validators on the conditions found
-    pub fn validate(&self) -> Result<()> {
-        if let Err(e) = condition_validators::all_validators(&self.0) {
-            error!("{e}");
-            return Err(e);
-        }
-        Ok(())
-    }
-
     /// Gets conditions from the conditions file, but filters then by the device id
-    ///
-    /// Validates only the filtered ones.
     pub fn get_for_device(device_id: &str) -> Result<Self> {
-        let collection = ConditionCollection::get_from_file()?;
+        let collection = ConditionCollection::generate()?;
         let filtered_collection = ConditionCollection(
             collection
                 .0
@@ -59,13 +39,12 @@ impl ConditionCollection {
                 .collect(),
         );
 
-        filtered_collection.validate()?;
-
         Ok(filtered_collection)
     }
 
+    /// Returns a condition by a given ID
     pub fn get_by_id(condition_id: &str) -> Option<Condition> {
-        let collection = ConditionCollection::get_from_file().ok()?;
+        let collection = ConditionCollection::generate().ok()?;
         collection
             .0
             .into_iter()

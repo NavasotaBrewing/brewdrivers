@@ -1,6 +1,5 @@
 pub mod connection;
 pub mod device;
-mod rtu_validators;
 
 use std::fs;
 use std::net::Ipv4Addr;
@@ -86,19 +85,7 @@ impl RTU {
     pub fn generate() -> Result<Self> {
         let rtu = Self::get_from_file()?;
         info!("[RTU `{}`] generated.", rtu.id);
-        rtu.validate()?;
         Ok(rtu)
-    }
-
-    /// Run all the [`validators`](crate::model::validators). Return an error if any of them don't succeed.
-    pub fn validate(&self) -> Result<()> {
-        if let Err(e) = rtu_validators::all_validators(self) {
-            error!("{e}");
-            return Err(e);
-        }
-
-        info!("RTU passed all validators");
-        Ok(())
     }
 }
 

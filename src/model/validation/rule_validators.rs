@@ -2,11 +2,9 @@ use log::{debug, info};
 
 use crate::{
     error::Error,
-    model::{conditions::ConditionCollection, RTU},
+    model::{conditions::ConditionCollection, rules::Rule, RTU},
     Result,
 };
-
-use super::Rule;
 
 fn fail(rule_id: &str, why: &str) -> Result<()> {
     Err(Error::ValidationError(format!(
@@ -14,7 +12,7 @@ fn fail(rule_id: &str, why: &str) -> Result<()> {
     )))
 }
 
-pub fn all_validators(rules: &Vec<Rule>) -> Result<()> {
+pub fn all(rules: &Vec<Rule>) -> Result<()> {
     all_used_conditions_exist(&rules)?;
     all_used_devices_exist(&rules)?;
     Ok(())
@@ -23,7 +21,7 @@ pub fn all_validators(rules: &Vec<Rule>) -> Result<()> {
 pub fn all_used_conditions_exist(rules: &Vec<Rule>) -> Result<()> {
     // We call get_from_file because that bypasses the conditions validation.
     // We don't want to revalidate all the conditions for each rule validation
-    let conditions = match ConditionCollection::get_from_file() {
+    let conditions = match ConditionCollection::generate() {
         Ok(conditions) => conditions,
         Err(e) => {
             return Err(Error::ValidationError(format!(

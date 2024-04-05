@@ -22,10 +22,7 @@ fn fail(id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
-// Note that when an RTU generates, if it recieves an error from one of these methods,
-// it will call log::error!() on it, then bubble up the error.
-
-pub fn all_validators(rtu: &RTU) -> Result<()> {
+pub fn all(rtu: &RTU) -> Result<()> {
     devices_have_unique_ids(rtu)?;
     id_has_no_whitespace(rtu)?;
     serial_port_is_valid(rtu)?;
