@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use log::{debug, trace, warn};
 
 use crate::{
@@ -32,6 +34,10 @@ pub fn all(
     }
 
     if let Err(e) = state_sets_are_correct_for_device_type(&rules.0, rtu) {
+        errors.push(e);
+    }
+
+    if let Err(e) = rules_do_not_have_conflicting_state_sets(&rules.0) {
         errors.push(e);
     }
 
@@ -97,6 +103,9 @@ pub fn state_sets_are_correct_for_device_type(rules: &Vec<Rule>, rtu: &mut RTU) 
 
                 match device.conn.controller {
                     STR1 | Waveshare | WaveshareV2 => {
+                        // relays should have a relay_state.
+                        // we'll warn if they try to set the sv or pv of a relay, but it's not an
+                        // error
                         if ts.relay_state.is_none() {
                             // No relay state was provided, but the device is a relay
                             return fail(
@@ -109,14 +118,16 @@ pub fn state_sets_are_correct_for_device_type(rules: &Vec<Rule>, rtu: &mut RTU) 
                         }
 
                         if ts.pv.is_some() || ts.sv.is_some() {
-                            warn!("rule `{}` tries to set the SV of {} device. This is likely an error with the rule configuration, and will have no effect.", &rule.id, device.conn.controller);
+                            warn!("rule `{}` tries to set the SV or PV of the device `{}`. This is likely an error with the rule configuration, and will have no effect.", &rule.id, device.conn.controller);
                         }
                     }
                     CN7500 => {
+                        // PIDs should not include a PV setting
                         if ts.pv.is_some() {
                             warn!("in rule `{}`, you are attempting to set the PV of a PID. This is not possible, as the process value is a readonly attribute", &rule.id);
                         }
 
+                        // PIDs should include either a relay_state, sv, or both
                         if ts.sv.is_none() && ts.relay_state.is_none() {
                             return fail(
                                 &rule.id,
@@ -133,5 +144,26 @@ pub fn state_sets_are_correct_for_device_type(rules: &Vec<Rule>, rtu: &mut RTU) 
     }
 
     trace!("rule validation check passed: all rules set the correct type of state for the device they operate on");
+    Ok(())
+}
+
+pub fn rules_do_not_have_conflicting_state_sets(rules: &Vec<Rule>) -> Result<()> {
+    // we should only be able to set the target of a device one time
+    for rule in rules {
+        let devices: Vec<&String> = rule
+            .set
+            .iter()
+            .map(|state_set| &state_set.device_id)
+            .collect();
+
+        let mut uniq = HashSet::new();
+        if !devices.into_iter().all(move |device| uniq.insert(device)) {
+            return fail(
+                &rule.id,
+                "this rule attempts to set a device's state multiple times, which is not allowed.",
+            );
+        }
+    }
+
     Ok(())
 }
