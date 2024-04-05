@@ -6,7 +6,7 @@
 //!
 //! `serde` takes care of making sure the proper values are present; only values in an `Option<>` or that provide a default can be missing.
 
-use log::{error, info, warn};
+use log::{error, trace, warn};
 use std::collections::HashMap;
 
 use crate::controllers::Controller;
@@ -22,15 +22,35 @@ fn fail(id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
-pub fn all(rtu: &RTU) -> Result<()> {
-    devices_have_unique_ids(rtu)?;
-    id_has_no_whitespace(rtu)?;
-    serial_port_is_valid(rtu)?;
-    controller_baudrate_is_valid(rtu)?;
-    timeout_valid(rtu)?;
-    command_retries_valid(rtu)?;
-    retry_delay_valid(rtu)?;
-    Ok(())
+pub fn all(rtu: &RTU) -> std::result::Result<(), Vec<Error>> {
+    let mut errors: Vec<Error> = Vec::new();
+
+    if let Err(e) = devices_have_unique_ids(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = id_has_no_whitespace(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = serial_port_is_valid(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = controller_baudrate_is_valid(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = timeout_valid(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = command_retries_valid(rtu) {
+        errors.push(e);
+    }
+    if let Err(e) = retry_delay_valid(rtu) {
+        errors.push(e);
+    }
+
+    if errors.len() == 0 {
+        return Ok(());
+    }
+    Err(errors)
 }
 
 /// Returns `Ok(())` if each device in the RTU has a unique ID
@@ -47,7 +67,7 @@ pub fn devices_have_unique_ids(rtu: &RTU) -> Result<()> {
         seen.insert(&device.id, true);
     }
 
-    info!("RTU validation check passed: all device IDs are unique");
+    trace!("RTU validation check passed: all device IDs are unique");
     Ok(())
 }
 
@@ -71,7 +91,7 @@ pub fn id_has_no_whitespace(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all ID values provided are valid");
+    trace!("RTU validation check passed: all ID values provided are valid");
     Ok(())
 }
 
@@ -115,7 +135,7 @@ pub fn serial_port_is_valid(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all serial port values provided are valid");
+    trace!("RTU validation check passed: all serial port values provided are valid");
     Ok(())
 }
 
@@ -165,7 +185,7 @@ pub fn controller_baudrate_is_valid(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all controller baudrates provided are valid");
+    trace!("RTU validation check passed: all controller baudrates provided are valid");
     Ok(())
 }
 
@@ -193,7 +213,7 @@ pub fn timeout_valid(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all timeout values provided are valid");
+    trace!("RTU validation check passed: all timeout values provided are valid");
     Ok(())
 }
 
@@ -211,7 +231,7 @@ pub fn command_retries_valid(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all command_retries values provided are valid");
+    trace!("RTU validation check passed: all command_retries values provided are valid");
     Ok(())
 }
 
@@ -229,7 +249,7 @@ pub fn retry_delay_valid(rtu: &RTU) -> Result<()> {
         }
     }
 
-    info!("RTU validation check passed: all relay_delay values provided are valid");
+    trace!("RTU validation check passed: all relay_delay values provided are valid");
     Ok(())
 }
 

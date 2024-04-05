@@ -1,4 +1,4 @@
-use log::info;
+use log::trace;
 use std::collections::HashMap;
 
 use crate::{
@@ -19,12 +19,29 @@ fn fail(condition_id: &str, key_value: (&str, &str), why: &str) -> Result<()> {
     )))
 }
 
-pub fn all(conditions: &Vec<Condition>) -> Result<()> {
-    conditions_have_unique_ids(conditions)?;
-    conditions_have_existing_device(conditions)?;
-    conditions_have_correct_device_type(conditions)?;
-    conditions_have_no_whitespace(conditions)?;
-    Ok(())
+pub fn all(conditions: &Vec<Condition>) -> std::result::Result<(), Vec<Error>> {
+    let mut errors: Vec<Error> = Vec::new();
+
+    if let Err(e) = conditions_have_unique_ids(conditions) {
+        errors.push(e);
+    }
+
+    if let Err(e) = conditions_have_existing_device(conditions) {
+        errors.push(e);
+    }
+
+    if let Err(e) = conditions_have_correct_device_type(conditions) {
+        errors.push(e);
+    }
+
+    if let Err(e) = conditions_have_no_whitespace(conditions) {
+        errors.push(e);
+    }
+
+    if errors.len() == 0 {
+        return Ok(());
+    }
+    Err(errors)
 }
 
 pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<()> {
@@ -40,7 +57,7 @@ pub fn conditions_have_unique_ids(conditions: &Vec<Condition>) -> Result<()> {
         seen.insert(&condition.id, true);
     }
 
-    info!("Condition validation check passed: all condition IDs are unique");
+    trace!("Condition validation check passed: all condition IDs are unique");
     Ok(())
 }
 
@@ -55,7 +72,7 @@ pub fn conditions_have_no_whitespace(conditions: &Vec<Condition>) -> Result<()> 
         }
     }
 
-    info!("Condition validation check passed: no condition IDs contain whitespace");
+    trace!("Condition validation check passed: no condition IDs contain whitespace");
     Ok(())
 }
 
@@ -78,7 +95,7 @@ pub fn conditions_have_existing_device(conditions: &Vec<Condition>) -> Result<()
         }
     }
 
-    info!("Condition validation check passed: all conditions have an associated device that exists in the configuration");
+    trace!("Condition validation check passed: all conditions have an associated device that exists in the configuration");
     Ok(())
 }
 
@@ -130,7 +147,9 @@ pub fn conditions_have_correct_device_type(conditions: &Vec<Condition>) -> Resul
         }
     }
 
-    info!("Condition validation check passed: all conditions have the proper device type attached");
+    trace!(
+        "Condition validation check passed: all conditions have the proper device type attached"
+    );
     Ok(())
 }
 

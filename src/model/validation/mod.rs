@@ -7,21 +7,63 @@
 ///
 /// Note that the model structs will fail to properly deserialize if there is a YAML syntax error.
 /// These validators do not check YAML syntax error, instead this happens earlier through serde.
+use log::*;
+
 use super::{conditions::ConditionCollection, rules::RuleSet, RTU};
-use crate::Result;
+use crate::error::Error;
 
 pub mod condition_validators;
 pub mod rtu_validators;
 pub mod rule_validators;
 
-pub fn validate_all(rtu: &RTU, conditions: &ConditionCollection, rules: &RuleSet) -> Result<()> {
+pub fn validate_all(
+    rtu: &RTU,
+    conditions: &ConditionCollection,
+    rules: &RuleSet,
+) -> Result<(), Vec<Error>> {
     // TODO: Add logging of errors?
     // TODO: add error collection?
     // TODO: Change these to accept RuleSet and ConditionCollection
-    condition_validators::all(&conditions.0)?;
-    rtu_validators::all(rtu)?;
-    rule_validators::all(&rules.0)?;
-    Ok(())
+
+    let mut all_errors = Vec::new();
+
+    match rtu_validators::all(rtu) {
+        Ok(_) => info!("RTU validation passed"),
+        Err(errors) => {
+            error!("RTU validation failed with the following errors:");
+            for error in errors {
+                error!("{error}");
+                all_errors.push(error);
+            }
+        }
+    }
+
+    match condition_validators::all(&conditions.0) {
+        Ok(_) => info!("Condition validation passed"),
+        Err(errors) => {
+            error!("Condition validation failed with the following errors:");
+            for error in errors {
+                error!("{error}");
+                all_errors.push(error);
+            }
+        }
+    }
+
+    match rule_validators::all(&rules.0) {
+        Ok(_) => info!("Rule validation passed"),
+        Err(errors) => {
+            error!("Rule validation failed with the following errors:");
+            for error in errors {
+                error!("{error}");
+                all_errors.push(error);
+            }
+        }
+    }
+
+    if all_errors.len() == 0 {
+        return Ok(());
+    }
+    Err(all_errors)
 }
 
 #[cfg(test)]

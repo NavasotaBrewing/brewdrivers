@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::{debug, trace};
 
 use crate::{
     error::Error,
@@ -12,10 +12,21 @@ fn fail(rule_id: &str, why: &str) -> Result<()> {
     )))
 }
 
-pub fn all(rules: &Vec<Rule>) -> Result<()> {
-    all_used_conditions_exist(&rules)?;
-    all_used_devices_exist(&rules)?;
-    Ok(())
+pub fn all(rules: &Vec<Rule>) -> std::result::Result<(), Vec<Error>> {
+    let mut errors: Vec<Error> = Vec::new();
+
+    if let Err(e) = all_used_conditions_exist(&rules) {
+        errors.push(e);
+    }
+
+    if let Err(e) = all_used_devices_exist(&rules) {
+        errors.push(e);
+    }
+
+    if errors.len() == 0 {
+        return Ok(());
+    }
+    Err(errors)
 }
 
 pub fn all_used_conditions_exist(rules: &Vec<Rule>) -> Result<()> {
@@ -46,7 +57,7 @@ pub fn all_used_conditions_exist(rules: &Vec<Rule>) -> Result<()> {
         }
     }
 
-    info!("Rule validation check passed: all conditions used by rules exist");
+    trace!("Rule validation check passed: all conditions used by rules exist");
     Ok(())
 }
 
@@ -77,6 +88,6 @@ pub fn all_used_devices_exist(rules: &Vec<Rule>) -> Result<()> {
         }
     }
 
-    info!("rule validation check passed: all devices used by rules exist");
+    trace!("rule validation check passed: all devices used by rules exist");
     Ok(())
 }

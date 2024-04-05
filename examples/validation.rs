@@ -2,7 +2,7 @@ use brewdrivers::model::validation;
 use brewdrivers::model::{conditions::ConditionCollection, rules::RuleSet, RTU};
 
 fn main() {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("trace"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let rtu = RTU::generate().expect("could not read RTU conf from file");
     let conditions =
