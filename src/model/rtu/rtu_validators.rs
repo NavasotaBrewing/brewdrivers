@@ -1,4 +1,4 @@
-//! Validators for when the RTU is deserialized from the config file
+//! Validators for when the RTU is generated
 //!
 //! These are called on the RTU and return an Err([ModelError](crate::model::ModelError)) if
 //! the RTU doesn't pass the test. It's another layer of validation on top of `serde_yaml`. This ensures

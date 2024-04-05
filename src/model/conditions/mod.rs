@@ -11,7 +11,6 @@ use crate::defaults::conditions_file;
 use crate::model::Device;
 use crate::state::DeviceState;
 use crate::{error::Error, Result};
-use condition_validators::all_validators;
 
 #[derive(Deserialize)]
 pub struct ConditionCollection(pub Vec<Condition>);
@@ -32,7 +31,7 @@ impl ConditionCollection {
     }
 
     /// Gets all conditions from the file, and validates them
-    pub fn get_all() -> Result<Self> {
+    pub fn generate() -> Result<Self> {
         let conditions = ConditionCollection::get_from_file()?;
         conditions.validate()?;
         Ok(conditions)
@@ -40,7 +39,10 @@ impl ConditionCollection {
 
     /// Runs all validators on the conditions found
     pub fn validate(&self) -> Result<()> {
-        all_validators(&self.0)?;
+        if let Err(e) = condition_validators::all_validators(&self.0) {
+            error!("{e}");
+            return Err(e);
+        }
         Ok(())
     }
 

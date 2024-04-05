@@ -62,6 +62,20 @@ impl RTU {
         self.devices.iter_mut().find(|dev| dev.id == device_id)
     }
 
+    /// Deserializes an RTU from the conf file. This does *not* validate the RTU.
+    ///
+    /// You should probably call RTU::generate() rather than this. This is used when
+    /// validating rules and conditions because in that context we only just need some
+    /// info from the conf file.
+    pub(crate) fn get_from_file() -> Result<RTU> {
+        let file_path = config_file();
+        info!("Generating RTU. Using config file: {:?}", file_path);
+        // Get the contents of the config file
+        let file_contents = fs::read_to_string(file_path).map_err(Error::IOError)?;
+        // Deserialize the file
+        serde_yaml::from_str::<RTU>(&file_contents).map_err(Error::YamlError)
+    }
+
     /// Reads the configuration file and builds the representation of an RTU from that. It does not
     /// enact/update any devices, so if any state is stored in the RTU struct, it will be stale.
     ///
@@ -69,17 +83,8 @@ impl RTU {
     ///
     /// This method calls [`RTU::validate()`](crate::model::RTU::validate) and returns an error if any of
     /// them don't succeed.
-    pub fn generate() -> Result<RTU> {
-        let file_path = config_file();
-        info!("Generating RTU. Using config file: {:?}", file_path);
-        // TODO: Get IPv4 here programatically instead of writing it in the file
-
-        // Get the contents of the config file
-        let file_contents = fs::read_to_string(file_path).map_err(Error::IOError)?;
-
-        // Deserialize the file. Return an Err if it doesn't succeed
-        let rtu = serde_yaml::from_str::<RTU>(&file_contents).map_err(Error::YamlError)?;
-
+    pub fn generate() -> Result<Self> {
+        let rtu = Self::get_from_file()?;
         info!("[RTU `{}`] generated.", rtu.id);
         rtu.validate()?;
         Ok(rtu)
