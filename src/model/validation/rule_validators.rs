@@ -41,6 +41,10 @@ pub fn all(
         errors.push(e);
     }
 
+    if let Err(e) = rules_cannot_set_state_of_device_that_triggered_them(&rules.0, conditions) {
+        errors.push(e);
+    }
+
     if errors.len() == 0 {
         return Ok(());
     }
@@ -165,5 +169,40 @@ pub fn rules_do_not_have_conflicting_state_sets(rules: &Vec<Rule>) -> Result<()>
         }
     }
 
+    trace!("rule validation check passed: all rules set a devices state only once");
+    Ok(())
+}
+
+pub fn rules_cannot_set_state_of_device_that_triggered_them(
+    rules: &Vec<Rule>,
+    conditions: &ConditionCollection,
+) -> Result<()> {
+    for rule in rules {
+        // Find the condition that this rule uses
+        if let Some(relevant_condition) = conditions
+            .0
+            .iter()
+            .find(|cond| cond.id == rule.condition_id)
+        {
+            // Get a list of all IDs of the devices that will be enacted when this rule triggers,
+            // ie. the resultant devices
+            let resultant_device_ids: Vec<&String> = rule
+                .set
+                .iter()
+                .map(|state_set| &state_set.device_id)
+                .collect();
+
+            // If the devices that triggers the rule (the one in the condition) is also a resultant
+            // device, we're cooked.
+            if resultant_device_ids.contains(&&relevant_condition.device_id) {
+                return fail(
+                    &rule.id,
+                    &format!("this rule will change the state of device `{}`, which is the same device that triggers the rule", relevant_condition.device_id)
+                );
+            }
+        }
+    }
+
+    trace!("rule validation check passed: no rules will change the state of the device that triggered them");
     Ok(())
 }
