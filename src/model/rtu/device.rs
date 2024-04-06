@@ -65,7 +65,9 @@ impl Device {
             };
 
             match result {
-                Ok(_) => return Ok(()),
+                Ok(_) => {
+                    return Ok(());
+                }
                 Err(e) => {
                     // If we're on the last iteration of the loop
                     // ie. the last retry and we still fail, then return the error
@@ -99,6 +101,8 @@ impl Device {
 
             match result {
                 Ok(_) => {
+                    // If we enacted a state successfully, then make sure all rules are being
+                    // followed
                     if let Err(e) = RuleSet::apply_all_to_all_devices().await {
                         error!("an error occured when applying rules, and I'm not handling it.");
                         error!("{e}");
@@ -156,6 +160,7 @@ impl Device {
             }
         }
 
+        // TODO: fix this, i think it's unreachable?
         panic!("temp");
     }
 }

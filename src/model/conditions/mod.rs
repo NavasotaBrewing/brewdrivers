@@ -96,18 +96,6 @@ impl Condition {
             device.id
         );
 
-        // Update the device state so we have accurate values
-        // if let Err(e) = device.update().await {
-        //     device_error!(
-        //         device,
-        //         &format!(
-        //             "error updating device when evaluating condition `{}`: {e}",
-        //             self.id
-        //         )
-        //     );
-        //     return Err(ConditionError::InstrumentError(e));
-        // }
-
         match self.kind {
             ConditionKind::RelayStateIs => self.evaluate_relay_state_is(device),
             ConditionKind::PVIsAtLeast => self.evaluate_pv_is_at_least(device),

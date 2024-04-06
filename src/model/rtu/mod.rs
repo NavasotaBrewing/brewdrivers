@@ -61,6 +61,16 @@ impl RTU {
         self.devices.iter_mut().find(|dev| dev.id == device_id)
     }
 
+    /// Returns an owned Device, cloned from the original collection
+    ///
+    /// Probably should only use this for testing.
+    pub(crate) fn device_cloned(&mut self, device_id: &str) -> Option<Device> {
+        self.devices
+            .iter_mut()
+            .find(|dev| dev.id == device_id)
+            .cloned()
+    }
+
     /// Deserializes an RTU from the conf file. This does *not* validate the RTU.
     ///
     /// You should probably call RTU::generate() rather than this. This is used when
