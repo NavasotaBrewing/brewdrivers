@@ -66,6 +66,45 @@ impl Device {
 
             match result {
                 Ok(_) => {
+                    if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+                        error!("an error occured when applying rules, and I'm not handling it.");
+                        error!("{e}");
+                    }
+                    return Ok(());
+                }
+                Err(e) => {
+                    // If we're on the last iteration of the loop
+                    // ie. the last retry and we still fail, then return the error
+                    if i == total_attempts {
+                        return Err(e);
+                    }
+                    device_info!(&self, &format!("updating failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
+                    std::thread::sleep(Duration::from_millis(self.retry_delay));
+                }
+            }
+        }
+
+        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
+    }
+
+    pub async fn update_without_applying_rules(&mut self) -> Result<()> {
+        let total_attempts = self.command_retries + 1;
+
+        for i in 1..=total_attempts {
+            device_info!(
+                &self,
+                &format!("updating (attempt {i} of {})", total_attempts)
+            );
+
+            let result = match self.conn.controller {
+                Controller::STR1 => STR1::update(self).await,
+                Controller::CN7500 => CN7500::update(self).await,
+                Controller::Waveshare => Waveshare::update(self).await,
+                Controller::WaveshareV2 => WaveshareV2::update(self).await,
+            };
+
+            match result {
+                Ok(_) => {
                     return Ok(());
                 }
                 Err(e) => {

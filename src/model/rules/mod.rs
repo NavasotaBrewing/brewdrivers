@@ -95,7 +95,7 @@ impl Rule {
         };
 
         // Update the dependant device so that we have new values
-        dependant_device.update().await?;
+        dependant_device.update_without_applying_rules().await?;
         // And evaluate the condition based on that device
         let condition_result = condition.evaluate_on(dependant_device).await;
 
@@ -144,7 +144,7 @@ impl Rule {
 
             // Only call update on the resultant devices (the ones that get their state potentially
             // changed)
-            found_device.update().await?;
+            found_device.update_without_applying_rules().await?;
 
             // If the device is already in that state, then don't enact
             if found_device.state != new_state.target_state {
@@ -167,7 +167,9 @@ impl Rule {
 
 #[cfg(test)]
 mod tests {
-    use crate::state::BinaryState;
+    use std::time::Duration;
+
+    use crate::{controllers::CN7500, state::BinaryState};
 
     use super::*;
     use tokio_test::assert_ok;
@@ -240,5 +242,69 @@ mod tests {
         device_a.enact().await.unwrap();
         device_b.update().await.unwrap();
         assert_eq!(device_b.state.relay_state, Some(BinaryState::Off));
+    }
+
+    #[tokio::test]
+    async fn test_rules_apply_without_enaction() {
+        // Rules should apply when the hardware changes without us enacting them.
+        // ie. the pv changes due to rising temps and triggers a condition.
+        // There's not a great way to do this without checking perdiodically,
+        // so instead I think we'll just apply rules when we update devices.
+
+        let mut rtu = RTU::generate().unwrap();
+        let pv: f64;
+
+        // We have some scope skullduggery here because we can't have two
+        // open connections to the omega at once time. We use the braces to
+        // make sure the omega is dropped, then we do the backdoor stuff, then
+        // we will get it again.
+        let mut relay = rtu.device_cloned("wsrelay0").unwrap();
+        // Turn this relay off. There's a rule that will turn it on when the PV meets to SV
+        // on the omega1 device
+        relay.state.relay_state = Some(BinaryState::Off);
+        relay.enact().await.unwrap();
+
+        {
+            let mut omega = rtu.device_cloned("omega1").unwrap();
+            // Set it to well outside the margin
+            omega.update().await.unwrap();
+            pv = omega.state.pv.unwrap();
+            omega.state.sv = Some(pv + 25.0);
+            omega.enact().await.unwrap();
+        }
+
+        // Relay should still be off
+        relay.update().await.unwrap();
+        assert_eq!(relay.state.relay_state.unwrap(), BinaryState::Off);
+
+        {
+            // Open a backdoor to the device, so we can control it directly.
+            // This will allow us to change the SV without calling enact() on the device,
+            // which would trigger a rule check.
+            // We have to do this because we can't change the pv, so we can't set it to the correct
+            // value to trigger this test. Instead, we'll set the SV to the PV and pretend that the
+            // PV rose to meet the SV
+            let mut omega_backdoor =
+                CN7500::connect(0x16, "/dev/ttyUSB0", 19200, Duration::from_millis(50))
+                    .await
+                    .expect("Couldn't get device");
+            // Set the sv manually to within the margin.
+            // In a perfect world, we would have something detect this and trigger
+            // the rule, but for now the rule will only be trigger after we call update()
+            // on the device.
+            omega_backdoor.set_sv(pv).await.unwrap();
+        }
+
+        let mut omega = rtu.device_cloned("omega1").unwrap();
+
+        // Relay should still be off
+        relay.update().await.unwrap();
+        assert_eq!(relay.state.relay_state.unwrap(), BinaryState::Off);
+
+        // This should trigger the rule and turn the relay on
+        omega.update().await.unwrap();
+
+        relay.update().await.unwrap();
+        assert_eq!(relay.state.relay_state.unwrap(), BinaryState::On);
     }
 }
