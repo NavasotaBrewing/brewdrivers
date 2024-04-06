@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::{defaults::rules_file, state::DeviceState};
+use crate::{defaults::rules_file, device_info, device_trace, state::DeviceState};
 use log::*;
 use serde::Deserialize;
 
@@ -151,14 +151,14 @@ impl Rule {
                 // Update the state and enact
                 found_device.state = new_state.target_state.clone();
 
-                info!(
-                    "device `{}` state is being changed due to the rule `{}`: {:?}",
-                    found_device.id, self.id, found_device.state
+                device_info!(
+                    &found_device,
+                    &format!("state is being changed due to the rule `{}`", self.name)
                 );
 
                 found_device.enact_without_applying_rules().await?;
             } else {
-                trace!("device `{}` would be updated due a the rule `{}`, but it's current state already matched the target state", found_device.id, self.id);
+                device_trace!(&found_device, &format!("device would be updated due to the rule `{}`, but it's current state already matched the target state", self.name));
             }
         }
         Ok(())

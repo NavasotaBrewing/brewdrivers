@@ -86,27 +86,6 @@ impl Device {
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
     }
 
-    /// Updates the internal state of the device, and applies all rules
-    pub async fn update(&mut self) -> Result<()> {
-        self.update_without_applying_rules().await?;
-        device_trace!(&self, &format!("updated internal state successfully"));
-        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-            error!("an error occured when applying rules, and I'm not handling it.");
-            error!("{e}");
-        }
-        return Ok(());
-    }
-
-    pub async fn enact(&mut self) -> Result<()> {
-        self.enact_without_applying_rules().await?;
-        device_trace!(&self, &format!("enacted state successfully"));
-        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-            error!("an error occured when applying rules, and I'm not handling it.");
-            error!("{e}");
-        }
-        return Ok(());
-    }
-
     /// Enacts a device, but doesn't apply rules. This is used by the rules themselves, so
     /// that there's no recursion.
     pub async fn enact_without_applying_rules(&mut self) -> Result<()> {
@@ -140,6 +119,38 @@ impl Device {
         }
 
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
+    }
+
+    /// Updates the internal state of the device, and applies all rules
+    pub async fn update(&mut self) -> Result<()> {
+        self.update_without_applying_rules().await?;
+        device_trace!(
+            &self,
+            &format!(
+                "updated internal state successfully. Updated state = {:?}",
+                self.state
+            )
+        );
+        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+            error!("an error occured when applying rules, and I'm not handling it.");
+            error!("{e}");
+        }
+        return Ok(());
+    }
+
+    /// Sets the state on the hardware to match the internally stored state. The state field
+    /// should be updated to the desired state before calling this method.
+    pub async fn enact(&mut self) -> Result<()> {
+        self.enact_without_applying_rules().await?;
+        device_trace!(
+            &self,
+            &format!("enacted state successfully. New state = {:?}", self.state)
+        );
+        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+            error!("an error occured when applying rules, and I'm not handling it.");
+            error!("{e}");
+        }
+        return Ok(());
     }
 }
 
