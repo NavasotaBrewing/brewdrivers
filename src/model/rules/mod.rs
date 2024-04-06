@@ -95,8 +95,7 @@ impl Rule {
         };
 
         // Update the dependant device so that we have new values
-        // We call update_internal_state() so it doesn't trigger rules ie. become recursive
-        dependant_device.update_internal_state().await?;
+        dependant_device.update_without_applying_rules().await?;
         // And evaluate the condition based on that device
         let condition_result = condition.evaluate_on(dependant_device).await;
 
@@ -145,7 +144,7 @@ impl Rule {
 
             // Only call update on the resultant devices (the ones that get their state potentially
             // changed)
-            found_device.update_internal_state().await?;
+            found_device.update_without_applying_rules().await?;
 
             // If the device is already in that state, then don't enact
             if found_device.state != new_state.target_state {

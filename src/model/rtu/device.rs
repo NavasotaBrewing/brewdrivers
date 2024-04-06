@@ -49,7 +49,7 @@ pub struct Device {
 
 impl Device {
     /// Reads the actual state of the device and updates the state field on this struct to match
-    pub(crate) async fn update_internal_state(&mut self) -> Result<()> {
+    pub(crate) async fn update_without_applying_rules(&mut self) -> Result<()> {
         // We'll try to update a few times, in case there's a collision or the hardware fucks up
         let total_attempts = self.command_retries + 1;
 
@@ -88,16 +88,9 @@ impl Device {
 
     /// Updates the internal state of the device, and applies all rules
     pub async fn update(&mut self) -> Result<()> {
-        self.update_internal_state().await?;
-
-        // In this case, we updated internal state successfully
+        self.update_without_applying_rules().await?;
         device_trace!(&self, &format!("updated internal state successfully"));
-        // Apply all rules since this is a standard update
-        // TODO: Maybe only apply rules that have something to do with this device? would be more
-        // efficient
         if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-            // Don't handle the error here so that a failed rule application doesn't
-            // cause all updates to grind to a halt.
             error!("an error occured when applying rules, and I'm not handling it.");
             error!("{e}");
         }
@@ -105,50 +98,17 @@ impl Device {
     }
 
     pub async fn enact(&mut self) -> Result<()> {
-        let total_attempts = self.command_retries + 1;
-
-        for i in 1..=total_attempts {
-            device_info!(
-                &self,
-                &format!("enacting (attempt {i} of {})", total_attempts)
-            );
-
-            let result = match self.conn.controller {
-                Controller::STR1 => STR1::enact(self).await,
-                Controller::CN7500 => CN7500::enact(self).await,
-                Controller::Waveshare => Waveshare::enact(self).await,
-                Controller::WaveshareV2 => WaveshareV2::enact(self).await,
-            };
-
-            match result {
-                Ok(_) => {
-                    // If we enacted a state successfully, then make sure all rules are being
-                    // followed
-                    if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-                        error!("an error occured when applying rules, and I'm not handling it.");
-                        error!("{e}");
-                    }
-                    return Ok(());
-                }
-                Err(e) => {
-                    // If we're on the last iteration of the loop
-                    // ie. the last retry and we still fail, then return the error
-                    if i == total_attempts {
-                        return Err(e);
-                    }
-                    device_info!(&self, &format!("enacting failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
-                    std::thread::sleep(Duration::from_millis(self.retry_delay));
-                }
-            }
+        self.enact_without_applying_rules().await?;
+        device_trace!(&self, &format!("enacted state successfully"));
+        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+            error!("an error occured when applying rules, and I'm not handling it.");
+            error!("{e}");
         }
-
-        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
+        return Ok(());
     }
 
     /// Enacts a device, but doesn't apply rules. This is used by the rules themselves, so
     /// that there's no recursion.
-    ///
-    // TODO: refactor this with enact()
     pub async fn enact_without_applying_rules(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
 
@@ -165,24 +125,21 @@ impl Device {
                 Controller::WaveshareV2 => WaveshareV2::enact(self).await,
             };
 
-            match result {
-                Ok(_) => {
-                    return Ok(());
+            if result.is_ok() {
+                return Ok(());
+            } else {
+                // Enaction failed
+                // If we're on the last iteration of the loop
+                // ie. the last retry and we still fail, then return the error
+                if i == total_attempts {
+                    return result;
                 }
-                Err(e) => {
-                    // If we're on the last iteration of the loop
-                    // ie. the last retry and we still fail, then return the error
-                    if i == total_attempts {
-                        return Err(e);
-                    }
-                    device_info!(&self, &format!("enacting failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
-                    std::thread::sleep(Duration::from_millis(self.retry_delay));
-                }
+                device_info!(&self, &format!("enacting failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
+                std::thread::sleep(Duration::from_millis(self.retry_delay));
             }
         }
 
-        // TODO: fix this, i think it's unreachable?
-        panic!("temp");
+        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
     }
 }
 
