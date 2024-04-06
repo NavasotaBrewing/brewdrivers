@@ -5,10 +5,10 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::logging_utils::device_info;
 use crate::Result;
+use crate::{controllers::*, device_trace};
 use log::*;
 // use crate::model::conditions::ConditionCollection;
 use crate::model::rules::RuleSet;
@@ -48,7 +48,9 @@ pub struct Device {
 }
 
 impl Device {
-    pub async fn update(&mut self) -> Result<()> {
+    /// Reads the actual state of the device and updates the state field on this struct to match
+    pub(crate) async fn update_internal_state(&mut self) -> Result<()> {
+        // We'll try to update a few times, in case there's a collision or the hardware fucks up
         let total_attempts = self.command_retries + 1;
 
         for i in 1..=total_attempts {
@@ -64,62 +66,42 @@ impl Device {
                 Controller::WaveshareV2 => WaveshareV2::update(self).await,
             };
 
-            match result {
-                Ok(_) => {
-                    if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-                        error!("an error occured when applying rules, and I'm not handling it.");
-                        error!("{e}");
-                    }
-                    return Ok(());
+            if result.is_ok() {
+                // If we get a good update, then return happy
+                return Ok(());
+            } else {
+                // Otherwise, this update failed.
+                // If we're on the last iteration of the loop
+                // ie. the last retry and we still fail, then return the error
+                if i == total_attempts {
+                    // return the err
+                    return result;
                 }
-                Err(e) => {
-                    // If we're on the last iteration of the loop
-                    // ie. the last retry and we still fail, then return the error
-                    if i == total_attempts {
-                        return Err(e);
-                    }
-                    device_info!(&self, &format!("updating failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
-                    std::thread::sleep(Duration::from_millis(self.retry_delay));
-                }
+                // Otherwise, log a message and sleep for a bit
+                device_info!(&self, &format!("updating failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
+                std::thread::sleep(Duration::from_millis(self.retry_delay));
             }
         }
 
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
     }
 
-    pub async fn update_without_applying_rules(&mut self) -> Result<()> {
-        let total_attempts = self.command_retries + 1;
+    /// Updates the internal state of the device, and applies all rules
+    pub async fn update(&mut self) -> Result<()> {
+        self.update_internal_state().await?;
 
-        for i in 1..=total_attempts {
-            device_info!(
-                &self,
-                &format!("updating (attempt {i} of {})", total_attempts)
-            );
-
-            let result = match self.conn.controller {
-                Controller::STR1 => STR1::update(self).await,
-                Controller::CN7500 => CN7500::update(self).await,
-                Controller::Waveshare => Waveshare::update(self).await,
-                Controller::WaveshareV2 => WaveshareV2::update(self).await,
-            };
-
-            match result {
-                Ok(_) => {
-                    return Ok(());
-                }
-                Err(e) => {
-                    // If we're on the last iteration of the loop
-                    // ie. the last retry and we still fail, then return the error
-                    if i == total_attempts {
-                        return Err(e);
-                    }
-                    device_info!(&self, &format!("updating failed, but attempts remain. Waiting for retry_delay = {} ms before trying again.", self.retry_delay));
-                    std::thread::sleep(Duration::from_millis(self.retry_delay));
-                }
-            }
+        // In this case, we updated internal state successfully
+        device_trace!(&self, &format!("updated internal state successfully"));
+        // Apply all rules since this is a standard update
+        // TODO: Maybe only apply rules that have something to do with this device? would be more
+        // efficient
+        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+            // Don't handle the error here so that a failed rule application doesn't
+            // cause all updates to grind to a halt.
+            error!("an error occured when applying rules, and I'm not handling it.");
+            error!("{e}");
         }
-
-        panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
+        return Ok(());
     }
 
     pub async fn enact(&mut self) -> Result<()> {
