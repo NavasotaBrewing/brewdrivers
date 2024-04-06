@@ -136,10 +136,17 @@ impl Device {
         );
 
         // Only apply rules if the state has actually changed
-        if old_state != self.state {
-            if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-                error!("an error occured when applying rules, and I'm not handling it.");
-                error!("{e}");
+        if old_state != self.state && !self.state.is_empty() {
+            match self.conn.controller {
+                Controller::STR1 | Controller::Waveshare | Controller::WaveshareV2 => {}
+                Controller::CN7500 => {
+                    // Only apply if it's a PID. We don't need to apply rules on relay updates,
+                    // because it's very rare we would actually change them manually.
+                    if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+                        error!("an error occured when applying rules, and I'm not handling it.");
+                        error!("{e}");
+                    }
+                }
             }
         }
         return Ok(());

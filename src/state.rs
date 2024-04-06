@@ -21,6 +21,12 @@ pub struct DeviceState {
     pub sv: Option<SV>,
 }
 
+impl DeviceState {
+    pub fn is_empty(&self) -> bool {
+        return self.relay_state.is_none() && self.pv.is_none() && self.sv.is_none();
+    }
+}
+
 impl std::fmt::Display for DeviceState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
