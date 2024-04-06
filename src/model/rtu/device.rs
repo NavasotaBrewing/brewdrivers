@@ -123,7 +123,10 @@ impl Device {
 
     /// Updates the internal state of the device, and applies all rules
     pub async fn update(&mut self) -> Result<()> {
+        let old_state = self.state.clone();
+
         self.update_without_applying_rules().await?;
+
         device_trace!(
             &self,
             &format!(
@@ -131,9 +134,13 @@ impl Device {
                 self.state
             )
         );
-        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-            error!("an error occured when applying rules, and I'm not handling it.");
-            error!("{e}");
+
+        // Only apply rules if the state has actually changed
+        if old_state != self.state {
+            if let Err(e) = RuleSet::apply_all_to_all_devices().await {
+                error!("an error occured when applying rules, and I'm not handling it.");
+                error!("{e}");
+            }
         }
         return Ok(());
     }
