@@ -121,3 +121,18 @@ async fn test_device_enact() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_rtu_device_borrow() {
+    let mut rtu = RTU::generate().unwrap();
+
+    let device = rtu.device("wsrelay0").unwrap();
+    device.state.relay_state = Some(BinaryState::On);
+    device.enact().await.unwrap();
+
+    device.update().await.unwrap();
+    assert_eq!(device.state.relay_state, Some(BinaryState::On));
+
+    device.state.relay_state = Some(BinaryState::Off);
+    device.enact().await.unwrap();
+}

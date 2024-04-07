@@ -29,6 +29,35 @@ pub enum Controller {
     WaveshareV2,
 }
 
+impl Controller {
+    pub fn is_pid(&self) -> bool {
+        match self {
+            Controller::CN7500 => true,
+            Controller::STR1 => false,
+            Controller::Waveshare => false,
+            Controller::WaveshareV2 => false,
+        }
+    }
+
+    pub fn has_relay(&self) -> bool {
+        match self {
+            Controller::CN7500 => true,
+            Controller::STR1 => true,
+            Controller::Waveshare => true,
+            Controller::WaveshareV2 => true,
+        }
+    }
+
+    pub fn is_strictly_relay(&self) -> bool {
+        match self {
+            Controller::CN7500 => false,
+            Controller::STR1 => true,
+            Controller::Waveshare => true,
+            Controller::WaveshareV2 => true,
+        }
+    }
+}
+
 impl std::fmt::Display for Controller {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

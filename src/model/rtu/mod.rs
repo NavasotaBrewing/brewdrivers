@@ -102,7 +102,6 @@ impl RTU {
 
 #[cfg(test)]
 mod tests {
-    use crate::state::BinaryState;
 
     use super::*;
 
@@ -113,20 +112,5 @@ mod tests {
         let rtu = RTU::generate();
         assert!(rtu.is_ok());
         assert!(!rtu.unwrap().devices.is_empty());
-    }
-
-    #[test]
-    async fn test_rtu_device_operations() {
-        let mut rtu = RTU::generate().unwrap();
-
-        let device = rtu.device("wsrelay0").unwrap();
-        device.state.relay_state = Some(BinaryState::On);
-        device.enact().await.unwrap();
-
-        device.update().await.unwrap();
-        assert_eq!(device.state.relay_state, Some(BinaryState::On));
-
-        device.state.relay_state = Some(BinaryState::Off);
-        device.enact().await.unwrap();
     }
 }

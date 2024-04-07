@@ -128,6 +128,8 @@ impl Device {
 mod tests {
     use std::path::PathBuf;
 
+    use crate::tests::test_device_from_type;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
@@ -146,5 +148,38 @@ mod tests {
 
         assert_eq!("/dev/ttyUSB0", conn.port());
         assert_ne!(r#""/dev/ttyUSB0""#, conn.port());
+    }
+
+    #[tokio::test]
+    async fn test_device_update_and_enact() {
+        let mut device = test_device_from_type(Controller::WaveshareV2);
+
+        // state is empty when we first generate the RTU data from the config file
+        assert!(device.state.is_empty());
+
+        // Turn it off to start the test
+        device.state.relay_state = Some(BinaryState::Off);
+        assert!(device.enact().await.is_ok());
+
+        // Now we'll update. We should have a relay state (not None), but no SV or PV since this is
+        // a relay
+        assert!(device.update().await.is_ok());
+
+        assert!(device.state.relay_state.is_some());
+        assert!(device.state.sv.is_none());
+        assert!(device.state.pv.is_none());
+
+        device.state.relay_state = Some(BinaryState::On);
+        assert!(device.enact().await.is_ok());
+
+        // We updated the internal state and enacted, so they should theoretically match
+        assert_eq!(device.state.relay_state, Some(BinaryState::On));
+        // We'll update again and make sure
+        assert!(device.update().await.is_ok());
+        assert_eq!(device.state.relay_state, Some(BinaryState::On));
+
+        // Turn it off to end the test
+        device.state.relay_state = Some(BinaryState::Off);
+        assert!(device.enact().await.is_ok());
     }
 }
