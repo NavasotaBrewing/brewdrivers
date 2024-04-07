@@ -9,46 +9,18 @@
 /// These validators do not check YAML syntax error, instead this happens earlier through serde.
 use log::*;
 
-use super::{conditions::ConditionCollection, rules::RuleSet, RTU};
+use super::RTU;
 use crate::error::Error;
 
-pub mod condition_validators;
 pub mod rtu_validators;
-pub mod rule_validators;
 
-pub fn validate_all(
-    rtu: &mut RTU,
-    conditions: &ConditionCollection,
-    rules: &RuleSet,
-) -> Result<(), Vec<Error>> {
+pub fn validate_all(rtu: &mut RTU) -> Result<(), Vec<Error>> {
     let mut all_errors = Vec::new();
 
     match rtu_validators::all(rtu) {
         Ok(_) => info!("RTU validation passed"),
         Err(errors) => {
             error!("RTU validation failed with the following errors:");
-            for error in errors {
-                error!("{error}");
-                all_errors.push(error);
-            }
-        }
-    }
-
-    match condition_validators::all(conditions, rtu) {
-        Ok(_) => info!("Condition validation passed"),
-        Err(errors) => {
-            error!("Condition validation failed with the following errors:");
-            for error in errors {
-                error!("{error}");
-                all_errors.push(error);
-            }
-        }
-    }
-
-    match rule_validators::all(rules, conditions, rtu) {
-        Ok(_) => info!("Rule validation passed"),
-        Err(errors) => {
-            error!("Rule validation failed with the following errors:");
             for error in errors {
                 error!("{error}");
                 all_errors.push(error);
@@ -70,9 +42,7 @@ mod tests {
     #[test]
     fn test_all_validation() {
         let mut rtu = RTU::generate().unwrap();
-        let conditions = ConditionCollection::generate().unwrap();
-        let rules = RuleSet::generate().unwrap();
 
-        assert!(validate_all(&mut rtu, &conditions, &rules).is_ok());
+        assert!(validate_all(&mut rtu).is_ok());
     }
 }

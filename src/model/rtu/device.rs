@@ -5,16 +5,13 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::controllers::*;
 use crate::defaults::{default_command_retries, default_retry_delay};
 use crate::logging_utils::device_info;
-use crate::Result;
-use crate::{controllers::*, device_trace};
-use log::*;
-// use crate::model::conditions::ConditionCollection;
-use crate::model::rules::RuleSet;
 use crate::model::Connection;
 use crate::model::SCADADevice;
 use crate::state::DeviceState;
+use crate::Result;
 
 // use super::conditions::Condition;
 
@@ -48,8 +45,11 @@ pub struct Device {
 }
 
 impl Device {
-    /// Reads the actual state of the device and updates the state field on this struct to match
-    pub(crate) async fn update_without_applying_rules(&mut self) -> Result<()> {
+    /// Reads the state from the actual device and updates this structs internal state to match.
+    ///
+    /// If reading the state fails, this will retry a few time, as many as is configured in the RTU
+    /// configuration.
+    pub async fn update(&mut self) -> Result<()> {
         // We'll try to update a few times, in case there's a collision or the hardware fucks up
         let total_attempts = self.command_retries + 1;
 
@@ -86,9 +86,11 @@ impl Device {
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device update loop without Ok() or Err()");
     }
 
-    /// Enacts a device, but doesn't apply rules. This is used by the rules themselves, so
-    /// that there's no recursion.
-    pub async fn enact_without_applying_rules(&mut self) -> Result<()> {
+    /// Attempts to write the internal state of this struct to the actual device. The inverse of
+    /// `Device::update()`
+    ///
+    /// Will retry a few times, just as `update()` does.
+    pub async fn enact(&mut self) -> Result<()> {
         let total_attempts = self.command_retries + 1;
 
         for i in 1..=total_attempts {
@@ -119,55 +121,6 @@ impl Device {
         }
 
         panic!("Reached some code that shouldn't be reachable. Ran through all iterations of a device enact loop without Ok() or Err()");
-    }
-
-    /// Updates the internal state of the device, and applies all rules
-    pub async fn update(&mut self) -> Result<()> {
-        let old_state = self.state.clone();
-
-        self.update_without_applying_rules().await?;
-
-        device_trace!(
-            &self,
-            &format!(
-                "updated internal state successfully. Updated state = {:?}",
-                self.state
-            )
-        );
-
-        // Only apply rules if the state has actually changed
-        // Also check that the state isn't empty. If it's empty, then most likely we just started
-        // the system and we didn't have any state stored. In that case, we don't want to apply all
-        // rules to all update()s as this causes some significant slowdown on the interface.
-        if old_state != self.state && !self.state.is_empty() {
-            match self.conn.controller {
-                Controller::STR1 | Controller::Waveshare | Controller::WaveshareV2 => {}
-                Controller::CN7500 => {
-                    // Only apply if it's a PID. We don't need to apply rules on relay updates,
-                    // because it's very rare we would actually change them manually.
-                    if let Err(e) = RuleSet::apply_rules_for_dependant_device(&self.id).await {
-                        error!("an error occured when applying rules, and I'm not handling it.");
-                        error!("{e}");
-                    }
-                }
-            }
-        }
-        return Ok(());
-    }
-
-    /// Sets the state on the hardware to match the internally stored state. The state field
-    /// should be updated to the desired state before calling this method.
-    pub async fn enact(&mut self) -> Result<()> {
-        self.enact_without_applying_rules().await?;
-        device_trace!(
-            &self,
-            &format!("enacted state successfully. New state = {:?}", self.state)
-        );
-        if let Err(e) = RuleSet::apply_all_to_all_devices().await {
-            error!("an error occured when applying rules, and I'm not handling it.");
-            error!("{e}");
-        }
-        return Ok(());
     }
 }
 
