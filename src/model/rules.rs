@@ -40,6 +40,28 @@ impl RuleSet {
         rule_set.apply_all(rtu.devices).await?;
         Ok(())
     }
+
+    /// Applies only the rules that use the given device as the dependant device (the one that is
+    /// evaluated to check the condition)
+    pub async fn apply_rules_for_dependant_device(device_id: &str) -> Result<()> {
+        let rule_set = Self::generate()?;
+        let mut rtu = RTU::generate()?;
+
+        for rule in rule_set.0 {
+            if let Some(condition) = ConditionCollection::get_by_id(&rule.condition_id) {
+                if condition.device_id == device_id {
+                    // This is a rule we need to apply
+                    if let Err(e) = rule.apply(rtu.devices.iter_mut().collect()).await {
+                        error!(
+                            "an error occured when trying to enact a rule, but I'm not handling it: {e}"
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
