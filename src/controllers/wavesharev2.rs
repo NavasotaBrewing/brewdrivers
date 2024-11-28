@@ -162,6 +162,16 @@ impl WaveshareV2 {
         Self::append_checksum(&mut bytes).unwrap();
 
         self.0.write_to_device(bytes)?;
+
+        let read_state = self.get_relay(relay_num)?;
+        if read_state != state {
+            error!(
+                "[WaveshareV2 addr: {}] attempted to set relay {} to {}, but checked it's state and found {}",
+                self.0.address(),
+                relay_num,
+                state,
+                read_state);
+        }
         Ok(())
     }
 
@@ -214,7 +224,7 @@ impl WaveshareV2 {
         if let Some(status_number) = resp.get(3) {
             // this is a little cursed but i don't know how else to work with binary
             let binary = format!("{:08b}", status_number);
-            trace!("States as binary: {:?}", binary);
+            trace!("Relay states: {:?}", binary);
             let statuses: Vec<BinaryState> = binary
                 .chars()
                 .filter(|&ch| ch == '1' || ch == '0')
